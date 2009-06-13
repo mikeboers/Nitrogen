@@ -74,6 +74,12 @@ URI class usage:
     >>> str(uri)
     'https://example.com/d/e/f?a=1&b=2'
 
+Directories:
+    >>> uri = URI()
+    >>> uri.path = '/abs/path/to/dir/'
+    >>> str(uri)
+    '/abs/path/to/dir/'
+
 Resolving relative URIs:
     
     >>> base = URI('http://a/b/c/d;p?q')
@@ -373,9 +379,13 @@ class URI(object):
                         if Base.has_authority and str(Base.path) in ('/', ''):
                             T.path = '/' + str(R.path)
                         else:
-                            T.path = str(Base.path)
-                            T.path.pop()
-                            T.path.extend(R.path)
+                            path = str(Base.path)
+                            pos = path.rfind('/')
+                            if pos > 0:
+                                path = path[:pos + 1]
+                                T.path = path + str(R.path)
+                            else:
+                                T.path = R.path
                     T.query = R.query                
                 T.userinfo = Base.userinfo
                 T.host = Base.host
@@ -383,6 +393,7 @@ class URI(object):
             T.scheme = Base.scheme
         
         T.fragment = R.fragment
+        # print T.path
         T.path.remove_dot_segments()
         return T
         
