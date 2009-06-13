@@ -183,17 +183,22 @@ class Path(list):
     def remove_dot_segments(self):
         i = 0
         while i < len(self):
-            print i, self[i], list(self)
+            # print i, self[i], list(self)
             if self[i] == '.':
                 if i == len(self) - 1:
                     self[i] = ''
                 else:
                     self.pop(i)
             elif self[i] == '..':
-                self.pop(i)
-                if i > 0:
-                    self.pop(i-1)
-                    i -= 1
+                if i == len(self) - 1:
+                    self.pop(i)
+                    if i > 0:
+                        self[i-1] = ''
+                else:
+                    self.pop(i)
+                    if i > 0:
+                        self.pop(i-1)
+                        i -= 1
             else:
                 i += 1
 
