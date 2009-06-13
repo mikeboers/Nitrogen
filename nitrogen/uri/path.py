@@ -70,6 +70,50 @@ class Path(list):
         >>> path.relative = False
         >>> str(path)
         '/'
+    
+    Conforming to RFC section 3.3
+    
+        >>> path = Path('there:is/a_colon')
+        >>> path.str()
+        'there:is/a_colon'
+        >>> path.str(scheme=False)
+        'there%3ais/a_colon'
+        
+        >>> path = Path('//empty/first/section')
+        >>> path.str()
+        '//empty/first/section'
+        >>> path.str(authority=False)
+        '/empty/first/section'
+        
+        >>> path = Path('////colon:resides/in/first_non_empty_section')
+        >>> path.str()
+        '////colon:resides/in/first_non_empty_section'
+        >>> path.str(scheme=False, authority=False)
+        '/colon:resides/in/first_non_empty_section'
+        
+        >>> path = Path('colon:resides/in/first_section')
+        >>> path.str()
+        'colon:resides/in/first_section'
+        >>> path.str(scheme=False)
+        'colon%3aresides/in/first_section'
+        >>> path.str(scheme=True)
+        'colon:resides/in/first_section'
+        >>> path.str(authority=False)
+        'colon:resides/in/first_section'
+        >>> path.str(authority=True)
+        '/colon:resides/in/first_section'
+        >>> path.str(scheme=False, authority=True)
+        '/colon:resides/in/first_section'
+        >>> path.str(scheme=False, authority=False)
+        'colon%3aresides/in/first_section'
+        >>> path.str(scheme=True, authority=True)
+        '/colon:resides/in/first_section'
+        >>> path.str(scheme=True, authority=False)
+        'colon:resides/in/first_section'
+        
+        >>> path = Path('relative/path')
+        >>> path.str(authority=True)
+        '/relative/path'
         
     """
     
@@ -94,8 +138,21 @@ class Path(list):
     def relative(self, value):
         self.absolute = not value
     
-    def __str__(self):
-        return ('/' if self.absolute else '') + '/'.join(encode(x, SUB_DELIMS + '@:') for x in self)
+    def str(self, scheme=None, authority=None):
+        encoded = [encode(x, SUB_DELIMS + '@:') for x in self]
+        # If there is no authority we must not have empty segments on the front.
+        if authority is not None and not authority:
+            while encoded and not encoded[0]:
+                encoded.pop(0)
+        # Encode a colon in the first chunk if we have been told there is no
+        # scheme, and this is relative.
+        if self.relative and encoded and scheme is not None and not scheme and not authority:
+            encoded[0] = encoded[0].replace(':', encode(':'))
+        # If we have an authority, we must either be empty, or start with '/'
+        slash = '/' if (self.absolute or (authority and encoded)) else ''
+        return slash + '/'.join(encoded)
+    
+    __str__ = str
     
     def __repr__(self):
         return '<uri.Path:%s:%s>' % (('absolute' if self.absolute else 'relative'), list.__repr__(self))
