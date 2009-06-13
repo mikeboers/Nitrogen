@@ -1,21 +1,20 @@
 """
 
-A convenient description of "uniform resource identifiers" or "data source names".
+A convenient description of "uniform resource identifiers" or "data source
+names".
 
-It roughly follows the uri specifications linked to by the given wikipedia page, but a few things may not be fully complaint (yet).
+We are attempting to (nearly) follow RFC 3986 but we may not have completely
+finished, and may have made some (slight) alterations. We should be
+documenting those changes as they are made.
 
-User info is stored as a list of segments.. A zero-length list implies there is no user info section in the URI.
-
-NOTE: this next paragraph is currently WRONG!
-Paths are represented by a list of path segments.
-A non-empty URI will always have at least one segment (even if empty).
-Absolute paths have a zero-length (ie '') first element (at index 0).
+The split function simply breaks up a URI into its components. At no time does
+it do ANY decoding of the URI material.
 
 See: http://en.wikipedia.org/wiki/Uniform_Resource_Identifier
 See: http://tools.ietf.org/html/rfc3986
 
 
-Basic encoding and decoding:
+Encoding and decoding:
 
     >>> encode("This is a string.")
     'This%20is%20a%20string.'
@@ -29,35 +28,8 @@ Basic encoding and decoding:
     >>> all_chars = ''.join(chr(x) for x in range(256));
     >>> decode(encode(all_chars)) == all_chars
     True
-
-Basic parsing:
     
-    >>> from pprint import pprint
-    >>> parse('scheme://user:pass@host:port/path?key=value#fragment')
-    ParsedUri(scheme='scheme', userinfo='user:pass', host='host', port='port', path='/path', query='key=value', fragment='fragment')
-    
-    >>> parse('mailto:fred@example.com')
-    ParsedUri(scheme='mailto', userinfo=None, host=None, port=None, path='fred@example.com', query=None, fragment=None)
-    
-    >>> uri = URI('scheme://user:pass@host:port/path1/2/3?key=value#fragment')
-    >>> str(uri)
-    'scheme://user:pass@host:port/path1/2/3?key=value#fragment'
-    >>> uri.scheme
-    'scheme'
-    >>> uri.userinfo
-    <uri.Userinfo:['user', 'pass']>
-    >>> uri.host
-    'host'
-    >>> uri.port
-    'port'
-    >>> uri.path
-    <uri.Path:['path1', '2', '3']>
-    >>> uri.query
-    <uri.Query:[('key', 'value')]>
-    >>> uri.fragment
-    'fragment'
-    
-Basic constuction:
+URI class usage:
 
     >>> uri = URI()
     >>> str(uri)
@@ -118,11 +90,18 @@ SplitUri = collections.namedtuple('SplitUri', 'scheme userinfo host port path qu
 ParsedUri = collections.namedtuple('ParsedUri', 'scheme userinfo host port path query fragment'.split())
 
 def split(uri):
-    """Split up a URI into its base components. Returns a SplitUri (which is a collections.namedtuple).
+    """Split up a URI into its base components. Returns a SplitUri (which is a
+    collections.namedtuple).
     
-    The split parts have NOT been decoded in any way. This ONLY splits up the URI.
+    The split parts have NOT been decoded in any way. This ONLY splits up the
+    URI.
     
-    Note that the path will always be a string, although it may be empty. If there is an authority part, then the host will always be a string as well, althought it may be empty. If there is no authority, the host will be none. The scheme will never be an empty string. The remaining sections will be a string if there delimeter is found, although they may be empty. They will be None if there delimiter was not found.
+    Note that the path will always be a string, although it may be empty. If
+    there is an authority part, then the host will always be a string as well,
+    althought it may be empty. If there is no authority, the host will be
+    none. The scheme will never be an empty string. The remaining sections
+    will be a string if there delimeter is found, although they may be empty.
+    They will be None if there delimiter was not found.
     
     Basic example:
     
@@ -133,9 +112,15 @@ def split(uri):
         'example.com'
     
     Empty sections:
+    
         >>> split('s://@:?#')
         SplitUri(scheme='s', userinfo='', host='', port='', path='', query='', fragment='')
         
+        >>> split('///path')
+        SplitUri(scheme=None, userinfo=None, host='', port=None, path='/path', query=None, fragment=None)
+        
+        >>> split('path?query#')
+        SplitUri(scheme=None, userinfo=None, host=None, port=None, path='path', query='query', fragment='')
         
     """
     # Pull our the 5 major parts.
@@ -154,32 +139,32 @@ def split(uri):
     }
     authority = m.group(4)
     if authority is not None:
-        ret.update(split_authority(authority))
+        ret.update(_split_authority(authority))
     else:
         for key in 'userinfo host port'.split():
             ret[key] = None
         
     return SplitUri(**ret)
 
-def split_authority(authority):
+def _split_authority(authority):
     """Split up an authority part into userinfo, host, and port. Returns a dict.
     
     The split parts have NOT been decoded in any way. Also, the host will always be a string, although it may be empty. The userinfo and port section will be None if they did not exist, but they may be an empty string if their delimiter existed, but there was no content.
     
     Basic example:
-        >>> split_authority('user:pass@example.com:port')
+        >>> _split_authority('user:pass@example.com:port')
         {'host': 'example.com', 'userinfo': 'user:pass', 'port': 'port'}
     
     Empty host:
-        >>> split_authority(':80')
+        >>> _split_authority(':80')
         {'host': '', 'userinfo': None, 'port': '80'}
     
     Empty port:
-        >>> split_authority('example.com:')
+        >>> _split_authority('example.com:')
         {'host': 'example.com', 'userinfo': None, 'port': ''}
     
     Empty userinfo:
-        >>> split_authority('@example.com')
+        >>> _split_authority('@example.com')
         {'host': 'example.com', 'userinfo': '', 'port': None}
     
     """
@@ -195,26 +180,18 @@ def split_authority(authority):
         'host': m.group(3),
         'port': m.group(5)
     }
-    
-def parse(uri):
-    uri = split(uri)
-    
-    return ParsedUri(
-        uri.scheme and decode(uri.scheme),
-        uri.userinfo,
-        uri.host and decode(uri.host),
-        uri.port and decode(uri.port),
-        uri.path,
-        uri.query,
-        uri.fragment and decode(uri.fragment)
-    )
-
 
 class URI(object):
     def __init__(self, uri=''):
-        parsed = parse(uri)._asdict()
-        for k, v in parsed.items():
-            setattr(self, k, v)
+        uri = split(uri)
+        
+        self.scheme = uri.scheme and decode(uri.scheme)
+        self.userinfo = uri.userinfo
+        self.host = uri.host and decode(uri.host)
+        self.port = uri.port and decode(uri.port)
+        self.path = uri.path
+        self.query = uri.query
+        self.fragment = uri.fragment and decode(uri.fragment)
     
     @property
     def path(self):
