@@ -192,11 +192,8 @@ class Path(list):
             elif self[i] == '..':
                 self.pop(i)
                 if i > 0:
-                    if i == len(self) - 1:
-                        self[i-1] = ''
-                    else:
-                        self.pop(i-1)
-                        i -= 1
+                    self.pop(i-1)
+                    i -= 1
             else:
                 i += 1
 
