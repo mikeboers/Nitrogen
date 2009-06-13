@@ -28,8 +28,19 @@ Encoding and decoding:
     >>> all_chars = ''.join(chr(x) for x in range(256));
     >>> decode(encode(all_chars)) == all_chars
     True
+
+Parsing a URI:
+    >>> uri = URI('http://example.com/path/to/stuff#fragment')
+    >>> uri
+    URI(scheme='http', userinfo=<uri.Userinfo:[]>, host='example.com', port=None, path=<uri.Path:absolute:['path', 'to', 'stuff']>, query=<uri.Query:[]>, fragment='fragment')
+    >>> uri.scheme
+    'http'
+    >>> uri.fragment
+    'fragment'
+    >>> str(uri.path)
+    '/path/to/stuff'
     
-URI class usage:
+Building up a URI:
 
     >>> uri = URI()
     >>> str(uri)
@@ -74,6 +85,17 @@ URI class usage:
     >>> str(uri)
     'https://example.com/d/e/f?a=1&b=2'
 
+Building up from keyword arguments:
+    
+    >>> str(URI(scheme='http', host='example.com'))
+    'http://example.com'
+    >>> str(URI(userinfo='user:pass', host='example.com'))
+    '//user:pass@example.com'
+    >>> str(URI(userinfo='user:pass'.split(':'), host='example.com'))
+    '//user:pass@example.com'
+    >>> str(URI(path=['a', 'path']))
+    'a/path'
+    
 Directories:
     >>> uri = URI()
     >>> uri.path = '/abs/path/to/dir/'
@@ -144,6 +166,22 @@ Abnormal examples (from RFC 5.4.2):
 
 	>>> # Schemes overide all!
 	>>> rfc_test("http:g", "http:g")
+
+Making sure there arent reference issues after resolving.
+    >>> base = URI('http://user:pass@example.com:80/path/to/stuff?query#fragment')
+    >>> base
+    URI(scheme='http', userinfo=<uri.Userinfo:['user', 'pass']>, host='example.com', port='80', path=<uri.Path:absolute:['path', 'to', 'stuff']>, query=<uri.Query:[('query', None)]>, fragment='fragment')
+    >>> ref = URI('../a')
+    >>> res = base.resolve(ref)
+    >>> str(res)
+    'http://user:pass@example.com:80/path/a'
+    >>> res.userinfo.append('more')
+    >>> res.path.append('more')
+    >>> res.query['key'] = 'value'
+    >>> str(res)
+    'http://user:pass:more@example.com:80/path/a/more?key=value'
+    >>> base
+    URI(scheme='http', userinfo=<uri.Userinfo:['user', 'pass']>, host='example.com', port='80', path=<uri.Path:absolute:['path', 'to', 'stuff']>, query=<uri.Query:[('query', None)]>, fragment='fragment')
     
 """
 
@@ -253,16 +291,19 @@ def _split_authority(authority):
     }
 
 class URI(object):
-    def __init__(self, uri=''):
+    def __init__(self, uri='', **kwargs):
         uri = uri if isinstance(uri, SplitUri) else split(uri)
+        uri = uri._asdict()
+        for k, v in kwargs.items():
+            uri[k] = v
         
-        self.scheme = uri.scheme and decode(uri.scheme)
-        self.userinfo = uri.userinfo
-        self.host = uri.host and decode(uri.host)
-        self.port = uri.port and decode(uri.port)
-        self.path = uri.path
-        self.query = uri.query
-        self.fragment = uri.fragment and decode(uri.fragment)
+        self.scheme = uri["scheme"] and decode(uri["scheme"])
+        self.userinfo = uri["userinfo"]
+        self.host = uri["host"] and decode(uri["host"])
+        self.port = uri["port"] and decode(uri["port"])
+        self.path = uri["path"]
+        self.query = uri["query"]
+        self.fragment = uri["fragment"] and decode(uri["fragment"])
     
     @property
     def path(self):
@@ -300,6 +341,8 @@ class URI(object):
     def has_authority(self):
         return self._userinfo or self.host is not None or self.port is not None
     
+    def __repr__(self):
+        return 'URI(scheme=%(scheme)r, userinfo=%(_userinfo)r, host=%(host)r, port=%(port)r, path=%(_path)r, query=%(_query)r, fragment=%(fragment)r)' % self.__dict__
     def str(self):
         uri = ''
         
@@ -374,8 +417,6 @@ class URI(object):
                     if str(R.path).startswith('/'):
                         T.path = R.path
                     else:
-                        # TODO MERGE
-                        # T.path = merge(Base.path, R.path)
                         if Base.has_authority and str(Base.path) in ('/', ''):
                             T.path = '/' + str(R.path)
                         else:
