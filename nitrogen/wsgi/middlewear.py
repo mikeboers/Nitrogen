@@ -5,19 +5,19 @@ from .input import Get, Post
 
 def cookie_parser(app):
     def inner(environ, start):
-        environ['boers.cookies'] = CookieContainer(environ.get('HTTP_COOKIE', ''))
+        environ['nitrogen.cookies'] = CookieContainer(environ.get('HTTP_COOKIE', ''))
         return app(environ, start)    
     return inner
 
 def get_parser(app):
     def inner(environ, start):
-        environ['boers.get'] = Get(environ)
+        environ['nitrogen.get'] = Get(environ)
         return app(environ, start)
     return inner
 
 def post_parser(app):
     def inner(environ, start):
-        environ['boers.post'] = Post(environ)
+        environ['nitrogen.post'] = Post(environ)
         return app(environ, start)
     return inner
 
