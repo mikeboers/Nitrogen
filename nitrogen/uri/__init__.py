@@ -73,6 +73,71 @@ URI class usage:
     >>> uri.query.sort()
     >>> str(uri)
     'https://example.com/d/e/f?a=1&b=2'
+
+Resolving relative URIs:
+    
+    >>> base = URI('http://a/b/c/d;p?q')
+    >>> def rfc_test(relative, result):
+    ...     resolved = base.resolve(relative)
+    ...     if str(resolved) != str(result):
+    ...         print resolved
+
+Normal examples (from RFC 5.4.1):
+
+	>>> rfc_test("g:h", "g:h")
+	>>> rfc_test("g", "http://a/b/c/g")
+	>>> rfc_test("./g", "http://a/b/c/g")
+	>>> rfc_test("g/", "http://a/b/c/g/")
+	>>> rfc_test("/g", "http://a/g")
+	>>> rfc_test("//g", "http://g")
+	>>> rfc_test("?y", "http://a/b/c/d;p?y")
+	>>> rfc_test("g?y", "http://a/b/c/g?y")
+	>>> rfc_test("#s", "http://a/b/c/d;p?q#s")
+	>>> rfc_test("g#s", "http://a/b/c/g#s")
+	>>> rfc_test("g?y#s", "http://a/b/c/g?y#s")
+	>>> rfc_test(";x", "http://a/b/c/;x")
+	>>> rfc_test("g;x", "http://a/b/c/g;x")
+	>>> rfc_test("g;x?y#s", "http://a/b/c/g;x?y#s")
+	>>> rfc_test("", "http://a/b/c/d;p?q")
+	>>> rfc_test(".", "http://a/b/c/")
+	>>> rfc_test("./", "http://a/b/c/")
+	>>> rfc_test("..", "http://a/b/")
+	>>> rfc_test("../", "http://a/b/")
+	>>> rfc_test("../g", "http://a/b/g")
+	>>> rfc_test("../..", "http://a/")
+	>>> rfc_test("../../", "http://a/")
+	>>> rfc_test("../../g", "http://a/g")
+
+Abnormal examples (from RFC 5.4.2):
+
+	>>> # Being careful about having too many '..'s
+	>>> rfc_test("../../../g", "http://a/g")
+	>>> rfc_test("../../../../g", "http://a/g")
+
+	>>> # Only removes segments that are fully '.' or '..'
+	>>> rfc_test("/./g", "http://a/g")
+	>>> rfc_test("/../g", "http://a/g")
+	>>> rfc_test("g.", "http://a/b/c/g.")
+	>>> rfc_test(".g", "http://a/b/c/.g")
+	>>> rfc_test("g..", "http://a/b/c/g..")
+	>>> rfc_test("..g", "http://a/b/c/..g")
+
+	>>> # Redundant '.'s or '..'s
+	>>> rfc_test("./../g", "http://a/b/g")
+	>>> rfc_test("./g/.", "http://a/b/c/g/")
+	>>> rfc_test("g/./h", "http://a/b/c/g/h")
+	>>> rfc_test("g/../h", "http://a/b/c/h")
+	>>> rfc_test("g;x=1/./y", "http://a/b/c/g;x=1/y")
+	>>> rfc_test("g;x=1/../y", "http://a/b/c/y")
+
+	>>> # Queries and fragments are seperate too!
+	>>> rfc_test("g?y/./x", "http://a/b/c/g?y/./x")
+	>>> rfc_test("g?y/../x", "http://a/b/c/g?y/../x")
+	>>> rfc_test("g#s/./x", "http://a/b/c/g#s/./x")
+	>>> rfc_test("g#s/../x", "http://a/b/c/g#s/../x")
+
+	>>> # Schemes overide all!
+	>>> rfc_test("http:g", "http:g")
     
 """
 
@@ -226,6 +291,9 @@ class URI(object):
         else:
             self._userinfo = Userinfo(input)
     
+    def has_authority(self):
+        return self._userinfo or self.host is not None or self.port is not None
+    
     def str(self):
         uri = ''
         
@@ -234,7 +302,7 @@ class URI(object):
             uri += encode(self.scheme, '+') + ':'
         
         # Append the authority
-        has_authority = self._userinfo or self.host is not None or self.port is not None
+        has_authority = self.has_authority()
         if has_authority:
             uri += '//'
             if self._userinfo:
@@ -260,6 +328,67 @@ class URI(object):
         return uri
     
     __str__ = str
+    
+    def resolve(self, reference, strict=True):
+        # TODO: there may be tons of reference issues here with the userinfo
+        # and such being carried from one to another.
+        
+        # This is coming mainly from RFC section 5.2.2
+        R = URI(str(reference))
+        T = URI()
+        Base = URI(str(self))
+        
+        # A non-strict parser may ignore a scheme in the reference if it is
+        # identical to the base URI's scheme.
+        if not strict and R.scheme == Base.scheme:
+            R.scheme = None
+        
+        # If it has a scheme it is essentially absolute already.
+        if R.scheme is not None:
+            T.scheme = R.scheme
+            T.userinfo = R.userinfo
+            T.host = R.host
+            T.port = R.port
+            T.path = R.path
+            T.query = R.query
+            
+        else:
+            if R.has_authority():
+                T.userinfo = R.userinfo
+                T.host = R.host
+                T.port = R.port
+            else:
+                if str(R.path) == '':
+                    T.path = Base.path
+                    if R.query:
+                        T.query = R.query
+                    else:
+                        T.query = Base.query
+                else:
+                    if str(R.path).startswith('/'):
+                        T.path = R.path
+                    else:
+                        # TODO MERGE
+                        # T.path = merge(Base.path, R.path)
+                        if Base.has_authority and str(Base.path) in ('/', ''):
+                            T.path = '/' + str(R.path)
+                        else:
+                            T.path = str(Base.path)
+                            T.path.pop()
+                            T.path.extend(R.path)
+                    T.query = R.query                
+                T.userinfo = Base.userinfo
+                T.host = Base.host
+                T.port = Base.port
+            T.scheme = Base.scheme
+        
+        T.fragment = R.fragment
+        T.path.remove_dot_segments()
+        return T
+        
+        
+            
+            
 
 if __name__ == '__main__':
     import doctest
