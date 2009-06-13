@@ -183,7 +183,7 @@ def _split_authority(authority):
 
 class URI(object):
     def __init__(self, uri=''):
-        uri = split(uri)
+        uri = uri if isinstance(uri, SplitUri) else split(uri)
         
         self.scheme = uri.scheme and decode(uri.scheme)
         self.userinfo = uri.userinfo
