@@ -40,18 +40,37 @@ class Path(list):
         >>> path.relative = True
         >>> print path
         some/path
+    
+    Empty paths:
+    
+        >>> path = Path('/')
+        >>> path
+        <uri.Path:absolute:[]>
+        >>> print path
+        /
+        
+        >>> path = Path('')
+        >>> path
+        <uri.Path:relative:[]>
+        >>> print path
+        <BLANKLINE>
+        
+        >>> path.relative = False
+        >>> print path
+        /
         
     """
     
     def __init__(self, input=None, absolute=False):
         self.absolute = absolute
-        if not input:
+        if input is None:
             return
         if isinstance(input, basestring):
             self.absolute = input and input[0] == '/'
             if self.absolute:
                 input = input[1:]
-            self.extend(decode(x) for x in input.split('/'))
+            if input:
+                self.extend(decode(x) for x in input.split('/'))
         else:
             self.extend(str(x) for x in input)
     
