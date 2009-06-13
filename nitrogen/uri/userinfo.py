@@ -3,12 +3,70 @@
 from transcode import *
 
 class Userinfo(list):
+    """A representation of the userinfo segment in a URI.
+    
+    Passed objects will only be parsed as a string if they extend the
+    basestring. Otherwise they will be treated as a list of string segments.
+    
+    This object has all list methods, except a different repr and str, as well
+    as a pair of absolute/relative parameters (which automatically reflect
+    each other).
+    
+    Basic parsing:
+        
+        >>> userinfo = Userinfo('user:pass')
+        >>> userinfo
+        <uri.Userinfo:['user', 'pass']>
+        >>> str(userinfo)
+        'user:pass'
+    
+    Modifications:
+    
+        >>> userinfo = Userinfo()
+        >>> userinfo.append('user')
+        >>> str(userinfo)
+        'user'
+        >>> userinfo.append('pass')
+        >>> str(userinfo)
+        'user:pass'
+    
+    Encoding:
+    
+        >>> userinfo = Userinfo(['something with spaces'])
+        >>> userinfo
+        <uri.Userinfo:['something with spaces']>
+        >>> str(userinfo)
+        'something%20with%20spaces'
+    
+    Decoding:
+        
+        >>> userinfo = Userinfo('something%20with%20spaces')
+        >>> userinfo
+        <uri.Userinfo:['something with spaces']>
+        >>> str(userinfo)
+        'something%20with%20spaces'
+    
+    Empty userinfo:
+    
+        >>> userinfo = Userinfo()
+        >>> userinfo
+        <uri.Userinfo:[]>
+        >>> str(userinfo)
+        ''
+        
+        >>> userinfo = Userinfo('')
+        >>> userinfo
+        <uri.Userinfo:[]>
+        >>> str(userinfo)
+        ''
+    """
     
     def __init__(self, input=None):
-        if not input:
+        if input is None:
             return
         if isinstance(input, basestring):
-            self.extend(decode(x) for x in input.split(':'))
+            if input:
+                self.extend(decode(x) for x in input.split(':'))
         else:
             self.extend(input)
 
@@ -17,3 +75,9 @@ class Userinfo(list):
     
     def __repr__(self):
         return '<uri.Userinfo:%s>' % list.__repr__(self)
+
+if __name__ == '__main__':
+    import doctest
+    print "Testing..."
+    doctest.testmod()
+    print "Done."
