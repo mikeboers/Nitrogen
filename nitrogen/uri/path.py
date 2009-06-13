@@ -114,6 +114,19 @@ class Path(list):
         >>> path = Path('relative/path')
         >>> path.str(authority=True)
         '/relative/path'
+    
+    remove_dot_segments from RFC section 5.2.4:
+    
+        >>> path = Path('/a/b/c/./../../g')
+        >>> path.remove_dot_segments()
+        >>> str(path)
+        '/a/g'
+        
+        >>> path = Path('mid/content=5/../6')
+        >>> path.remove_dot_segments()
+        >>> str(path)
+        'mid/6'
+        
         
     """
     
@@ -156,6 +169,20 @@ class Path(list):
     
     def __repr__(self):
         return '<uri.Path:%s:%s>' % (('absolute' if self.absolute else 'relative'), list.__repr__(self))
+    
+    def remove_dot_segments(self):
+        i = 0
+        while i < len(self):
+            # print i, self[i], list(self)
+            if self[i] == '.':
+                self.pop(i)
+            elif self[i] == '..':
+                self.pop(i)
+                if i > 0:
+                    self.pop(i-1)
+                    i -= 1
+            else:
+                i += 1
 
 if __name__ == '__main__':
     import doctest
