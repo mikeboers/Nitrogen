@@ -226,9 +226,8 @@ class URI(object):
         else:
             self._userinfo = Userinfo(input)
     
-    def __str__(self):
+    def str(self):
         uri = ''
-        
         
         # Append the scheme.
         if self.scheme is not None:
@@ -245,27 +244,10 @@ class URI(object):
                 uri += ':' + encode(self.port)
         
         # Append the path
-        # TODO: Conform this to section 3.3 on the reference.
-        if self._path and self._path != ['']:
-            path = [encode(x, SUB_DELIMS + '@:') for x in self._path]
-            
-            # If there is no scheme, we must encode colons in the first chunk.
-            # This coresponds to the "path-noscheme" ABNF in section 3.3 of the RFC.
-            if not self.scheme and path:
-                path[0] = path[0].replace(':', '%%%02x' % ord(':'))
-            
-            # If there is no authority there can be no empty segments at begining.
-            # This coresponds to the "path-absolute" ABNF in section 3.3 of the RFC.
-            if not has_authority:
-                while path and not path[0]:
-                    path.pop(0)
-            
-            # If there IS an authority we must have a preceding slash.
-            # This coresponds to the "path-abempty" ABNF in section 3.3 of the RFC.
-            elif path and path[0]:
-                path.insert(0, '')
-            
-            uri += '/'.join(path)
+        uri += self._path.str(
+            scheme=self.scheme is not None,
+            authority=has_authority
+        )
         
         # Append the query.
         if self._query:
@@ -276,7 +258,8 @@ class URI(object):
             uri += '#' + encode(self.fragment, '/?')
         
         return uri
-
+    
+    __str__ = str
 
 if __name__ == '__main__':
     import doctest
