@@ -1,0 +1,23 @@
+
+webapp.dev
+	httpdocs
+		nitrogen
+			__init__.py
+			most of the lib is here
+			ext
+				jinja2
+				fcgi
+				markdown
+				sqlalchemy
+				BeautifulSoup
+			wsgi
+				middlewear
+				request
+				cookies
+				routing
+		
+~account
+	httpdocs
+		nitrogen
+		webapp
+		dispatch.py

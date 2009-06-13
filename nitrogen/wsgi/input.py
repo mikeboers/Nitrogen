@@ -1,8 +1,14 @@
 """
 
 A set of read-only GET/POST parsers.
+
+Note that these are for general practical use, and are generalized for that
+use case. Therefore, while they will accept more than one value under the same
+key, under normal dict-like usage they will only return the first of those
+values. Also, while keys do not retain the order that they were parsed in,
+the different values for each key certainly do.
     
-Initialization:
+GET Initialization:
     >>> get = Get({'QUERY_STRING': 'key=value&same=first&same=second'})
 
 Basic usage:
@@ -28,14 +34,25 @@ Lots of normal dict methods:
     ['key', 'same']
     >>> get.items()
     [('key', 'value'), ('same', 'first')]
-
+    
 It will accept more than one of the same key. When accessed by all of the
-normal dict methods, only the first value will ever be returnd. You can access
-the rest of them with the Get.list(key) method:
+normal dict methods, only the first value will ever be returned. You can access
+the rest of them (in order) with the get.list(key) method:
 
     >>> [(key, get.list(key)) for key in get]
     [('key', ['value']), ('same', ['first', 'second'])]
 
+Alternatively, you can use the allitems() and iterallitems() methods:
+    >>> get.allitems()
+    [('key', 'value'), ('same', 'first'), ('same', 'second')]
+    >>> type(get.iterallitems())
+    <type 'generator'>
+    >>> for item in get.iterallitems():
+    ...     print '%s: %r' % item
+    key: 'value'
+    same: 'first'
+    same: 'second'
+    
 POST Initialization:
     >>> import StringIO
     >>> post = Post({
@@ -53,7 +70,7 @@ import collections
 class SimpleFields(collections.Mapping):
     
     def __init__(self, environ):
-        self._data = {}            
+        self._data = {}         
         fs = self._fieldstorage(environ)
         for key in fs:
             self._data[key] = fs.getlist(key)
@@ -72,6 +89,14 @@ class SimpleFields(collections.Mapping):
     
     def list(self, key):
         return self._data.get(key)
+    
+    def iterallitems(self):
+        for key in self:
+            for value in self.list(key):
+                yield (key, value)
+    
+    def allitems(self):
+        return list(self.iterallitems())
 
 class _FieldStorage(cgi.FieldStorage):
     def make_file(self, binary=None):

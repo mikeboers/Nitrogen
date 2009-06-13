@@ -1,0 +1,38 @@
+
+inject the server and config to boers.server and boers.config in some middlewear.
+the error handler can read off of that to see wtf is up.
+maybe always pass the full environment to jinja as env
+	{% if env.boers.server.is_dev %}
+		Drop the dump here.
+	{% endif %}
+
+cache middlewear
+	if the env has been modified to have a boers.cache_duration or whatnot, cache it
+
+session middlewear
+	runs off of a cookie
+
+cookie signer
+	give it a key, and it signs every cookie going out (checks all the set-cookie headers) and verifies them once they come back in
+	this really needs to be in the general cookies thing
+		just use a signed cookies container
+	first make <expirytime>|<nonce>|cookievalue
+	hash it
+	then return <hash>|<expirytime>|<nonce>|cookievalue
+	c4e71c4ecd34f1f4ee927397d70a320a|1244839877|c4e71c4e|value
+	
+	cookie container should ignore all cookie errors thrown while a cookie is parsing values through _loads
+
+start_delay
+	delays the start until the sub-iterator has been exhausted
+	this should be the only one which caches the response like this, ever.
+
+
+request_builder
+	takes an env and start and build a wrapper around them that is "easier" to use
+	with get post cookies environ headers etc
+	has a print function which we use to print into it
+
+cookies:
+	should throw exception when cookies are modified after headers are sent
+	or just silently fail and let the start_delay take care of it.

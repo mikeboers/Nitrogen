@@ -1,0 +1,3 @@
+the file upload and download is done through normal CGI because the download pipe was breaking after about 15 to 20 seconds (there was an exception in the fcgi module) and the upload pipe was doing something wonky... that I don't remember.
+
+needed to create symbolic links for the /usr/lib/libjpeg.so.* to ~/lib/libjpeg.so so that I could compile PIL

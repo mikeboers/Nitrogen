@@ -1,0 +1,34 @@
+maybe use decorators to determine routing
+
+@route(r'^match')
+def app1(env, start)
+	env['boers.autostart']()
+	yield 'This one starts with match!\n'
+
+
+there is a class, which is a wsgi app, which takes the first of the path segments, and tries to call a method by that name on itself. these could be nested
+
+class Router(object):
+	# make it go here
+	pass
+
+
+class index(Router):
+	
+	def index(env, start):
+		env['boers.router.start'].start()
+		yield 'This is the index.'
+	
+	class inner(Router):
+		
+		def index(env, start):
+			env['boers.router.start'].start()
+			yield 'This is on the inside.'
+		
+		def _404(env, start):
+			# this is for ones that aren't found.
+		
+		def _505(env, start):
+			# this is for ones that error while going
+
+/inner/index will go to the inner one

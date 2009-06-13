@@ -1,0 +1,33 @@
+-? cancel throws and alert if there are changes
+
+-? moving away from the page throws and alert if there are changes
+
+-? preview button drops it all back into place with new values
+
+-? cancel throws an alert if there were changes
+
+- better handing of API errors
+	I think I can remove all the api error messages
+	just the error code is good enough
+
+-? see if I can get template cloning into the editables
+	have them created right beside the template which is hidden
+
+####
+
+
+-? figure out a messaging system like on rebelhouse or the humanized messaging system
+
+- documentation
+    document a lot of the basic setup
+    how info flows around
+	how to deploy and update
+	what the cron does
+	server setup
+		python version
+		python modules
+		cron file
+
+-? rewrite a bunch of stuff to use weakrefs... dicts which use threads as keys, for instance
+	def threaded_store(stuff_to_insert = None):
+		return stuff if data is None, or initialize it to None

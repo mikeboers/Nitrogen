@@ -1,0 +1,71 @@
+FEATURES TO ADD:
+    - multiple selections
+    - need control over the order of actions
+    - make the upload que sortable
+    - Restarting of failed and cancelled uploads.
+    - Panes should be resizable.
+    - info panel can be turned off
+    - actions are actually node methods
+        node.files.mkdir()
+        node.files.delete()
+        node.files.move()
+        should raise an exception if they cant do it.
+        the ui still checks for ext changes and such
+    - allow_* should be show_* and affect the action panel only.
+
+- Need to be more obvious about how everything works.
+    Remember who it is for.
+
+
+BUGS:
+    √ needs to deal with user timeout better
+        pulse the api.signal every 5 minutes
+    √ you can rename over existing files
+        alert that this isn't allowed
+    √ you can move file into folder with file of same name
+        prompt if they want to overwrite it
+    √ visual jump on opening directories
+    √ dropping files into an open directory with no children
+        they do not appear instantly
+    √ you can upload over files
+        don't allow it at request time
+        append a _# at moving time.
+    √ should warn if you are changing file extensions
+    √ flash the upload markup instead of removing it
+    √ click to remove the upload markup
+        instead of it removing itself
+    √ partial uploads are still put into place
+        they should be rejected and an error passed back down
+    √ either the iframe finishing OR the status coming back "done" should flag a file as done
+        or don't go off the iframe at all...
+    √ need a sanity check on the upload checks. if the ticket hasnt updated in a couple seconds there is something wrong
+    √ ability to cancel uploads
+    √ ability to remove uploads from que
+    √ ability to handle half uploaded files
+        With Firefox on my laptop and work machines, the predicted size is exactly the same as the number of uploaded bytes.
+        If they don't match, it is incomplete.
+    √ collapsing the folder of the selected file should select the collapsed folder
+    √ counter on the ticket to see how many times it has been probed
+        use this so that ticket updates come back in order
+        don't need to do this, as I wait for an update to come back before asking for the next
+    √ more graceful handling of "The specified ID does not exist" errors
+        it was send with id = "undefined"
+    √ sometimes it checks if upload.id == res.id, and upload is null
+    √ temp upload directory should be in config (and be /app/uploads)
+    √ matching progress bar colours for different states.
+    √ On naming collisoin, remember if they were warned, and don't warn a second time.
+    √ make sure I am removing iframes and forms for uploads.
+    √ Toggle div should have a &nbsp; in it.
+    √ speed, bytes uploaded, eta calculations
+    √ Add a message into the upload markup for the message coming back from the server.
+    √ tailor message better
+    √ average out eta samples.
+    √ speed = 0 leads to infinity eta
+    √ click on the eta to swtich from eta to elapsed mode
+    √ smoothly animate the progress bar.
+    √ need to change the selection when renaming things
+
+    - long upload descriptions tend to force layout wierdnedd with the elapsed time
+    - overly long file names tend to wrap to the next line in wierd circumstances
+        Ask shane about this one.
+    - need to catch api errors on the Upload.pulse

@@ -1,0 +1,24 @@
+-?? heirarchical api method tree
+	model.<model_type>.new
+	model.<model_type>.<id>.new
+	/model/model-type/id/new
+	/reflect
+
+-?? encapsulate all the api args some how:
+	1) have the args in a sub section: {
+		method: 'some_method',
+		transport_option: 'something',
+		data: {
+			key: 'value'
+		}
+	}
+
+
+-?? take the source for the YUI uploader and write my own very very simple one
+	- this seems pretty stupid of me =P
+
+contain the entire app in a subdirectory similar to the rebelhouse/nitrogen setup
+
+status_helper is a terrible name. remove helper
+	status_resolver
+	status_fixer

@@ -1,0 +1,20 @@
+Think about using ':' as path seperators, and ';' as query seperators.
+Think about having path key/value pairs.
+
+scheme:///path should have host = '' (not None) and path = '/path'
+
+How to represent paths?
+	list of segments, and an is_relative flag?
+		I believe this makes the most sense for most cases.
+		Nearly all are going to be absolute
+	Move all of the encoding of the path to the Path object
+		path.str(no_authority=False, no_scheme=False)
+	
+	'/a/b/c' -> a, b, c
+		str() -> '/a/b/c'
+	'a/b/c'  -> a, b, c, relative=True
+
+
+
+The Uri class should jump right from the split, and not use parse
+the unsplitting should be from an unsplit function
