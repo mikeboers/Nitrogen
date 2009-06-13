@@ -20,44 +20,56 @@ class Path(list):
         >>> path = Path('/absolute/path/to/something')
         >>> path
         <uri.Path:absolute:['absolute', 'path', 'to', 'something']>
-        >>> print path
-        /absolute/path/to/something
+        >>> str(path)
+        '/absolute/path/to/something'
         
         >>> path = Path('relative/path/to/something')
         >>> path
         <uri.Path:relative:['relative', 'path', 'to', 'something']>
-        >>> print path
-        relative/path/to/something
+        >>> str(path)
+        'relative/path/to/something'
     
     Switching to/from relative/absolute:
     
         >>> path = Path('some/path')
-        >>> print path
-        some/path
+        >>> str(path)
+        'some/path'
         >>> path.absolute = True
-        >>> print path
-        /some/path
+        >>> str(path)
+        '/some/path'
         >>> path.relative = True
-        >>> print path
-        some/path
+        >>> str(path)
+        'some/path'
+    
+    Basic modifications:
+    
+        >>> path = Path('/some/path/to/stuff')
+        >>> path.pop(0)
+        'some'
+        >>> str(path)
+        '/path/to/stuff'
+        >>> path.pop()
+        'stuff'
+        >>> str(path)
+        '/path/to'
     
     Empty paths:
     
         >>> path = Path('/')
         >>> path
         <uri.Path:absolute:[]>
-        >>> print path
-        /
+        >>> str(path)
+        '/'
         
         >>> path = Path('')
         >>> path
         <uri.Path:relative:[]>
-        >>> print path
-        <BLANKLINE>
+        >>> str(path)
+        ''
         
         >>> path.relative = False
-        >>> print path
-        /
+        >>> str(path)
+        '/'
         
     """
     
