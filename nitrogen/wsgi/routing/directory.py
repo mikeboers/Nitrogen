@@ -1,17 +1,11 @@
 """Module for wsgi dispatchers."""
 
 import os
+import re
 
-# Import the URI class
-try:
-    from ..uri import URI
-except ValueError:
-    # For local testing.
-    import sys
-    sys.path.append('..')
-    from uri import URI
+from . import get_unrouted
 
-class DirectoryDispatcher(object):
+class Directory(object):
     
     def __init__(self, path, app_key='app'):
         self.path = path
@@ -31,8 +25,9 @@ class DirectoryDispatcher(object):
         self.apps[path] = (os.path.getmtime(path), scope[self.app_key])
     
     def __call__(self, environ, start):
-        uri = URI(environ.get('REQUEST_URI', ''))
-        name = uri.path[0] if uri.path else ''
+        path = get_unrouted(environ)
+        name = path.pop(0) if path else ''
+        name = name if name else 'index'
         path = self.build_path(name)
         
         try:
