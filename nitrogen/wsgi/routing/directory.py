@@ -3,7 +3,7 @@
 import os
 import re
 
-from . import get_unrouted
+from . import get_route_segment
 
 class Directory(object):
     
@@ -25,9 +25,7 @@ class Directory(object):
         self.apps[path] = (os.path.getmtime(path), scope[self.app_key])
     
     def __call__(self, environ, start):
-        path = get_unrouted(environ)
-        name = path.pop(0) if path else ''
-        name = name if name else 'index'
+        name = get_route_segment(environ) or 'index'
         path = self.build_path(name)
         
         try:
