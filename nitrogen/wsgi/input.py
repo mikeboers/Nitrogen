@@ -19,8 +19,8 @@ class _SimpleFields(collections.Mapping):
     Note that this is for general practical use, and are generalized for that
     use case. Therefore, while they will accept more than one value under the same
     key, under normal dict-like usage they will only return the first of those
-    values. Also, while keys do not retain the order that they were parsed in,
-    the different values for each key certainly do.
+    values. If the special methods are used to access all of the key/value
+    pairs, the order that they were recieved WILL be maintained.
         
     Initialization:
         >>> import StringIO
