@@ -71,9 +71,12 @@ def debugger(app):
             
             except Exception as e:
                 tb = traceback.format_exc()
-                self.start('500 Server Error', [
-                    ('Content-Type', 'text/plain')
-                ])
+                try:
+                    self.start('500 Server Error', [
+                        ('Content-Type', 'text/plain')
+                    ])
+                except:
+                    pass
                 yield 'UNCAUGHT EXCEPTION\n'
                 yield tb
                 yield '\n'
