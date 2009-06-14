@@ -32,3 +32,6 @@ class index(Router):
 			# this is for ones that error while going
 
 /inner/index will go to the inner one
+
+DirectoryDispatcher:
+	needs to write what it is doing out to the log
