@@ -1,1 +1,0 @@
-Rewrite the escaping/markdown/clean_html functions to use jinja.Markdown properly.

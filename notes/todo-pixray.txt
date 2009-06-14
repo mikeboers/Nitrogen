@@ -17,17 +17,3 @@
 
 
 -? figure out a messaging system like on rebelhouse or the humanized messaging system
-
-- documentation
-    document a lot of the basic setup
-    how info flows around
-	how to deploy and update
-	what the cron does
-	server setup
-		python version
-		python modules
-		cron file
-
--? rewrite a bunch of stuff to use weakrefs... dicts which use threads as keys, for instance
-	def threaded_store(stuff_to_insert = None):
-		return stuff if data is None, or initialize it to None

@@ -26,8 +26,9 @@ def build_environment(*paths):
     )
 
     # Setup nl2br and escape.
-    # This should be done better. nl2br can be smart about working on Markup
+    # This could be done better. nl2br can be smart about working on Markup
     # objects so that we don't have to replace the built in escape filter.
+    # The question then becomes, do I WANT to keep using the Markup objects?
     nl2br = lambda s: s.replace("\n", "<br />")
     escape = lambda s: unicode(jinja.escape(s))
 
