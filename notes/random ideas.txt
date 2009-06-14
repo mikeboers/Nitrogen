@@ -12,7 +12,3 @@
 			key: 'value'
 		}
 	}
-
-
-
-NEED to read the URI specs about how to deal with +s

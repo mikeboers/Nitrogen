@@ -95,6 +95,7 @@ Set one that is more complex.
 #
 import string
 import collections
+import re
 
 # These are for the encrypted cookies.
 try:
@@ -102,7 +103,15 @@ try:
 except ImportError:
     import pickle
 
-import re
+# For signed cookies
+try:
+    from ..uri.query import Query
+except ValueError:
+    # For local testing.
+    import sys
+    sys.path.append('..')
+    from uri.query import Query
+
 
 # Define an exception visible to External modules
 class Error(Exception):
@@ -488,24 +497,69 @@ def make_encrypted_container(entropy):
     return EncryptedContainer
 
 def make_signed_container(entropy):
+    """Builds a signed cookie container class.
+    
+    Examples:
+    
+        >>> SignedClass = make_signed_container('this is the key material')
+        >>> signed = SignedClass()
+        >>> signed['key'] = 'value'
+        >>> encoded = signed.build_headers()[0][1]
+        >>> encoded # doctest:+ELLIPSIS
+        'key="v=value&n=...&s=..."'
+        
+        >>> verified = SignedClass(encoded)
+        >>> verified['key'].value
+        'value'
+        
+        >>> encoded = encoded[:-5] + '"'
+        >>> bad = SignedClass(encoded)
+        >>> bad['key']
+        Traceback (most recent call last):
+        KeyError: 'key'
+        
+        >>> signed = SignedClass()
+        >>> signed.create('key', 'this expires', maxage=10)
+        >>> encoded = signed.build_headers()[0][1]
+        >>> encoded # doctest:+ELLIPSIS
+        'key="v=this%20expires&x=...&n=...&s=..."; Max-Age=10'
+        
+        >>> verified = SignedClass(encoded)
+        >>> verified['key'].value
+        'this expires'
+        
+    """
+    
     import os
     import hmac
     import hashlib
-    from urllib import urlencode
-    from urlparse import parse_qs
-
+    import time
+    
     class SignedContainer(Container):
         class cookie_class(Cookie):
-            @staticmethod
-            def _dumps(value):
-                to_sign = [('value', value), ('nonce', os.urandom(8).encode('hex'))]
-                sig = hmac.new(entropy, urlencode(to_sign, True), hashlib.md5)
-                to_sign.append[('sig', sig)]
-                return urlencode(to_sign, True)
+            
+            def _dumps(self, value):
+                query = Query()
+                query['v'] = value
+                if self.maxage is not None:
+                    query['x'] = int(time.time()) + self.maxage
+                query['n'] = os.urandom(4).encode('hex')
+                query['s'] = hmac.new(entropy, str(query), hashlib.md5).hexdigest()
+                return str(query)
             
             @staticmethod
             def _loads(value):
-                return value
+                try:
+                    query = Query(value)
+                    sig = query['s']
+                    del query['s']
+                    if hmac.new(entropy, str(query), hashlib.md5).hexdigest() != sig:
+                        raise Error("Bad signature.")
+                    if 'x' in query and int(query['x']) < time.time():
+                        raise Error("Expired cookie.")
+                    return query['v']
+                except Exception as e:
+                    raise Error(str(e))
 
     return SignedContainer
 
