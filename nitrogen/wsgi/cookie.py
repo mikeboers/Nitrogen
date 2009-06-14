@@ -496,7 +496,7 @@ def make_encrypted_container(entropy):
     
     return EncryptedContainer
 
-def make_signed_container(entropy):
+def make_signed_container(entropy, maxage=None):
     """Builds a signed cookie container class.
     
     Examples:
@@ -541,8 +541,9 @@ def make_signed_container(entropy):
             def _dumps(self, value):
                 query = Query()
                 query['v'] = value
-                if self.maxage is not None:
-                    query['x'] = int(time.time()) + self.maxage
+                maxages = [x for x in [self.maxage, maxage] if x is not None]
+                if maxages:
+                    query['x'] = int(time.time()) + min(maxages)
                 query['n'] = os.urandom(4).encode('hex')
                 query['s'] = hmac.new(entropy, str(query), hashlib.md5).hexdigest()
                 return str(query)
