@@ -12,11 +12,6 @@ except ValueError:
     import sys
     sys.path.append('..')
     from uri.query import Query
-
-class FileRejectingFieldStorage(cgi.FieldStorage):
-    """cgi.FieldStorage class which rejects all posted files."""
-    def make_file(self, binary=None):
-        raise TypeError('Not accepting posting files.')
         
 class _SimpleFields(collections.Mapping):
     """A read-only GET/POST representation.
@@ -34,7 +29,7 @@ class _SimpleFields(collections.Mapping):
         ...     'wsgi.input': StringIO.StringIO('key=value&same=first&same=second')
         ... })
         >>> post
-        {'key': ['value'], 'same': ['first', 'second']}
+        [('key', 'value'), ('same', 'first'), ('same', 'second')]
 
     Basic usage:
         >>> post['key']
@@ -71,7 +66,7 @@ class _SimpleFields(collections.Mapping):
         >>> post.allitems()
         [('key', 'value'), ('same', 'first'), ('same', 'second')]
         >>> type(post.iterallitems())
-        <type 'generator'>
+        <type 'listiterator'>
         >>> for item in post.iterallitems():
         ...     print '%s: %r' % item
         key: 'value'
@@ -79,42 +74,69 @@ class _SimpleFields(collections.Mapping):
         same: 'second'
     """
     
-    field_storage_class = FileRejectingFieldStorage
-    
     def __init__(self, environ):
-        self._data = {}
-        for key in fs:
-            self._data[key] = fs.getlist(key)
+        self._keys = []
+        self._key_i = {}
+        self._pairs = []
+        for key, value in self._parse_environ(environ):
+            if key not in self._key_i:
+                self._keys.append(key)
+                self._key_i[key] = len(self._pairs)
+            self._pairs.append((key, value))
     
     def _parse_environ(self, environ):
         raise NotImplemented()
     
     def __repr__(self):
-        return repr(self._data)
+        return repr(self._pairs)
     
     def __getitem__(self, key):
-        return self._data[key][0]
+        return self._pairs[self._key_i[key]][1]
     
     def __iter__(self):
-        return iter(self._data)
+        return iter(self._keys)
     
     def __len__(self):
-        return len(self._data)
+        return len(self._key_i)
+    
+    def iter(self, key):
+        for k, v in self._pairs:
+            if k == key:
+                yield v
     
     def list(self, key):
-        return self._data.get(key)
+        return list(self.iter(key))
     
     def iterallitems(self):
-        for key in self:
-            for value in self.list(key):
-                yield (key, value)
+        return iter(self._pairs)
     
     def allitems(self):
-        return list(self.iterallitems())
+        return self._pairs[:]
 
 class Get(_SimpleFields):
-    pass
+    """Read-only GET parser.
+    
+    For main examples, see _SimpleFields.
+    
+    Get initialization:
+        
+        >>> get = Get({'QUERY_STRING': 'key=value&same=first&same=second'})
+        >>> get
+        [('key', 'value'), ('same', 'first'), ('same', 'second')]
+    """
+    def _parse_environ(self, environ):
+        query = environ.get('QUERY_STRING')
+        if query is None:
+            return
+        query = Query(query)
+        return query.iterallitems()
 
+class FileRejectingFieldStorage(cgi.FieldStorage):
+    """cgi.FieldStorage class which rejects all posted files.
+    """
+    def make_file(self, binary=None):
+        raise TypeError('Not accepting posting files.')
+            
 class Post(_SimpleFields):
     """Read-only POST parser.
     
@@ -124,7 +146,11 @@ class Post(_SimpleFields):
     provide a different FieldStorage-like class which accepts files (returns
     a file handle from a fs.make_file(binary=None) call.
     
+    For main examples, see _SimpleFields.
+    
     """
+    
+    field_storage_class = FileRejectingFieldStorage
     
     def _parse_environ(self, environ):
         environ = environ.copy()
@@ -134,9 +160,8 @@ class Post(_SimpleFields):
             environ=environ,
             keep_blank_values=True
         )
-        for key in fs:
-            for value in fs.getlist(key):
-                yield (key, value)
+        for chunk in fs.list:
+            yield (chunk.name, chunk.value)
     
 if __name__ == "__main__":
     import doctest
