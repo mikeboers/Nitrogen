@@ -14,11 +14,5 @@
 	}
 
 
--?? take the source for the YUI uploader and write my own very very simple one
-	- this seems pretty stupid of me =P
 
-contain the entire app in a subdirectory similar to the rebelhouse/nitrogen setup
-
-status_helper is a terrible name. remove helper
-	status_resolver
-	status_fixer
+NEED to read the URI specs about how to deal with +s
