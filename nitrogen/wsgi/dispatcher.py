@@ -19,7 +19,7 @@ class DirectoryDispatcher(object):
         self.apps = {}
     
     def build_path(self, name):
-        return '%s/%s.py' % (self.path, name)
+        return '%s%s.py' % (self.path, name)
     
     def load_app(self, path):
         if not os.path.exists(path):
