@@ -26,13 +26,3 @@ cookie signer
 start_delay
 	delays the start until the sub-iterator has been exhausted
 	this should be the only one which caches the response like this, ever.
-
-
-request_builder
-	takes an env and start and build a wrapper around them that is "easier" to use
-	with get post cookies environ headers etc
-	has a print function which we use to print into it
-
-cookies:
-	should throw exception when cookies are modified after headers are sent
-	or just silently fail and let the start_delay take care of it.

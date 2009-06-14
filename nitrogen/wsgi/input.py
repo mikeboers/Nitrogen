@@ -4,14 +4,16 @@ Module for POST parser.
 
 import cgi
 import collections
-
+    
 try:
     from ..uri.query import Query
+    from .cookie import Container as CookieContainer
 except ValueError:
     # For local testing.
     import sys
     sys.path.append('..')
     from uri.query import Query
+    from cookie import Container as CookieContainer
         
 class _SimpleFields(collections.Mapping):
     """A read-only GET/POST representation.
@@ -162,7 +164,10 @@ class Post(_SimpleFields):
         )
         for chunk in fs.list:
             yield (chunk.name, chunk.value)
-    
+
+def Cookies(environ):
+    return CookieContainer(environ.get('HTTP_COOKIE', ''))
+
 if __name__ == "__main__":
     import doctest
     print "Testing..."
