@@ -2,6 +2,7 @@
 
 import os
 import re
+import logging
 
 from . import get_routed, get_route_segment, NotFoundError
 
@@ -33,6 +34,7 @@ class Directory(object):
         if os.path.getmtime(path) != self.apps[path][0]:
             self.load_app(environ, path)
         
+        logging.info('Routing %r...' % name)
         return self.apps[path][1](environ, start)
         
     
