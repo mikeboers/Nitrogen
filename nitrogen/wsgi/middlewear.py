@@ -56,7 +56,9 @@ def debugger(app):
             self.environ = environ
             self.start = start
             self.output = []
-        
+            self.status = None
+            self.headers = None
+            
         def app_start(self, status, headers):
             self.status = status
             self.headers = headers

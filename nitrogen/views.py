@@ -39,6 +39,7 @@ def build_environment(*paths):
     environment.filters['markdown'] = lambda x: clean_html(markdown(x.encode('utf8'))).decode('utf8')
     environment.filters['format_date'] = lambda d, f: (d.strftime(f) if d else '')
     environment.filters['randomize'] = lambda x: sorted(x, key=lambda y: random.random())
+    environment.filters['sorted'] = sorted
     
     return environment
 
