@@ -1,14 +1,13 @@
-'''Generic API module.
+"""Generic API module.
 
 Steps for general usage:
-    1. Add error message keys and their format strings to the error_messages.
-    2. Define api methods that take a single dict-like object (an ApiRequest)
+    1. Define api methods that take a single dict-like object (an ApiRequest)
         and perform some action, optionally modifying the request object.
         Raise ApiErrors if something is awry.
-    3. Add method keys and their callbacks to the methods mapping.
-    4. Call dispatch() with keywork arguments.
+    2. Add method keys and their callbacks to the methods mapping.
+    3. Call dispatch() with keyword arguments.
     
-All request data is taken from keywork arguments to the dispatch method. The
+All request data is taken from keyword arguments to the dispatch method. The
 method is looked up in the messages mapping. The method is called with the
 request object as the single argument. Modifications to the request object are
 returned as part of the result.
@@ -16,189 +15,149 @@ returned as part of the result.
 You can remove keys from the request object, but it is not considered good
 practise.
 
-'''
+Examples:
+
+    >>> api = Api()
+    >>> sorted(api.methods.keys())
+    ['api.error', 'api.exception', 'api.inspect', 'api.list', 'api.signal']
+    
+    >>> api.dispatch(method='api.list')
+    {'status': 'ok', 'method': u'api.list', 'methods': ['api.error', 'api.exception', 'api.inspect', 'api.list', 'api.signal']}
+    
+    >>> api.dispatch(method="api.signal")
+    {'status': 'ok', 'method': u'api.signal'}
+    
+    # >>> api.dispatch(method="api.inspect", key="api.inspect")
+    {'status': 'ok', 'doc': 'Return documentation for a given method.\n\nParameters:\n    key -- The method to inspect.', 'method': u'api.inspect', 'key': u'api.inspect'}
+    
+    >>> api.dispatch(method="api.error")
+    {'status': 'error', 'method': u'api.error', 'error': 'Test error.'}
+    
+    >>> api.dispatch(method="api.exception")
+    Traceback (most recent call last):
+    ValueError: Test error.
+
+"""
 
 import re
 import traceback
 import inspect
 import time
 
+class ApiError(Exception):
+    pass
+
+class ApiRequest(dict):
+    def __getitem__(self, key):
+        try:
+            return dict.__getitem__(self, key)
+        except:
+            raise ApiError('Missing required argument %r.' % key)
+        
 class Api(object):
-    
     
     def __init__(self):
         self.methods = {}
-        self.error_messages = {
-            'api.internal.exception': 'Uncaught %(type)s: %(message)r',
-            'api.internal.bad_error_key': 'No error key %(key)r found',
-            'api.bad_method': 'No method named %(method)r found',
-            'api.missing_parameter': 'Missing parameter %(parameter)r',
-        }
-        self.Error = self.Request = None
-        self.__init_error_class()
-        self.__init_request_class()
         
-        # register class methods and error messages
-        for k in dir(self):
-            if k.startswith('method_'):
-                self.methods[k[len('method_'):].replace('__', '.')] = \
-                  getattr(self, k)
-            elif k.startswith('ERROR_'):
-                self.error_messages[k[6:].replace('__', '.')] = \
-                  getattr(self, k)
+        # Register class methods which start with 'do_'.
+        for key in dir(self):
+            if key.startswith('do_'):
+                method = getattr(self, key)
+                self.methods[
+                    key[len('do_'):].replace('__', '.')
+                ] = method
     
+    def register(self, method, name=None):
+        """Decorator to register a method.
+        
+        >>> api = Api()
+        >>> @api.register
+        ... def test(res):
+        ...     res['greeting'] = "Hello, World!"
+        
+        >>> api.dispatch(method='test')
+        {'status': 'ok', 'method': u'test', 'greeting': 'Hello, World!'}
+        
+        """
+        self.methods[name if name is not None else method.__name__.replace('__', '.')] = method
+        return method
     
     def dispatch(self, **kwargs):
-        '''Process an API request -> dict.
         
-        See module documentation for more info.
+        req = ApiRequest(kwargs)
         
-        '''
-        
-        req = self.Request(kwargs)
-        
-        # Decode it all to unicode
+        # Put it all into unicode.
         for k in req:
-            req[k] = req[k].decode('utf8')
+            req[k] = unicode(req[k], 'utf8')
         
         try:
-            # get and verify the method exists
+            # Get the method, and make sure it exists.
             method_key = req['method']
             callback = self.methods.get(method_key)
             if not callback:
-                raise self.Error('api.bad_method', method = method_key)
-            # make the call and assert success status
+                raise ApiError("Could not find method %r." % req['method'])
+            # Make the call, and assert success status, and method value.
             callback(req)
             req['status'] = 'ok'
             req['method'] = method_key
-        except self.Error, e:
-            req.update(e.get_response())
+        except ApiError as e:
+            req.update(dict(
+                status='error',
+                error=str(e)
+            ))
+            if len(e.args) > 1:
+                req['error_data'] = e.args[1]
+            
         return dict(req)
     
-    
     @staticmethod
-    def method_api__signal(req):
-        '''Does nothing.
+    def do_api__signal(req):
+        """Does nothing.
         
         Useful to check if the communication channel to the API is clear, as
         this will return all values sent to it, in addition to a status of
         'ok'.
         
-        '''
-        
-        return None
+        """
+        pass
     
-    
-    def method_api__list(self, req):
-        '''Returns a list of API methods.
+    def do_api__list(self, req):
+        """Returns a list of API methods.
         
         Return Keys:
             methods -- List of all API methods.
-        
-        '''
-        
+        """
         req['methods'] = sorted(self.methods.keys())
     
-    
-    def method_api__inspect(self, req):
-        '''Return documentation for a given method.
+    def do_api__inspect(self, req):
+        """Return documentation for a given method.
         
         Parameters:
-            method_ -- The method to inspect.
+            key -- The method to inspect.
         
-        '''
-        
-        method = req['method_']
+        """ 
+        method = req['key']
         callback = self.methods.get(method, None)
         if not callback:
-            raise self.Error('api.inspect.bad_method', method=method)
+            raise ApiError('Could not find method %r.' % key)
         req['doc'] = inspect.cleandoc(callback.__doc__)
     
-    ERROR_api__inspect__bad_method = \
-      'No method named %(method)r to inspect.'
-    
-    
-    def method_api__error(self, req):
-        '''Raise an ApiError of type "api.test".'''
-        raise self.Error('api.test')
-    
-    ERROR_api__test = 'This is just a test of the API method "api.error"'
-    
+    def do_api__error(self, req):
+        """Raise an ApiError."""
+        raise ApiError('Test error.')
     
     @staticmethod
-    def method_api__exception(data):
-        '''Raise a TestException.'''
-        class TestException(Exception):
-            pass
-        raise TestException('This is just a test.')
+    def do_api__exception(req):
+        """Raise a ValueError."""
+        raise ValueError('Test error.')
     
     
-    
-    def __init_request_class(self):
-        if self.Request:
-            return
-        api = self
-        class ApiRequest(dict):
-            
-            '''API request object that is passed to API methods.'''
-            
-            def __getitem__(self, key):
-                '''req['key'] -> FIRST value (if it exists).
-                
-                Raises an ApiError('api.missing_param') if the key is not
-                found.
-                
-                '''
-                
-                if key not in self:
-                    raise api.Error('api.missing_parameter', parameter = key)
-                return dict.__getitem__(self, key)
-        self.Request = ApiRequest
-    
-    def __init_error_class(self):
-        if self.Error:
-            return
-        api = self
-        class ApiError(Exception):
-            '''Represents errors that are known to occour.'''
-            
-            def __init__(self, error_key = None, **kwargs):
-                self.key = error_key 
-                self.data = kwargs
-                
-                msg_pattern = api.error_messages.get(self.key, None)
-                if not msg_pattern:
-                    self.data = {
-                        'data': self.data,
-                        'key': self.key
-                    }
-                    self.key = 'api.internal.bad_error_key'
-                    msg_pattern = api.error_messages.get(self.key)
-                
-                try:
-                    message = msg_pattern % self.data
-                except KeyError, e:
-                    self.data = {
-                        'data': data,
-                        'error': self.key,
-                        'key': str(e)
-                    }
-                    self.key = 'api.internal.bad_error_data'
-                    message = \
-                      'Error message format failure on key %r' % \
-                      e.message
-                Exception.__init__(self, message)
-            
-            def get_response(self):
-                return {
-                    'status': 'error',
-                    'error': self.key,
-                    'error_message': str(self),
-                    'error_data': self.data
-                }
-        self.Error = ApiError
 
-
+if __name__ == '__main__':
+    import doctest
+    print 'Testing', __file__
+    doctest.testmod()
+    print 'Done.'
 
 
 
