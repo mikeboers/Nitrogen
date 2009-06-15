@@ -14,20 +14,6 @@ See: http://en.wikipedia.org/wiki/Uniform_Resource_Identifier
 See: http://tools.ietf.org/html/rfc3986
 
 
-Encoding and decoding:
-
-    >>> encode("This is a string.")
-    'This%20is%20a%20string.'
-    
-    >>> encode('this/is/a/string/with/slashes')
-    'this%2fis%2fa%2fstring%2fwith%2fslashes'
-    
-    >>> encode('this/is/a/string/with/safe/slashes', '/')
-    'this/is/a/string/with/safe/slashes'
-    
-    >>> all_chars = ''.join(chr(x) for x in range(256));
-    >>> decode(encode(all_chars)) == all_chars
-    True
 
 Parsing a URI:
     >>> uri = URI('http://example.com/path/to/stuff#fragment')
