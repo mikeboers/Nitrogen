@@ -39,7 +39,7 @@ Expire some cookies:
     >>> del cookies['key3']
     >>> del cookies['already1']
     >>> cookies
-    <cookie.Container: key1='value1'>
+    <cookie.Container:{'key1': 'value1'}>
     
     >>> # Notice that you cannot access the expired cookies anymore.
     >>> cookies['key2']
@@ -448,8 +448,8 @@ class Container(collections.MutableMapping):
         items = self.items()
         items.sort()
         for key, value in items:
-            L.append('%s=%s' % (key, repr(value.value)))
-        return '<cookie.Container: %s>' % ' '.join(L)
+            L.append('%r: %r' % (key, value.value))
+        return '<cookie.Container:{%s}>' % ' '.join(L)
 
     def _parse_string(self, input_string):
         i = 0            # Our starting point
