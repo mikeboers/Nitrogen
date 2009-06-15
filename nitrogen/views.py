@@ -40,6 +40,7 @@ def build_environment(*paths):
     environment.filters['format_date'] = lambda d, f: (d.strftime(f) if d else '')
     environment.filters['randomize'] = lambda x: sorted(x, key=lambda y: random.random())
     environment.filters['sorted'] = sorted
+    environment.filters['repr'] = repr
     
     return environment
 
@@ -49,3 +50,10 @@ def build_render(environ):
         template = environ.get_template(template_name)
         return template.render(**data).encode('utf8')
     return render
+    
+def build_iter_render(environ):
+    def iter_render(template_name, **data):
+        '''Find a template file and render it with the given keyword arguments.'''
+        template = environ.get_template(template_name)
+        return template.generate(**data).encode('utf8')
+    return iter_render
