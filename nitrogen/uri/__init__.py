@@ -13,7 +13,8 @@ it do ANY decoding of the URI material.
 See: http://en.wikipedia.org/wiki/Uniform_Resource_Identifier
 See: http://tools.ietf.org/html/rfc3986
 
-
+I have attempted to make these interpret everything as unicode, but it was far
+too hard for me to do. Sorry.
 
 Parsing a URI:
     >>> uri = URI('http://example.com/path/to/stuff#fragment')
