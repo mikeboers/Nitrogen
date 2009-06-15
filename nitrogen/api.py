@@ -151,7 +151,6 @@ class Api(object):
         """Raise a ValueError."""
         raise ValueError('Test error.')
     
-    
 
 if __name__ == '__main__':
     import doctest
