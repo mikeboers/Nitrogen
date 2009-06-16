@@ -1,4 +1,5 @@
-"""
+# coding: UTF-8
+u"""
 
 A convenient description of "uniform resource identifiers" or "data source
 names".
@@ -19,11 +20,11 @@ too hard for me to do. Sorry.
 Parsing a URI:
     >>> uri = URI('http://example.com/path/to/stuff#fragment')
     >>> uri
-    URI(scheme='http', userinfo=<uri.Userinfo:[]>, host='example.com', port=None, path=<uri.Path:absolute:['path', 'to', 'stuff']>, query=<uri.Query:[]>, fragment='fragment')
+    URI(scheme=u'http', userinfo=<uri.Userinfo:[]>, host=u'example.com', port=None, path=<uri.Path:absolute:[u'path', u'to', u'stuff']>, query=<uri.Query:[]>, fragment=u'fragment')
     >>> uri.scheme
-    'http'
+    u'http'
     >>> uri.fragment
-    'fragment'
+    u'fragment'
     >>> str(uri.path)
     '/path/to/stuff'
     
@@ -49,7 +50,7 @@ Building up a URI:
     'https://user:password@example.com'
     >>> uri.userinfo = 'a:b:c:d:e'
     >>> uri.userinfo
-    <uri.Userinfo:['a', 'b', 'c', 'd', 'e']>
+    <uri.Userinfo:[u'a', u'b', u'c', u'd', u'e']>
     >>> uri.userinfo[4] = 'f'
     >>> str(uri)
     'https://a:b:c:d:f@example.com'
@@ -157,7 +158,7 @@ Abnormal examples (from RFC 5.4.2):
 Making sure there arent reference issues after resolving.
     >>> base = URI('http://user:pass@example.com:80/path/to/stuff?query#fragment')
     >>> base
-    URI(scheme='http', userinfo=<uri.Userinfo:['user', 'pass']>, host='example.com', port='80', path=<uri.Path:absolute:['path', 'to', 'stuff']>, query=<uri.Query:[('query', None)]>, fragment='fragment')
+    URI(scheme=u'http', userinfo=<uri.Userinfo:[u'user', u'pass']>, host=u'example.com', port=u'80', path=<uri.Path:absolute:[u'path', u'to', u'stuff']>, query=<uri.Query:[(u'query', None)]>, fragment=u'fragment')
     >>> ref = URI('../a')
     >>> res = base.resolve(ref)
     >>> str(res)
@@ -168,7 +169,18 @@ Making sure there arent reference issues after resolving.
     >>> str(res)
     'http://user:pass:more@example.com:80/path/a/more?key=value'
     >>> base
-    URI(scheme='http', userinfo=<uri.Userinfo:['user', 'pass']>, host='example.com', port='80', path=<uri.Path:absolute:['path', 'to', 'stuff']>, query=<uri.Query:[('query', None)]>, fragment='fragment')
+    URI(scheme=u'http', userinfo=<uri.Userinfo:[u'user', u'pass']>, host=u'example.com', port=u'80', path=<uri.Path:absolute:[u'path', u'to', u'stuff']>, query=<uri.Query:[(u'query', None)]>, fragment=u'fragment')
+
+Unicode (unfortunately I can't test what ">>> uri" would give, as there are
+two levels of encoding in the doctests):
+
+    >>> uri = URI('%C2%A1%E2%84%A2%C2%A3://%C2%A2%E2%88%9E%C2%A7/%C2%B6%E2%80%A2%C2%AA?%C2%BA')
+    >>> print uri.scheme
+    ¡™£
+    >>> print uri.host
+    ¢∞§
+    >>> str(uri)
+    '%C2%A1%E2%84%A2%C2%A3://%C2%A2%E2%88%9E%C2%A7/%C2%B6%E2%80%A2%C2%AA?%C2%BA'
     
 """
 
@@ -183,7 +195,6 @@ from path import Path
 from query import Query
 
 SplitUri = collections.namedtuple('SplitUri', 'scheme userinfo host port path query fragment'.split())
-ParsedUri = collections.namedtuple('ParsedUri', 'scheme userinfo host port path query fragment'.split())
 
 def split(uri):
     """Split up a URI into its base components. Returns a SplitUri (which is a
