@@ -1,13 +1,16 @@
 import traceback
+import logging
 
 try:
     from .cookie import Container as CookieContainer
     from .input import Get, Post
     from .status import resolve_status
+    from .error import format_error_report
 except ValueError: # In case we are running local tests.
     from cookie import Container as CookieContainer
     from input import Get, Post
     from status import resolve_status
+    from error import format_error_report
 
 def cookie_parser(app):
     def inner(environ, start):
@@ -72,6 +75,8 @@ def debugger(app):
                     yield x
             
             except Exception as e:
+                report = format_error_report(self.environ, error=e, output=self.output)
+                logging.critical(report)
                 tb = traceback.format_exc()
                 try:
                     self.start('500 Server Error', [
@@ -79,13 +84,7 @@ def debugger(app):
                     ])
                 except:
                     pass
-                yield 'UNCAUGHT EXCEPTION\n'
-                yield tb
-                yield '\n'
-                yield 'Buffered %d chunks.\n' % len(self.output)
-                yield '=' * 80 + '\n'
-                for x in self.output:
-                    yield x
+                yield report
     return inner
 
 
