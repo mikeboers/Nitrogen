@@ -6,8 +6,8 @@ def _reporter(environ, output=None):
     yield '\n'
     yield 'Environment:\n'
     yield '\n'.join('  %s: %r' % x for x in sorted(environ.items()))
-    output = list(output) if output is not None else None
     if output is not None:
+        output = list(output)
         yield '\n\n'
         yield 'Recieved %d chunks (%d bytes).' % (len(output), sum(len(x) for x in output))
         if output:
