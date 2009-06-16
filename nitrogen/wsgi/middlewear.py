@@ -69,14 +69,14 @@ def debugger(app):
         def __iter__(self):
             try:
                 for x in app(self.environ, self.app_start):
-                    self.output.append(str(x))
+                    self.output.append(x)
                 self.start(self.status, self.headers)
                 for x in self.output:
                     yield x
             
             except Exception as e:
-                report = format_error_report(self.environ, error=e, output=self.output)
-                logging.critical(report)
+                report = format_error_report(self.environ, output=self.output)
+                logging.error('nitrogen.wsgi.middlewear.debugger caught %r\n' % e + report)
                 tb = traceback.format_exc()
                 try:
                     self.start('500 Server Error', [
