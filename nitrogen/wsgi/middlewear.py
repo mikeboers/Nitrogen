@@ -12,6 +12,25 @@ except ValueError: # In case we are running local tests.
     from status import resolve_status
     from error import format_error_report
 
+def utf8_encoder(app):
+    """Encodes everything to a UTF-8 string.
+    Forces test/* content types to have a UTF-8 charset.
+    """
+    def inner(environ, start):
+        def app_start(status, headers):
+            for i, h in enumerate(headers):
+                if h[0] == 'Content-Type' and h[1].startswith('text'):
+                    if 'charset' not in h[1]:
+                        headers[i] = (h[0], h[1] + ';charset=UTF-8')
+                    elif 'UTF-8' not in h[1]:
+                        raise ValueError('Content-Type header has non UTF-8 charset: %r.' % h[1])
+            start(status, headers)
+        for x in app(environ, app_start):
+            if not isinstance(x, unicode):
+                x = unicode(x, 'utf8', 'replace')
+            yield x.encode('utf8', 'xmlcharrefreplace')
+    return inner
+
 def cookie_parser(app):
     def inner(environ, start):
         environ['nitrogen.cookies'] = CookieContainer(environ.get('HTTP_COOKIE', ''))

@@ -81,6 +81,8 @@ class _SimpleFields(collections.Mapping):
         self._key_i = {}
         self._pairs = []
         for key, value in self._parse_environ(environ):
+            if not isinstance(value, unicode):
+                value = unicode(value, 'utf8', 'replace')
             if key not in self._key_i:
                 self._keys.append(key)
                 self._key_i[key] = len(self._pairs)
@@ -124,7 +126,7 @@ class Get(_SimpleFields):
         
         >>> get = Get({'QUERY_STRING': 'key=value&same=first&same=second'})
         >>> get
-        [('key', 'value'), ('same', 'first'), ('same', 'second')]
+        [(u'key', u'value'), (u'same', u'first'), (u'same', u'second')]
     """
     def _parse_environ(self, environ):
         query = environ.get('QUERY_STRING')
