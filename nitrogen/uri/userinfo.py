@@ -1,9 +1,10 @@
+# coding: UTF-8
 """Module for query.Userinfo object."""
 
 from transcode import *
 
 class Userinfo(list):
-    """A representation of the userinfo segment in a URI.
+    u"""A representation of the userinfo segment in a URI.
     
     Passed objects will only be parsed as a string if they extend the
     basestring. Otherwise they will be treated as a list of string segments.
@@ -16,7 +17,7 @@ class Userinfo(list):
         
         >>> userinfo = Userinfo('user:pass')
         >>> userinfo
-        <uri.Userinfo:['user', 'pass']>
+        <uri.Userinfo:[u'user', u'pass']>
         >>> str(userinfo)
         'user:pass'
     
@@ -42,7 +43,7 @@ class Userinfo(list):
         
         >>> userinfo = Userinfo('something%20with%20spaces')
         >>> userinfo
-        <uri.Userinfo:['something with spaces']>
+        <uri.Userinfo:[u'something with spaces']>
         >>> str(userinfo)
         'something%20with%20spaces'
     
@@ -59,6 +60,16 @@ class Userinfo(list):
         <uri.Userinfo:[]>
         >>> str(userinfo)
         ''
+    
+    Unicode:
+
+        >>> userinfo = Userinfo('%C2%A1%E2%84%A2%C2%A3:%C2%A2%E2%88%9E%C2%A7:%C2%B6%E2%80%A2%C2%AA:%C2%BA')
+        >>> print ':'.join(userinfo)
+        ¡™£:¢∞§:¶•ª:º
+
+        >>> userinfo = Userinfo([u'¡™£', u'¢∞§', u'¶•ª', u'º'])
+        >>> str(userinfo)
+        '%C2%A1%E2%84%A2%C2%A3:%C2%A2%E2%88%9E%C2%A7:%C2%B6%E2%80%A2%C2%AA:%C2%BA'
     """
     
     def __init__(self, input=None):
