@@ -1,4 +1,5 @@
-"""
+# coding: UTF-8
+u"""
 
 Encoding and decoding:
 
@@ -28,6 +29,11 @@ import urllib
 GEN_DELIMS = ':/?#[]@'
 SUB_DELIMS = '!$&\'()*+,;='
 SAFE = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~'
+
+def unicoder(obj, encoding='UTF-8', errors='replace'):
+    if isinstance(obj, unicode):
+        return obj
+    return unicode(str(obj), encoding, errors)
 
 def encode(string, safe=''):
     """Encode non-safe characters.

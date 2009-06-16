@@ -1,9 +1,10 @@
+# coding: UTF-8
 """Module for query.Path object."""
 
 from transcode import *
 
 class Path(list):
-    """A representation of a path in a URI.
+    u"""A representation of a path in a URI.
     
     Passed objects will only be parsed as a string if they extend the
     basestring. Otherwise they will be treated as a list of string segments.
@@ -19,13 +20,13 @@ class Path(list):
     
         >>> path = Path('/absolute/path/to/something')
         >>> path
-        <uri.Path:absolute:['absolute', 'path', 'to', 'something']>
+        <uri.Path:absolute:[u'absolute', u'path', u'to', u'something']>
         >>> str(path)
         '/absolute/path/to/something'
         
         >>> path = Path('relative/path/to/something')
         >>> path
-        <uri.Path:relative:['relative', 'path', 'to', 'something']>
+        <uri.Path:relative:[u'relative', u'path', u'to', u'something']>
         >>> str(path)
         'relative/path/to/something'
     
@@ -45,11 +46,11 @@ class Path(list):
     
         >>> path = Path('/some/path/to/stuff')
         >>> path.pop(0)
-        'some'
+        u'some'
         >>> str(path)
         '/path/to/stuff'
         >>> path.pop()
-        'stuff'
+        u'stuff'
         >>> str(path)
         '/path/to'
     
@@ -77,7 +78,7 @@ class Path(list):
         >>> path.str()
         'there:is/a_colon'
         >>> path.str(scheme=False)
-        'there%3ais/a_colon'
+        'there%3Ais/a_colon'
         
         >>> path = Path('//empty/first/section')
         >>> path.str()
@@ -95,7 +96,7 @@ class Path(list):
         >>> path.str()
         'colon:resides/in/first_section'
         >>> path.str(scheme=False)
-        'colon%3aresides/in/first_section'
+        'colon%3Aresides/in/first_section'
         >>> path.str(scheme=True)
         'colon:resides/in/first_section'
         >>> path.str(authority=False)
@@ -105,7 +106,7 @@ class Path(list):
         >>> path.str(scheme=False, authority=True)
         '/colon:resides/in/first_section'
         >>> path.str(scheme=False, authority=False)
-        'colon%3aresides/in/first_section'
+        'colon%3Aresides/in/first_section'
         >>> path.str(scheme=True, authority=True)
         '/colon:resides/in/first_section'
         >>> path.str(scheme=True, authority=False)
@@ -136,7 +137,16 @@ class Path(list):
         >>> path.remove_dot_segments()
         >>> str(path)
         'a/b/'
+    
+    Unicode:
+    
+        >>> path = Path('%C2%A1%E2%84%A2%C2%A3/%C2%A2%E2%88%9E%C2%A7/%C2%B6%E2%80%A2%C2%AA/%C2%BA')
+        >>> print '/'.join(path)
+        ¡™£/¢∞§/¶•ª/º
         
+        >>> path = Path([u'¡™£', u'¢∞§', u'¶•ª', u'º'])
+        >>> str(path)
+        '%C2%A1%E2%84%A2%C2%A3/%C2%A2%E2%88%9E%C2%A7/%C2%B6%E2%80%A2%C2%AA/%C2%BA'
         
     """
     
@@ -151,7 +161,7 @@ class Path(list):
             if input:
                 self.extend(decode(x) for x in input.split('/'))
         else:
-            self.extend(str(x) for x in input)
+            self.extend(unicoder(x) for x in input)
     
     @property
     def relative(self):
