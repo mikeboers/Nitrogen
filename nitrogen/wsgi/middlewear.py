@@ -38,15 +38,31 @@ def cookie_parser(app):
         return app(environ, start)    
     return inner
 
-def cookie_builder(app):
-    def inner(environ, start):
-        def inner_start(status, headers):
-            cookies = environ.get('nitrogen.cookies')
+def cookie_builder(app, strict=True):
+    class inner(object):
+        def __init__(self, environ, start):
+            self.environ = environ
+            self.start = start
+            self.headers = None
+    
+        def inner_start(self, status, headers):
+            cookies = self.environ.get('nitrogen.cookies')
             if cookies:
-                environ['nitrogen.cookies']
-                headers.extend(cookies.build_headers())
-            start(status, headers)
-        return app(environ, inner_start)
+                self.headers = cookies.build_headers()
+                headers.extend(self.headers)
+            self.start(status, headers)
+        
+        def __iter__(self):    
+            for x in app(self.environ, self.inner_start):
+                yield x
+            if not strict:
+                return
+            cookies = self.environ.get('nitrogen.cookies')
+            if cookies is None:
+                raise ValueError('Cookies have been removed from environ.')
+            headers = cookies.build_headers()
+            if self.headers != headers:
+                raise ValueError('Cookies have been modified since WSGI start.', self.headers, headers)
     return inner
 
 def get_parser(app):
