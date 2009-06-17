@@ -67,7 +67,7 @@ def cookie_builder(app, strict=True):
             if cookies is None:
                 raise ValueError('Cookies have been removed from environ.')
             headers = cookies.build_headers()
-            if self.headers != headers:
+            if self.headers is not None and self.headers != headers:
                 raise ValueError('Cookies have been modified since WSGI start.', self.headers, headers)
     return inner
 
