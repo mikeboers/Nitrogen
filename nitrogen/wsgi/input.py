@@ -82,7 +82,7 @@ class _SimpleFields(collections.Mapping):
         self._pairs = []
         for key, value in self._parse_environ(environ):
             if not isinstance(value, unicode):
-                value = unicode(value, 'utf8', 'replace')
+                value = value.decode('utf8', 'replace')
             if key not in self._key_i:
                 self._keys.append(key)
                 self._key_i[key] = len(self._pairs)
