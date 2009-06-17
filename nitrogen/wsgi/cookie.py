@@ -1,4 +1,5 @@
-"""Mike's bastardization of the Python library Cookie module.
+# coding: UTF-8
+ur"""Mike's bastardization of the Python library Cookie module.
 
 I found the Cookie module painfully inadequete, so I copied it here and stared
 tearing it apart.
@@ -27,7 +28,7 @@ Cookie name must be only legal characters:
     >>> cookies['illegal name'] = "this wont show up."
     Traceback (most recent call last):
     ...
-    Error: Illegal key value: illegal name
+    Error: Illegal key value: 'illegal name'
 
 Expire some cookies:
     
@@ -56,9 +57,9 @@ Reading cookies:
 
     >>> cookies = Container('key=value; key_with_spaces="value with spaces"')
     >>> cookies['key']
-    <Cookie: 'value'>
+    <Cookie: u'value'>
     >>> cookies['key'].value
-    'value'
+    u'value'
 
 Adding cookies to a container that started with HTTP_COOKIE cookies:
     
@@ -87,7 +88,21 @@ Set one that is more complex.
     >>> cookies.build_headers()
     [('Set-Cookie', 'key=value; Domain=domain; httponly; Max-Age=3600; Path=path; secure')]
     
-
+More Unicode:
+    >>> cookies = Container()
+    >>> cookies[u'kéy'] = u'¡™£¢∞§¶•ªº' # doctest:+ELLIPSIS
+    Traceback (most recent call last):
+    ...
+    Error: Illegal key value: u'...'.
+    >>> cookies['unicode'] = u'¡™£¢∞§¶•ªº'
+    >>> cookies.build_headers()
+    [('Set-Cookie', 'unicode="\\302\\241\\342\\204\\242\\302\\243\\302\\242\\342\\210\\236\\302\\247\\302\\266\\342\\200\\242\\302\\252\\302\\272"')]
+    
+    >>> cookies = Container('unicode="\\302\\241\\342\\204\\242\\302\\243\\302\\242\\342\\210\\236\\302\\247\\302\\266\\342\\200\\242\\302\\252\\302\\272"')
+    >>> repr(cookies['unicode'])
+    "<Cookie: u'\\xa1\\u2122\\xa3\\xa2\\u221e\\xa7\\xb6\\u2022\\xaa\\xba'>"
+    >>> print cookies['unicode'].value
+    ¡™£¢∞§¶•ªº
 """
 
 #
@@ -348,12 +363,12 @@ class Cookie(object):
     @staticmethod
     def _loads(raw_string):
         """Overide me to provide more sophisticated decoding."""
-        return raw_string
+        return raw_string.decode('utf8', 'replace')
     
     @staticmethod
     def _dumps(value):
         """Overide me to provide more sophisticated encoding."""
-        return str(value)
+        return value.encode('utf8', 'replace')
 
 #
 # Pattern for finding cookie
@@ -400,8 +415,13 @@ class Container(collections.MutableMapping):
             self._cookies[key] = value
         else:
             # Make sure the key is legal.
+            if isinstance(key, unicode):
+                try:
+                    key = key.encode('ascii')
+                except UnicodeError:
+                    raise Error("Illegal key value: %r." % key)
             if "" != key.translate(_idmap, _legal_chars):
-                raise Error("Illegal key value: %s" % key)
+                raise Error("Illegal key value: %r" % key)
             # Build (if nessesary) and set the cookie.
             cookie = self.get(key, self.cookie_class())
             cookie.value = value
@@ -510,7 +530,7 @@ def make_signed_container(entropy, maxage=None):
         
         >>> verified = SignedClass(encoded)
         >>> verified['key'].value
-        'value'
+        u'value'
         
         >>> encoded = encoded[:-5] + '"'
         >>> bad = SignedClass(encoded)
@@ -526,7 +546,7 @@ def make_signed_container(entropy, maxage=None):
         
         >>> verified = SignedClass(encoded)
         >>> verified['key'].value
-        'this expires'
+        u'this expires'
         
     """
     
