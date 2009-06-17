@@ -48,12 +48,12 @@ def build_render(environ):
     def render(template_name, **data):
         '''Find a template file and render it with the given keyword arguments.'''
         template = environ.get_template(template_name)
-        return template.render(**data).encode('utf8')
+        return template.render(**data)
     return render
     
 def build_iter_render(environ):
     def iter_render(template_name, **data):
         '''Find a template file and render it with the given keyword arguments.'''
         template = environ.get_template(template_name)
-        return template.generate(**data).encode('utf8')
+        return template.generate(**data)
     return iter_render
