@@ -40,7 +40,6 @@ def utf8_encoder(app):
 def cookie_parser(app):
     def inner(environ, start):
         environ['nitrogen.cookies'] = CookieContainer(environ.get('HTTP_COOKIE', ''))
-        logging.warning('here')
         return app(environ, start)    
     return inner
 
