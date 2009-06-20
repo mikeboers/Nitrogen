@@ -28,6 +28,10 @@ import doctest
 # Add the path ABOVE nirogen to the path
 root_path = os.path.abspath(__file__ + '/../../..')
 sys.path.append(root_path)
+sys.path.append(root_path + '/nitrogen/lib')
+
+import nose.loader
+nose_loader = nose.loader.TestLoader()
 
 suites = []
 
@@ -45,14 +49,24 @@ for dirpath, dirnames, filenames in os.walk(root_path + '/nitrogen'):
             name = path[len(root_path) + 1:-3].replace('/', '.')
             try:
                 m = __import__(name, fromlist=['force'])
-                suite = unittest.defaultTestLoader.loadTestsFromModule(m)
+                
+                # Unit tests
+                # suite = unittest.defaultTestLoader.loadTestsFromModule(m)
+                # suites.append(suite)
+                
+                # Nose and unit tests
+                suite = nose_loader.loadTestsFromModule(m)
                 suites.append(suite)
+                
+                # Doc tests
                 try:
                     suite = doctest.DocTestSuite(m)
                     suites.append(suite)
                 except ValueError as e:
                     if e.args[1] != 'has no tests':
                         raise
+                        
+                
             except Exception as e:
                 print 'Could not import module %s:' % name
                 print '\t%r' % e

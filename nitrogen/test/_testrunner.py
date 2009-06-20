@@ -1,30 +1,21 @@
-import unittest
+from __init__ import *
+
 import random
 
-class TestSequenceFunctions(unittest.TestCase):
-
-    def setUp(self):
-        self.seq = range(10)
-
-    def testshuffle(self):
-        # make sure the shuffled sequence does not lose any elements
-        random.shuffle(self.seq)
-        self.seq.sort()
-        self.assertEqual(self.seq, range(10))
-
-    def testchoice(self):
-        element = random.choice(self.seq)
-        self.assert_(element in self.seq)
-
-    def testsample(self):
-        self.assertRaises(ValueError, random.sample, self.seq, 20)
-        for element in random.sample(self.seq, 5):
-            self.assert_(element in self.seq)
-
 class TestTestRunner(unittest.TestCase):
+    """This module is for testing the test runner.
     
-    def test_basics(self):
+    Doctest:
+        >>> True
+        True
+        >>> False
+        False
+    """
+    def test_pass(self):
         self.assert_(True)
 
+def test_nose():
+    assert True, "Nose does not work."
+
 if __name__ == '__main__':
-    unittest.main()
+    run()
