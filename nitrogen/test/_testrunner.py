@@ -15,6 +15,10 @@ class TestTestRunner(unittest.TestCase):
         self.assert_(True)
 
 def test_nose():
+    """
+    >>> "Hello world!"
+    'Hello world!'
+    """
     assert True, "Nose does not work."
 
 if __name__ == '__main__':
