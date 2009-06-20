@@ -1,5 +1,6 @@
 import traceback
 import logging
+import zlib
 
 try:
     from .cookie import Container as CookieContainer
@@ -12,6 +13,23 @@ except ValueError: # In case we are running local tests.
     from status import resolve_status
     from error import format_error_report
 
+def compressor(app):
+    def inner(environ, start):
+        if 'gzip' not in environ.get('HTTP_ACCEPT_ENCODING', '').split(','):
+            for x in app(environ, start):
+                yield x
+            return
+        def inner_start(status, headers):
+            headers.append(('Content-Encoding', 'deflate'))
+            start(status, headers)
+        compressor = zlib.compressobj()
+        for x in app(environ, inner_start):
+            x = compressor.compress(x) if x else None
+            if x:
+                yield x
+        yield compressor.flush()
+    return inner
+            
 def utf8_encoder(app):
     """Encodes everything to a UTF-8 string.
     Forces test/* content types to have a UTF-8 charset.
