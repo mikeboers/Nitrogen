@@ -1,2 +1,4 @@
 >>> print "This works."
 This works.
+
+>>> "this doesnt"

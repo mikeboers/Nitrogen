@@ -1,3 +1,4 @@
+#!/usr/bin/env python2.6
 # encoding: utf8
 """Script for running all of the tests in the nitrogen package.
 
@@ -14,18 +15,7 @@ import sys
 import unittest
 import doctest
 
-# class utf8_out(object):
-#     def __init__(self, out):
-#         self.out = out
-#     def write(self, stuff):
-#         if isinstance(stuff, unicode):
-#             stuff = stuff.encode('utf8')
-#         return self.out.write(stuff)
-#         
-# sys.stdout = utf8_out(sys.stdout)
-# sys.stderr = utf8_out(sys.stderr)
-
-# Add the path ABOVE nirogen to the path
+# Add the path ABOVE nitrogen to the path
 root_path = os.path.abspath(__file__ + '/../../..')
 sys.path.append(root_path)
 sys.path.append(root_path + '/nitrogen/lib')
@@ -41,18 +31,14 @@ for dirpath, dirnames, filenames in os.walk(root_path + '/nitrogen'):
         if name.endswith('.py'):
             path = dirpath + '/' + name
             
-            # Skip the library.
+            # Skip the library or "binaries".
             if '/lib/' in path or '/bin/' in path:
                 continue
             
             # Turn it into a module
             name = path[len(root_path) + 1:-3].replace('/', '.')
             try:
-                m = __import__(name, fromlist=['force'])
-                
-                # Unit tests
-                # suite = unittest.defaultTestLoader.loadTestsFromModule(m)
-                # suites.append(suite)
+                m = __import__(name, fromlist=['force']) # Needs something in fromlist.
                 
                 # Nose and unit tests
                 suite = nose_loader.loadTestsFromModule(m)

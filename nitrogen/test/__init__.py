@@ -2,6 +2,11 @@ import unittest
 TestCase = unittest.TestCase
 
 def run():
+    """Find all the tests in the __main__ module, and run them.
+    
+    Looks for nose tests, unittest.TestCase tests, and doc tests.
+    """
+    
     import os
     import sys
     import doctest
@@ -20,7 +25,8 @@ def run():
     try:
         doc_suite = doctest.DocTestSuite(m)
         suite.addTest(doc_suite)
-        print "Found %d doc tests." % doc_suite.countTestCases()
+        doc_count = doc_suite.countTestCases()
+        print "Found %d doc test%s." % (doc_count, 's' if doc_count > 1 else '')
     except:
         doc_suite = None
     
@@ -38,7 +44,7 @@ def run():
     nose_suite = nose_loader.loadTestsFromModule(m)
     nose_count = len(list(nose_suite._get_tests()))
     if nose_count:
-        print "Found %d nose/unittest tests." % nose_count
+        print "Found %d nose/unittest test%s." % (nose_count, 's' if nose_count > 1 else '')
         suite.addTest(nose_suite)    
     
     # GO!
