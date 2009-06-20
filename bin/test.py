@@ -1,3 +1,4 @@
+# encoding: utf8
 """Script for running all of the tests in the nitrogen package.
 
 Imports ALL of the modules (except those in lib), looks for unittest stuff
@@ -13,6 +14,17 @@ import sys
 import unittest
 import doctest
 
+# class utf8_out(object):
+#     def __init__(self, out):
+#         self.out = out
+#     def write(self, stuff):
+#         if isinstance(stuff, unicode):
+#             stuff = stuff.encode('utf8')
+#         return self.out.write(stuff)
+#         
+# sys.stdout = utf8_out(sys.stdout)
+# sys.stderr = utf8_out(sys.stderr)
+
 # Add the path ABOVE nirogen to the path
 root_path = os.path.abspath(__file__ + '/../../..')
 sys.path.append(root_path)
@@ -26,7 +38,7 @@ for dirpath, dirnames, filenames in os.walk(root_path + '/nitrogen'):
             path = dirpath + '/' + name
             
             # Skip the library.
-            if '/lib' in path or path == __file__:
+            if '/lib/' in path or '/bin/' in path:
                 continue
             
             # Turn it into a module
@@ -47,7 +59,7 @@ for dirpath, dirnames, filenames in os.walk(root_path + '/nitrogen'):
             
         elif name.endswith('.test'):
             path = dirpath + '/' + name
-            suite = doctest.DocFileSuite(path, module_relative=False)
+            suite = doctest.DocFileSuite(path, module_relative=False, encoding='UTF-8')
             suites.append(suite)
 
 runner = unittest.TextTestRunner()
