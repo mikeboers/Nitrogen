@@ -4,15 +4,15 @@ def resolve_status(status):
     """Resolve a given object into the status that it should represent.
     
     Examples:
-        >>> _resolve_status(200)
+        >>> resolve_status(200)
         '200 OK'
-        >>> _resolve_status(404)
+        >>> resolve_status(404)
         '404 Not Found'
-        >>> _resolve_status('UNAUTHORIZED')
+        >>> resolve_status('UNAUTHORIZED')
         '401 Unauthorized'
-        >>> _resolve_status(None)
+        >>> resolve_status(None)
         '200 OK'
-        >>> _resolve_status('314159 Not in list')
+        >>> resolve_status('314159 Not in list')
         '314159 Not in list'
     """
     

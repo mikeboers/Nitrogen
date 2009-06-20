@@ -31,11 +31,11 @@ class _SimpleFields(collections.Mapping):
         ...     'wsgi.input': StringIO.StringIO('key=value&same=first&same=second')
         ... })
         >>> post
-        [('key', 'value'), ('same', 'first'), ('same', 'second')]
+        [('key', u'value'), ('same', u'first'), ('same', u'second')]
 
     Basic usage:
         >>> post['key']
-        'value'
+        u'value'
 
     You cannot modify it:    
         >>> post['key'] = 'new value'
@@ -55,25 +55,25 @@ class _SimpleFields(collections.Mapping):
         >>> post.keys()
         ['key', 'same']
         >>> post.items()
-        [('key', 'value'), ('same', 'first')]
+        [('key', u'value'), ('same', u'first')]
 
     It will accept more than one of the same key. When accessed by all of the
     normal dict methods, only the first value will ever be returned. You can access
     the rest of them (in order) with the post.list(key) method:
 
         >>> [(key, post.list(key)) for key in post]
-        [('key', ['value']), ('same', ['first', 'second'])]
+        [('key', [u'value']), ('same', [u'first', u'second'])]
 
     Alternatively, you can use the allitems() and iterallitems() methods:
         >>> post.allitems()
-        [('key', 'value'), ('same', 'first'), ('same', 'second')]
+        [('key', u'value'), ('same', u'first'), ('same', u'second')]
         >>> type(post.iterallitems())
         <type 'listiterator'>
         >>> for item in post.iterallitems():
         ...     print '%s: %r' % item
-        key: 'value'
-        same: 'first'
-        same: 'second'
+        key: u'value'
+        same: u'first'
+        same: u'second'
     """
     
     def __init__(self, environ):
