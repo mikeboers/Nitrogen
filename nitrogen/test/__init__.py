@@ -8,9 +8,7 @@ try:
 except:
     from StringIO import StringIO
 
-TestCase = unittest.TestCase
-
-
+__all__ = 'unittest WSGIServer run'.split()
 
 
 

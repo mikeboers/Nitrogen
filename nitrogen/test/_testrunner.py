@@ -1,6 +1,7 @@
 from __init__ import *
 
 import random
+import re
 
 class TestTestRunner(unittest.TestCase):
     """This module is for testing the test runner.
