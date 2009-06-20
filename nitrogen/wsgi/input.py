@@ -1,3 +1,4 @@
+# encoding: utf8
 """
 Module for POST parser.
 """
@@ -31,7 +32,7 @@ class _SimpleFields(collections.Mapping):
         ...     'wsgi.input': StringIO.StringIO('key=value&same=first&same=second')
         ... })
         >>> post
-        [('key', u'value'), ('same', u'first'), ('same', u'second')]
+        [(u'key', u'value'), (u'same', u'first'), (u'same', u'second')]
 
     Basic usage:
         >>> post['key']
@@ -53,20 +54,20 @@ class _SimpleFields(collections.Mapping):
 
     Lots of normal dict methods:
         >>> post.keys()
-        ['key', 'same']
+        [u'key', u'same']
         >>> post.items()
-        [('key', u'value'), ('same', u'first')]
+        [(u'key', u'value'), (u'same', u'first')]
 
     It will accept more than one of the same key. When accessed by all of the
     normal dict methods, only the first value will ever be returned. You can access
     the rest of them (in order) with the post.list(key) method:
 
         >>> [(key, post.list(key)) for key in post]
-        [('key', [u'value']), ('same', [u'first', u'second'])]
+        [(u'key', [u'value']), (u'same', [u'first', u'second'])]
 
     Alternatively, you can use the allitems() and iterallitems() methods:
         >>> post.allitems()
-        [('key', u'value'), ('same', u'first'), ('same', u'second')]
+        [(u'key', u'value'), (u'same', u'first'), (u'same', u'second')]
         >>> type(post.iterallitems())
         <type 'listiterator'>
         >>> for item in post.iterallitems():
@@ -165,13 +166,25 @@ class Post(_SimpleFields):
             keep_blank_values=True
         )
         for chunk in fs.list:
-            yield (chunk.name, chunk.value)
+            yield (chunk.name.decode('utf8'), chunk.value)
 
+def test_post_unicode():
+    """Test to make sure that post is handling unicode properly.
+    This only is testing the form-encoded version.
+    """
+    import StringIO
+    post = Post({
+        'REQUEST_METHOD': 'POST',
+        'wsgi.input': StringIO.StringIO('k%C3%A9y=%C2%A1%E2%84%A2%C2%A3%C2%A2%E2%88%9E%C2%A7%C2%B6%E2%80%A2%C2%AA%C2%BA')
+    })
+    assert post.keys()[0] == u'kéy'
+    assert post.values()[0] == u'¡™£¢∞§¶•ªº'
+    
 def Cookies(environ):
     return CookieContainer(environ.get('HTTP_COOKIE', ''))
 
 if __name__ == "__main__":
-    import doctest
-    print "Testing..."
-    doctest.testmod()
-    print "Done."
+    import sys
+    sys.path.insert(0, '..')
+    from test import run
+    run()
