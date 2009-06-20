@@ -9,6 +9,8 @@ Runs all of the files that are of the form *.test as doctests.
 
 """
 
+print "Nitrogen test runner."
+print
 
 import os
 import sys
