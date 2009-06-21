@@ -1,7 +1,14 @@
+"""Module for dealing with WSGI errors."""
+
 import sys
 import traceback
 
 def _reporter(environ, output=None):
+    """Worker function for format_error_report.
+    
+    See format_error_report for details.
+    """
+    
     yield traceback.format_exc()
     yield '\n'
     yield 'Environment:\n'
@@ -20,4 +27,12 @@ def _reporter(environ, output=None):
             yield '=' * 80
 
 def format_error_report(environ, output=None):
+    """Builds an error report with traceback, environment, and buffered
+    output, if supplied.
+    
+    Params:
+        environ -- The WSGI environ that the error occoured in.
+        output -- The caught WSGI output (so far).
+    """
+    
     return ''.join(_reporter(environ, output))

@@ -1,4 +1,4 @@
-"""nitrogen.wsgi.routing package."""
+"""Package for easy routing of requests into request handlers (or WSGI apps.)"""
 
 from ..uri import URI
 from ..uri.path import Path

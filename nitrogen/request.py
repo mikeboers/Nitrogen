@@ -1,4 +1,10 @@
-"Module for nitrogen.wsgi.request"
+"""Module for WSGI request adapter.
+
+This class is designed to raise the level of abstraction much higher than
+just environ and start, and provide get, post, files, cookies, session,
+routing, etc.
+
+"""
 
 from __future__ import print_function
 

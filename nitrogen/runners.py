@@ -1,4 +1,4 @@
-"""WSGI assisting functions."""
+"""WSGI application runners."""
 
 def run_via_cgi(app):
     """Run a web application via the CGI interface of a web server.
