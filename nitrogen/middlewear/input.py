@@ -74,19 +74,17 @@ class ReadOnlyMapping(collections.Mapping):
     def allitems(self):
         return self._pairs[:]
 
-class PostStorage(cgi.FieldStorage):
-    def __init__(self, environ, accept, make_file, max_size):
-        environ = environ.copy()
-        environ['QUERY_STRING'] = ''
-        cgi.FieldStorage.__init__(self,
-            fp=environ.get('wsgi.input'),
-            environ=environ,
-            keep_blank_values=True
-        )
-        
-    
-    def make_file(self, binary=None):
-        return cgi.FieldStorage.make_file(self, binary)
+def PostStorage(environ, accept, make_file, max_size):
+    class FieldStorage(cgi.FieldStorage):    
+        def make_file(self, binary=None):
+            return cgi.FieldStorage.make_file(self, binary)
+    environ = environ.copy()
+    environ['QUERY_STRING'] = ''
+    return FieldStorage(
+        fp=environ.get('wsgi.input'),
+        environ=environ,
+        keep_blank_values=True
+    )
 
 def input_parser(app, accept=False, make_file=None, max_size=None):
     def inner(environ, start):
