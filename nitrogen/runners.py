@@ -20,8 +20,8 @@ def run_via_fcgi(app, multithreaded=True):
             if the server is under load.
     """
     
-    from fcgi import WSGIServer
-    WSGIServer(app, multithreaded=thread_safe).run()
+    from lib.fcgi import WSGIServer
+    WSGIServer(app, multithreaded=multithreaded).run()
 
 def run_via_socket(app, host='', port=8000, once=False):
     """Run a web aplication directly via a socket.

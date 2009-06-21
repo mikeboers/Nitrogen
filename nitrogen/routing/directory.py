@@ -6,6 +6,8 @@ import logging
 
 from . import get_routed, get_route_segment, NotFoundError
 
+log = logging.getLogger(__name__)
+
 class Directory(object):
     
     def __init__(self, path, app_key='app'):
@@ -30,8 +32,10 @@ class Directory(object):
         path = self.build_path(name)
         
         if path not in self.apps:
+            log.debug("Loading app %r at %r." % (name, path))
             self.load_app(environ, path)
         if os.path.getmtime(path) != self.apps[path][0]:
+            log.debug("App %r modified. Reloading." % name)
             self.load_app(environ, path)
         
         logging.info('Routing %r...' % name)

@@ -129,7 +129,7 @@ class Get(_SimpleFields):
     def _parse_environ(self, environ):
         query = environ.get('QUERY_STRING')
         if query is None:
-            return
+            return []
         query = Query(query)
         return query.iterallitems()
 
