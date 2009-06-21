@@ -1,5 +1,7 @@
 import zlib
 
+__all__ = ['compressor']
+
 def compressor(app):
     def inner(environ, start):
         if 'deflate' not in environ.get('HTTP_ACCEPT_ENCODING', '').split(','):
@@ -18,17 +20,25 @@ def compressor(app):
     return inner
 
 def test_compress_plain():
-    """Nose test."""
+    """Nose test, checking that plaintext is returned."""
+    
+    from nitrogen.test import WSGIServer
     
     def app(environ, start):
         start('200 OK', [])
         yield 'Hello, world!'
     
     status, headers, output = WSGIServer(compressor(app)).run()
-    assert output == 'Hello, world!', "Message comes through normally."
+    
+    headers = dict(headers)
+    assert 'Content-Encoding' not in headers, "Content encoding is set."
+    
+    assert output == 'Hello, world!', "Output is wrong."
 
 def test_compress_deflate():
-    """Nose test."""
+    """Nose test, checking that compressed data is returned."""
+    
+    from nitrogen.test import WSGIServer
     
     def app(environ, start):
         start('200 OK', [])
@@ -39,9 +49,10 @@ def test_compress_deflate():
     status, headers, output = server.run()
     
     headers = dict(headers)
-    assert 'Content-Encoding' in headers
-    assert headers['Content-Encoding'] == 'deflate'
+    assert 'Content-Encoding' in headers, "Did not get content encoding."
+    assert headers['Content-Encoding'] == 'deflate', "Wrong content encoding."
     
+    assert output != 'Hello, world!', "Recieved plaintext."
     output = zlib.decompress(output)
     assert output == "Hello, world!", "Failed decode."
     
@@ -49,5 +60,5 @@ def test_compress_deflate():
 if __name__ == '__main__':
     import sys
     sys.path.insert(0, '../..')
-    from nitrogen.test import WSGIServer, run
+    from nitrogen.test import run
     run()
