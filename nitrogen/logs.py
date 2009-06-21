@@ -1,3 +1,13 @@
+"""Logging module.
+
+There are functions in here to setup the main methods of logging. The example
+webapp runs them during it's setup procedure.
+
+There is a log_extra_filler in middlewear to fill in the IP and thread_i onto
+the "extra" object so they will be in the logs.
+
+"""
+
 import os
 import sys
 import logging
