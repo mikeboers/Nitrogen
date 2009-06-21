@@ -1,6 +1,7 @@
 import traceback
 import logging
 import zlib
+import threading
 
 try:
     from ..cookie import Container as CookieContainer
@@ -8,6 +9,7 @@ try:
     from ..status import resolve_status
     from ..error import format_error_report
     from .compressor import compressor
+    from .. import logs
 except ValueError: # In case we are running local tests.
     import sys
     sys.path.insert(0, '..')
@@ -16,9 +18,24 @@ except ValueError: # In case we are running local tests.
     from status import resolve_status
     from error import format_error_report
     from compressor import compressor
+    import logs
 
 
-            
+class log_extra_filler(object):
+    def __init__(self, app):
+        self.app = app
+        self.thread_count = 0
+        self.lock = threading.Lock()
+
+    def __call__(self, environ, start):
+        if not hasattr(logs.extra, 'thread_i'):
+            self.lock.acquire()
+            self.thread_count += 1
+            logs.extra.thread_i = self.thread_count
+            self.lock.release()
+        logs.extra.ip = environ.get('REMOTE_ADDR')
+        return self.app(environ, start)
+                        
 def utf8_encoder(app):
     """Encodes everything to a UTF-8 string.
     Forces test/* content types to have a UTF-8 charset.
