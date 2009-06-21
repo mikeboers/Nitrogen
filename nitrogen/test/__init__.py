@@ -1,5 +1,5 @@
 import unittest
-import wsgiref.util
+import ef.util
 from pprint import pprint
 import re
 

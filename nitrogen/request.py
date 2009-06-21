@@ -5,11 +5,11 @@ from __future__ import print_function
 from StringIO import StringIO
 
 try:
-    from .wsgi.input import Get, Post, Cookies
-    from .wsgi.status import resolve_status
+    from .input import Get, Post, Cookies
+    from .status import resolve_status
 except ValueError:
-    from wsgi.input import Get, Post, Cookies
-    from wsgi.status import resolve_status
+    from input import Get, Post, Cookies
+    from status import resolve_status
 
 class HeaderList(list):
     '''A more dict-like list for headers.'''
