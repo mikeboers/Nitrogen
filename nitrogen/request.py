@@ -5,11 +5,11 @@ from __future__ import print_function
 from StringIO import StringIO
 
 try:
-    from .input import Get, Post, Cookies
-    from .status import resolve_status
+    from .wsgi.input import Get, Post, Cookies
+    from .wsgi.status import resolve_status
 except ValueError:
-    from input import Get, Post, Cookies
-    from status import resolve_status
+    from wsgi.input import Get, Post, Cookies
+    from wsgi.status import resolve_status
 
 class HeaderList(list):
     '''A more dict-like list for headers.'''
@@ -95,6 +95,8 @@ class Request(object):
         return self.environ.get('REQUEST_METHOD')
 
 
-
+if __name__ == '__main__':
+    from test import run
+    run()
 
 

@@ -7,12 +7,9 @@ import cgi
 import collections
     
 try:
-    from ..uri.query import Query
+    from .uri.query import Query
     from .cookie import Container as CookieContainer
 except ValueError:
-    # For local testing.
-    import sys
-    sys.path.append('..')
     from uri.query import Query
     from cookie import Container as CookieContainer
         
@@ -184,7 +181,5 @@ def Cookies(environ):
     return CookieContainer(environ.get('HTTP_COOKIE', ''))
 
 if __name__ == "__main__":
-    import sys
-    sys.path.insert(0, '..')
     from test import run
     run()

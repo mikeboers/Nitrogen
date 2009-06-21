@@ -103,7 +103,8 @@ def run():
         doc_suite = doctest.DocTestSuite(m)
         suite.addTest(doc_suite)
         doc_count = doc_suite.countTestCases()
-        print "Found %d doc test%s." % (doc_count, 's' if doc_count > 1 else '')
+        if doc_count:
+            print "Found %d doc test%s." % (doc_count, 's' if doc_count > 1 else '')
     except:
         doc_suite = None
     

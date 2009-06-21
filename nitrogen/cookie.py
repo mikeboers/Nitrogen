@@ -129,11 +129,8 @@ except ImportError:
 
 # For signed cookies
 try:
-    from ..uri.query import Query
+    from .uri.query import Query
 except ValueError:
-    # For local testing.
-    import sys
-    sys.path.append('..')
     from uri.query import Query
 
 
@@ -596,10 +593,8 @@ def make_signed_container(entropy, maxage=None):
     return SignedContainer
 
 if __name__ == "__main__":
-    import doctest
-    print "Testing..."
-    doctest.testmod()
-    print "Done."
+    from test import run
+    run()
 
 
 

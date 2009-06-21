@@ -1,7 +1,7 @@
 """nitrogen.wsgi.routing package."""
 
-from ...uri import URI
-from ...uri.path import Path
+from ..uri import URI
+from ..uri.path import Path
 
 UNROUTED_ENVIRON_KEY = 'nitrogen.path.unrouted'
 ROUTED_ENVIRON_KEY = 'nitrogen.path.routed'
