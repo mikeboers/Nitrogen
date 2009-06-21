@@ -12,14 +12,14 @@ except ValueError:
     from uri.query import Query
     from cookie import Container as CookieContainer
 
-    
 class ReadOnlyMapping(collections.Mapping):
   
     def __init__(self, supplier):
         self.supplier = supplier
         self._is_setup = False
 
-    def _setup(self):
+    def _setup(self):    
+        self._is_setup = True
         self.__pairs = []
         self.__keys = []
         self.__key_i = {}
@@ -29,7 +29,6 @@ class ReadOnlyMapping(collections.Mapping):
                 self.__key_i[key] = len(self.__pairs)
             self.__pairs.append((key, value))
         self.supplier = None
-        self._is_setup = True
     
     @property
     def _pairs(self):
@@ -75,13 +74,60 @@ class ReadOnlyMapping(collections.Mapping):
     def allitems(self):
         return self._pairs[:]
 
-def input_parser(app):
+class PostStorage(cgi.FieldStorage):
+    def __init__(self, environ, accept, make_file, max_size):
+        environ = environ.copy()
+        environ['QUERY_STRING'] = ''
+        cgi.FieldStorage.__init__(self,
+            fp=environ.get('wsgi.input'),
+            environ=environ,
+            keep_blank_values=True
+        )
+        
+    
+    def make_file(self, binary=None):
+        pass
+
+def input_parser(app, accept=False, make_file=None, max_size=None):
     def inner(environ, start):
         
         # Build the get object
         query = environ.get('QUERY_STRING', '')
         query = Query(query)
         environ['nitrogen.get'] = ReadOnlyMapping(query.iterallitems)
+        
+        # Post and files.
+        post  = environ['nitrogen.post']  = ReadOnlyMapping()
+        files = environ['nitrogen.files'] = ReadOnlyMapping()
+        
+        state = {
+            'fs': None
+        }
+        def builder_builder(other):
+            is_post  = other is files
+            is_files = other is post
+            def inner():
+                if not state['fs']:
+                    state['fs'] = PostStorage(
+                        environ=environ,
+                        accept=files.accept,
+                        make_file=files.make_file,
+                        max_size=files.max_size
+                    )
+                for chunk in state['fs'].list:
+                    if chunk.filename and is_files:
+                        # Send to files object.
+                    else:
+                        # Send to post object.
+                        yield (chunk.name.decode('utf8'), chunk.value)
+            return inner
+        
+        files.accept = accept
+        files.make_file = make_file
+        files.max_size = max_size
+        
+        post.supplier = builder_builder(files)
+        files.supplier = builder_builder(post)
         
         return app(environ, start)
     
