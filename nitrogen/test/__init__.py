@@ -42,9 +42,9 @@ class WSGIServer(object):
     def __init__(self, app=None, input=None):
         self.app = app
         self.input = input
+        self.environ = create_wsgi_environ(input or self.input or '')
         
     def run(self, app=None, input=None, **kwargs):
-        self.environ = create_wsgi_environ(input or self.input or '')
         self.environ.update(kwargs)
         self.started = False
         self.output = []

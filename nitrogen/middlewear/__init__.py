@@ -7,6 +7,7 @@ try:
     from ..input import Get, Post
     from ..status import resolve_status
     from ..error import format_error_report
+    from .compressor import compressor
 except ValueError: # In case we are running local tests.
     import sys
     sys.path.insert(0, '..')
@@ -14,23 +15,9 @@ except ValueError: # In case we are running local tests.
     from input import Get, Post
     from status import resolve_status
     from error import format_error_report
+    from compressor import compressor
 
-def compressor(app):
-    def inner(environ, start):
-        if 'gzip' not in environ.get('HTTP_ACCEPT_ENCODING', '').split(','):
-            for x in app(environ, start):
-                yield x
-            return
-        def inner_start(status, headers):
-            headers.append(('Content-Encoding', 'deflate'))
-            start(status, headers)
-        compressor = zlib.compressobj()
-        for x in app(environ, inner_start):
-            x = compressor.compress(x) if x else None
-            if x:
-                yield x
-        yield compressor.flush()
-    return inner
+
             
 def utf8_encoder(app):
     """Encodes everything to a UTF-8 string.
