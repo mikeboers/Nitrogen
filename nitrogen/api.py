@@ -88,7 +88,8 @@ class Api(object):
         
         # Put it all into unicode.
         for k in req:
-            req[k] = unicode(req[k], 'utf8')
+            if not isinstance(req[k], unicode):
+                req[k] = unicode(str(req[k]), 'utf8')
         
         try:
             # Get the method, and make sure it exists.
