@@ -2,12 +2,13 @@
 
 import cgi
 import collections
-    
+import sys
+import tempfile
+
 try:
     from ..uri.query import Query
     from ..cookie import Container as CookieContainer
 except ValueError:
-    import sys
     sys.path.insert(0, '..')
     from uri.query import Query
     from cookie import Container as CookieContainer
@@ -74,17 +75,56 @@ class ReadOnlyMapping(collections.Mapping):
     def allitems(self):
         return self._pairs[:]
 
+
+
+
+
+
+class DefaultFile(object):
+    def __init__(self, max_size):
+        self.fh = tempfile.TemporaryFile("w+b")
+        self.max_size = max_size
+        self.written = 0
+        
+        # Transfer all the methods.
+        for attr in 'read flush seek tell fileno'.split():
+            setattr(self, attr, getattr(self.fh, attr))
+    
+    def write(self, stuff):
+        self.written += len(stuff)
+        if self.max_size and self.max_size < self.written:
+            raise ValueError("Too much written to file!")
+        return self.fh.write(stuff)
+
+
 def PostStorage(environ, accept, make_file, max_size):
     class FieldStorage(cgi.FieldStorage):    
         def make_file(self, binary=None):
-            return cgi.FieldStorage.make_file(self, binary)
+            if not accept:
+                raise ValueError("Not accepting posted files.")
+            if make_file:
+                return make_file(
+                    key=self.name,
+                    filename=self.filename,
+                    length=(self.length if self.length > 0 else 0)
+                )
+            return DefaultFile(max_size=max_size)
     environ = environ.copy()
     environ['QUERY_STRING'] = ''
-    return FieldStorage(
+    fs = FieldStorage(
         fp=environ.get('wsgi.input'),
         environ=environ,
         keep_blank_values=True
     )
+    
+    # Assert that all the files have been written out.
+    for chunk in fs.list:
+        if chunk.filename and hasattr(chunk.file, 'getvalue'): # IT is a stringIO
+            contents = chunk.file.getvalue()
+            chunk.file = chunk.make_file(None)
+            chunk.file.write(contents)
+            chunk.file.seek(0)
+    return fs
 
 def input_parser(app, accept=False, make_file=None, max_size=None):
     def inner(environ, start):
@@ -111,10 +151,11 @@ def input_parser(app, accept=False, make_file=None, max_size=None):
                         max_size=files.max_size
                     )
                 for chunk in state['fs'].list:
+                    # sys.stderr.write(str(chunk.filename) + '\n')
                     if chunk.filename and is_files:
                         # Send to files object.
                         yield (chunk.name.decode('utf8'), chunk.file)
-                    else:
+                    elif not chunk.filename and not is_files:
                         # Send to post object.
                         yield (chunk.name.decode('utf8'), chunk.value)
             return inner
