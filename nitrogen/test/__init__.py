@@ -52,7 +52,7 @@ class WSGIServer(object):
             if not self.started:
                 raise ValueError("Recieved output before start.")
             if not isinstance(x, str):
-                raise TypeError("Iterator returned non-str.")
+                raise TypeError("Iterator returned non-str.", x)
             self.output.append(x)
         if not self.started:
             raise ValueError("No content at all.")
