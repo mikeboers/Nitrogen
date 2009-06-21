@@ -154,10 +154,10 @@ def input_parser(app, accept=False, make_file=None, max_size=None):
                     # sys.stderr.write(str(chunk.filename) + '\n')
                     if chunk.filename and is_files:
                         # Send to files object.
-                        yield (chunk.name.decode('utf8'), chunk.file)
+                        yield (chunk.name.decode('utf8', 'replace'), chunk.file)
                     elif not chunk.filename and not is_files:
                         # Send to post object.
-                        yield (chunk.name.decode('utf8'), chunk.value)
+                        yield (chunk.name.decode('utf8', 'replace'), chunk.value.decode('utf8', 'replace'))
             return inner
         
         files.accept = accept

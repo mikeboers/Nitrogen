@@ -9,6 +9,7 @@ try:
     from ..status import resolve_status
     from ..error import format_error_report
     from .compressor import compressor
+    from .input import input_parser
     from .. import logs
 except ValueError: # In case we are running local tests.
     import sys
@@ -95,20 +96,8 @@ def cookie_builder(app, strict=True):
                 raise ValueError('Cookies have been modified since WSGI start.', self.headers, headers)
     return inner
 
-def get_parser(app):
-    def inner(environ, start):
-        environ['nitrogen.get'] = Get(environ)
-        return app(environ, start)
-    return inner
-
-def post_parser(app):
-    def inner(environ, start):
-        environ['nitrogen.post'] = Post(environ)
-        return app(environ, start)
-    return inner
-
 def full_parser(app):
-    return cookie_builder(post_parser(get_parser(cookie_parser(app))))
+    return cookie_builder(input_parser(cookie_parser(app)))
 
 
 
