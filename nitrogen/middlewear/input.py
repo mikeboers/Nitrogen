@@ -14,7 +14,7 @@ except ValueError:
 
 class ReadOnlyMapping(collections.Mapping):
   
-    def __init__(self, supplier):
+    def __init__(self, supplier=None):
         self.supplier = supplier
         self._is_setup = False
 
@@ -86,7 +86,7 @@ class PostStorage(cgi.FieldStorage):
         
     
     def make_file(self, binary=None):
-        pass
+        return cgi.FieldStorage.make_file(self, binary)
 
 def input_parser(app, accept=False, make_file=None, max_size=None):
     def inner(environ, start):
@@ -103,9 +103,7 @@ def input_parser(app, accept=False, make_file=None, max_size=None):
         state = {
             'fs': None
         }
-        def builder_builder(other):
-            is_post  = other is files
-            is_files = other is post
+        def builder_builder(is_files):
             def inner():
                 if not state['fs']:
                     state['fs'] = PostStorage(
@@ -117,6 +115,7 @@ def input_parser(app, accept=False, make_file=None, max_size=None):
                 for chunk in state['fs'].list:
                     if chunk.filename and is_files:
                         # Send to files object.
+                        yield (chunk.name.decode('utf8'), chunk.file)
                     else:
                         # Send to post object.
                         yield (chunk.name.decode('utf8'), chunk.value)
@@ -126,8 +125,8 @@ def input_parser(app, accept=False, make_file=None, max_size=None):
         files.make_file = make_file
         files.max_size = max_size
         
-        post.supplier = builder_builder(files)
-        files.supplier = builder_builder(post)
+        post.supplier = builder_builder(False)
+        files.supplier = builder_builder(True)
         
         return app(environ, start)
     
@@ -156,6 +155,22 @@ def test_get():
     status, headers, output = WSGIServer(app).run(QUERY_STRING='key=value&key2=value2')
     assert output == 'START|key=value|key2=value2|END'
 
+def test_post():
+    def app(environ, start):
+        start('200 OK', [])
+        yield "START|"
+        for k, v in environ.get('nitrogen.post').allitems():
+            yield ('%s=%s|' % (k, v)).encode('utf8')
+        yield "END"
+    app = input_parser(app)
+    status, headers, output = WSGIServer(app).run(REQUEST_METHOD='POST')
+    assert output == 'START|END'
+    
+    status, headers, output = WSGIServer(app,
+        input='key=value&same=first&same=second').run(REQUEST_METHOD='POST')
+    assert output == 'START|key=value|same=first|same=second|END'
+        
+        
 if __name__ == '__main__':
     from test import run, WSGIServer
     run()
