@@ -1,4 +1,42 @@
-"""Module for middlewear that will parse GET, POST, posted files, and basic cookies."""
+"""Web input parsing functions.
+
+The functions and middlewear in this module are designed to parse query string
+(GET) and posted data/files. They do so in a lazy manner, only parsing the
+input when they must. This gives a little bit of time to setup some
+configuration on how the files are parsed.
+
+By default, files are rejected; an exception is thrown when a file is posted.
+You can change the accept parameter on the files object to turn off this
+behavior. Then, by default, temporary files will be created that will be
+removed from the drive as soon as they are garbage collected.
+
+The default temp files will also respond to a max_size attribute on the files
+object. They will not accept any more data than the number of bytes specified
+on the max_size attribute.
+
+If you want even more control over the files, you can specify a make_file
+attribute on the files object, which will be called with keyword arguments
+"key" (the key it will have in the files dict), "filename" (as reported by the
+browser), and "length" (the content-length of the file as reported by the
+browser). It is expected to return a file-like object.
+
+I don't do anything to deal with possibly incomplete files. You will need to
+implement your own make_file which returns an object that tracks the written
+amount and compares it to the reported content-length.
+
+Notes from cgi.FieldStorage:
+	fs.length is the reported content length
+		will be -1 if the content length is not given
+	fs.file will have the file object
+		it could be a stringIO
+	fs.name is the field name
+	fs.type_options has the type options (it is a dict)
+		maybe it has a charset key? =]
+	it has internal protection for recieving too much in the read_binary mode, but that is only triggered from read_single (when there is a length), which is triggerd when the content type is not multipart/* or application/x-www-form-urlencoded. If it is multipart, then a bunch of FieldStorages are made from the multiple parts and those are finally read with read_single
+		so if a length is provided, then it already stops reading after that far
+		if there is no length, it reads until the boundary or the end of file.
+
+"""
 
 import cgi
 import collections
@@ -108,6 +146,8 @@ def PostStorage(environ, accept, make_file, max_size):
                     filename=self.filename,
                     length=(self.length if self.length > 0 else 0)
                 )
+            if self.length > max_size:
+                raise ValueError("Reported file size is too big.")
             return DefaultFile(max_size=max_size)
     environ = environ.copy()
     environ['QUERY_STRING'] = ''
