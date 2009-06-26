@@ -29,7 +29,7 @@ if __name__ == '__main__':
     @property
     def new_name(self):
         return 'fa-' + self.field.name
-    cls.name = new_name
+    #cls.name = new_name
 
     print cls.name
 
