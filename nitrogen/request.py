@@ -100,7 +100,22 @@ class Request(object):
     def method(self):
         return self.environ.get('REQUEST_METHOD')
 
+# This has a bad name... Shame on me.
+# TODO: Name this better.
+def request_handler(app):
+    """Decorator for converting WSGI based apps into request handling apps."""
+    def inner(environ, start, *args):
+        req = Request(environ, start)
+        return app(req, *args)
+    return inner
 
+def request_handler_method(app):
+    """Decorator for converting WSGI based instance methods into request handling apps."""
+    def inner(self, environ, start, *args):
+        req = Request(environ, start)
+        return app(self, req, *args)
+    return inner
+    
 if __name__ == '__main__':
     from test import run
     run()

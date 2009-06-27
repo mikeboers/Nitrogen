@@ -88,7 +88,7 @@ def run():
     import sys
     import doctest
     
-    sys.path.append('../lib')
+    sys.path.append(os.path.abspath(__file__ + '/../../lib'))
     import nose.loader
     
     # Grab the main module/

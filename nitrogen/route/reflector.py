@@ -21,7 +21,7 @@ class Reflector(object):
         segment = get_route_segment(self.environ) or 'index'
         method_name = 'do_' + segment
         if not hasattr(self, method_name):
-            raise NotFoundError(get_routed(environ))
+            raise NotFoundError(get_routed(self.environ))
         method = getattr(self, method_name)
         for x in method(self.environ, self.start):
             yield x

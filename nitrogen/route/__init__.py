@@ -9,7 +9,7 @@ ROUTED_ENVIRON_KEY = 'nitrogen.path.routed'
 def get_unrouted(environ):
     """Returns the unrouted portion of the requested URI."""
     if UNROUTED_ENVIRON_KEY not in environ:
-        path = URI(environ.get('REQUEST_URI', '')).path
+        path = URI(environ.get('REQUEST_URI', '').strip('/')).path
         path.remove_dot_segments()
         environ[UNROUTED_ENVIRON_KEY] = path
     return environ[UNROUTED_ENVIRON_KEY]

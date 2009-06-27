@@ -26,14 +26,21 @@ class Formatter(logging.Formatter):
     def format(self, record):
         data = {
             'ip': None,
-            'thread_i': 0
+            'thread_i': 0,
+            'process': 0,
+            'asctime': 'DATETIME',
+            'levelname': 'LEVELNAME',
+            'message': 'MESSAGE'
         }
         data.update(record.__dict__)
         data.update(extra.__dict__)
         
         if '(asctime)' in base_format:
             data['asctime'] = self.formatTime(record)
-        data['message'] = record.msg % record.args
+        try:
+            data['message'] = record.msg % record.args
+        except:
+            data['message'] = record.msg
         
         return base_format % data
 formatter = Formatter()
