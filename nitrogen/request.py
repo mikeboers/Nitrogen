@@ -52,10 +52,13 @@ class Request(object):
         if self.cookies is None:
             self.cookies = Cookies(environ)
         
+        # self.unrouted = environ.get('nitrogen.path.unrouted')
+        # self.routed = environ.get('nitrogen.path.routed')
+        
         self.status = '200 OK'
         self.headers = HeaderList()
     
-    def start(self, status=None, headers=None):
+    def start(self, status=None, headers=None, html=None):
         """Start the wsgi return sequence.
         
         If called with status, that status is resolved. If status is None, we
@@ -68,9 +71,14 @@ class Request(object):
         if self._has_started:
             raise ValueError("wsgi start has already been called.")
         self._has_started = True
+        
         headers = self.headers + (list(headers) if headers else [])
         if not self._cookies_provided:
             headers.extend(self.cookies.build_headers())
+        
+        if html:
+            headers.append(('Content-Type', 'text/html'))
+        
         self._start(resolve_status(status or self.status), headers)
     
     def write(self, *args, **kwargs):

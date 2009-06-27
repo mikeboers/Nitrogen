@@ -23,13 +23,6 @@ if __name__ == '__main__':
 
 
 
-    cls = fa.FieldRenderer
-    print cls
-
-    @property
-    def new_name(self):
-        return 'fa-' + self.field.name
-    #cls.name = new_name
 
     print cls.name
 

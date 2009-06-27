@@ -6,7 +6,7 @@ from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker, object_session, relation, backref
 from sqlalchemy.ext.declarative import declarative_base
 
-engine = create_engine('sqlite:///:memory:', echo=True)
+engine = create_engine('sqlite:///:memory:', echo=False)
 Session = sessionmaker(bind=engine)
 Base = declarative_base()
 
@@ -60,3 +60,5 @@ session.commit()
 session = Session()
 for person in session.query(Person).all():
     print person
+
+print Person.__table__.columns
