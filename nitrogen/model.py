@@ -1,15 +1,9 @@
 
-try:    
-    from .lib.sqlalchemy import *
-    from .lib.sqlalchemy.orm import sessionmaker, object_session, relation, backref
-    from .lib.sqlalchemy.ext.declarative import declarative_base
-except ValueError:
-    import sys
-    sys.path.append('lib')
-    from sqlalchemy import *
-    from sqlalchemy.orm import sessionmaker, object_session, relation, backref
-    from sqlalchemy.ext.declarative import declarative_base
-
+from sqlalchemy import *
+from sqlalchemy.orm import sessionmaker, object_session, relation, backref
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.types import TypeDecorator
+    
 Base = declarative_base()
 
 # Monkey patching the declarative base to add some convenience features, such
