@@ -28,7 +28,7 @@ def unpkcs5(string):
     pad = ord(string[-1])
     return string[:-pad]
 
-def timed_hash(input, salt=None, min_time=0.01, min_cycles=2**10, trials=5, _inner=False):
+def timed_hash(input, to_check=None, min_time=0.033, _inner=False):
     """Hashes the input with a random salt a number of times until enough
     time has elapsed.
     
@@ -41,7 +41,7 @@ def timed_hash(input, salt=None, min_time=0.01, min_cycles=2**10, trials=5, _inn
     
         >>> hash = timed_hash('password')
         >>> len(hash)
-        68
+        69
         >>> hash == timed_hash('password', hash)
         True
         >>> hash == timed_hash('different', hash)
@@ -49,43 +49,60 @@ def timed_hash(input, salt=None, min_time=0.01, min_cycles=2**10, trials=5, _inn
         
     """
     
-    cycles = None
-    if salt and len(salt) == 32 + 32 + 4:
-        salt_in = salt
-        salt = salt_in[0:32]
-        cycles = int(salt_in[-4:].encode('hex'), 16)
+    min_cycles=2**12
+    inner_trial_count=3
+    
+    cycle_count = None
+    if to_check and len(to_check) == 32 + 32 + 4 + 1:
+        version = ord(to_check[0])
+        assert version == 1
+        to_check = to_check[1:]
+        salt = to_check[0:32]
+        cycle_count = int(to_check[-4:].encode('hex'), 16)
     else:
-        # generate a salt
+        to_check = None
         salt = sha256(os.urandom(512)).digest()
     
-    if not cycles and not _inner:
+    # If we are building up a new hash...
+    if to_check is None and not _inner:
+        
         # We need to run a couple trials
         hashes = [timed_hash(
             input=input,
             min_time=min_time,
-            min_cycles=min_cycles,
-            trials=trials,
-            _inner=True) for x in range(trials)]
+            _inner=True) for x in range(inner_trial_count)]
+        
+        # Pull out the one with the most cycles.
         count, salt, hash = list(reversed(sorted(hashes)))[0]
-        return '%s%s%s' % (salt, hash, ('%08x' % count).decode('hex'))
+        
+        return '%c%s%s%s' % (1, salt, hash, ('%08x' % count).decode('hex'))
     
     hash = input
     start_time = time.time()
     count = 0
     while True:
-        if cycles is not None:
-            if not cycles:
+        
+        # Track the number of cycles if we are verifying.
+        if cycle_count is not None:
+            if not cycle_count:
                 break
-            cycles -= 1
-        elif count >= min_cycles and (time.time() - start_time) >= min_time:
+            cycle_count -= 1
+        
+        # Track the time and minimum number of cycles for generating.
+        elif count >= min_cycles and not count % 64 and (time.time() - start_time) >= min_time:
             break
         count += 1
+        
+        # Do the actual hash
         hash = sha256(salt + hash).digest()
     
-    if _inner:
+    # Return to ourself.
+    if _inner:    
+        # print 'inner', count
         return (count, salt, hash)
     
-    return '%s%s%s' % (salt, hash, ('%08x' % count).decode('hex'))
+    # print 'count', count
+    return '%c%s%s%s' % (1, salt, hash, ('%08x' % count).decode('hex'))
 
 
 
