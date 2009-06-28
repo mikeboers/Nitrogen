@@ -4,6 +4,8 @@ import base64
 import hashlib
 from subprocess import Popen, PIPE
 import StringIO
+import time
+import os
 
 def base64_encode(data, urlsafe=False):
     return base64.b64encode(data, '-_' if urlsafe else None)
@@ -25,6 +27,73 @@ def pkcs5(string, blocksize):
 def unpkcs5(string):
     pad = ord(string[-1])
     return string[:-pad]
+
+def timed_hash(input, salt=None, min_time=0.01, min_cycles=2**10, trials=5, _inner=False):
+    """Hashes the input with a random salt a number of times until enough
+    time has elapsed.
+    
+    The result is of the form (68 bytes):
+        [ 32 bytes of salt ][ 32 bytes of hash ][ 4 bytes of num of cycles ]
+    
+    Input and output should be in raw binary.
+    
+    Examples:
+    
+        >>> hash = timed_hash('password')
+        >>> len(hash)
+        68
+        >>> hash == timed_hash('password', hash)
+        True
+        >>> hash == timed_hash('different', hash)
+        False
+        
+    """
+    
+    cycles = None
+    if salt and len(salt) == 32 + 32 + 4:
+        salt_in = salt
+        salt = salt_in[0:32]
+        cycles = int(salt_in[-4:].encode('hex'), 16)
+    else:
+        # generate a salt
+        salt = sha256(os.urandom(512)).digest()
+    
+    if not cycles and not _inner:
+        # We need to run a couple trials
+        hashes = [timed_hash(
+            input=input,
+            min_time=min_time,
+            min_cycles=min_cycles,
+            trials=trials,
+            _inner=True) for x in range(trials)]
+        count, salt, hash = list(reversed(sorted(hashes)))[0]
+        return '%s%s%s' % (salt, hash, ('%08x' % count).decode('hex'))
+    
+    hash = input
+    start_time = time.time()
+    count = 0
+    while True:
+        if cycles is not None:
+            if not cycles:
+                break
+            cycles -= 1
+        elif count >= min_cycles and (time.time() - start_time) >= min_time:
+            break
+        count += 1
+        hash = sha256(salt + hash).digest()
+    
+    if _inner:
+        return (count, salt, hash)
+    
+    return '%s%s%s' % (salt, hash, ('%08x' % count).decode('hex'))
+
+
+
+
+
+
+
+
 
 class CryptoError(Exception):
     pass
@@ -76,9 +145,5 @@ class AES(object):
             return out
 
 if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
-    
-    aes = AES('thisisakey..yeah', pad=True, salt=True, base64=True)
-    enc = aes.encrypt('This is some secret data.')
-    print enc, aes.decrypt(enc)
+    from test import run
+    run()
