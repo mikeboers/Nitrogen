@@ -19,9 +19,10 @@ from . import get_routed, get_unrouted, NotFoundError
 
 class ReRouter(object):
     
-    def __init__(self):
+    def __init__(self, default=None):
         self._apps = []
-    
+        self.default = default
+        
     def register(self, pattern, app=None):
         """Register directly, or use as a decorator."""
         if app:
@@ -41,4 +42,6 @@ class ReRouter(object):
             m = pattern.search(path)
             if m is not None:
                 return app(environ, start, *m.groups())
+        if self.default:
+            return self.default(environ, start)
         raise NotFoundError(get_routed(environ))
