@@ -353,6 +353,8 @@ class Cookie(object):
         for key in sorted(_attr_map):
             name = _attr_map[key]
             value = getattr(self, key)
+            if key == 'path' and value is None:
+                value = '/'
             if value is not None:
                 if key == "max-age":
                     result.append("%s=%d" % (name, value))

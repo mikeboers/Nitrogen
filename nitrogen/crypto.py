@@ -47,7 +47,13 @@ def timed_hash(input, to_check=None, min_time=0.033, _inner=False):
         >>> hash == timed_hash('different', hash)
         False
         
+        >>> hash == timed_hash(u'password', hash)
+        True
+        
     """
+    
+    if isinstance(input, unicode):
+        input = input.encode('utf8')
     
     min_cycles=2**12
     inner_trial_count=3

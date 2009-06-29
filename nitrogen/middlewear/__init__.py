@@ -4,7 +4,7 @@ import zlib
 import threading
 
 try:
-    from ..cookie import Container as CookieContainer
+    from .. import cookie
     from ..input import Get, Post
     from ..status import resolve_status
     from ..error import format_error_report
@@ -14,7 +14,7 @@ try:
 except ValueError: # In case we are running local tests.
     import sys
     sys.path.insert(0, '..')
-    from cookie import Container as CookieContainer
+    import cookie
     from input import Get, Post
     from status import resolve_status
     from error import format_error_report
@@ -63,9 +63,10 @@ def utf8_encoder(app):
             yield x.encode('utf8', 'xmlcharrefreplace')
     return inner
 
-def cookie_parser(app):
+def cookie_parser(app, signature_key=None):
+    class_ = cookie.make_signed_container(signature_key) if signature_key else cookie.Container
     def inner(environ, start):
-        environ['nitrogen.cookies'] = CookieContainer(environ.get('HTTP_COOKIE', ''))
+        environ['nitrogen.cookies'] = class_(environ.get('HTTP_COOKIE', ''))
         return app(environ, start)    
     return inner
 
@@ -96,8 +97,11 @@ def cookie_builder(app, strict=True):
                 raise ValueError('Cookies have been modified since WSGI start.', self.headers, headers)
     return inner
 
-def full_parser(app):
-    return cookie_builder(input_parser(cookie_parser(app)))
+def full_parser(app, signature_key=None, strict=True):
+    return cookie_builder(
+        input_parser(cookie_parser(app, signature_key=signature_key)),
+        strict=strict
+    )
 
 
 
