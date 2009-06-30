@@ -15,7 +15,7 @@ as the last routing (or into another set of rerouters).
 import re
 import logging
 
-from . import get_routed, get_unrouted, NotFoundError
+from .tools import get_routed, get_unrouted, NotFoundError
 
 class ReRouter(object):
     

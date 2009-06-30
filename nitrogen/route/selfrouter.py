@@ -9,9 +9,9 @@ It is written so that you can nest reflectors.
 
 """
 
-from . import get_routed, get_route_segment, NotFoundError
+from .tools import get_routed, get_route_segment, NotFoundError
 
-class Reflector(object):
+class SelfRouter(object):
     
     def __init__(self, environ, start):
         self.environ = environ

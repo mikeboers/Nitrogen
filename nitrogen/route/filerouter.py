@@ -18,7 +18,7 @@ import os
 import re
 import logging
 
-from . import get_routed, get_route_segment, NotFoundError
+from .tools import get_routed, get_route_segment, NotFoundError
 
 log = logging.getLogger(__name__)
 
