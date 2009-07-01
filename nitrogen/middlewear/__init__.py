@@ -5,7 +5,6 @@ import threading
 
 try:
     from .. import cookie
-    from ..input import Get, Post
     from ..status import resolve_status
     from ..error import format_error_report
     from .compressor import compressor
@@ -15,7 +14,6 @@ except ValueError: # In case we are running local tests.
     import sys
     sys.path.insert(0, '..')
     import cookie
-    from input import Get, Post
     from status import resolve_status
     from error import format_error_report
     from compressor import compressor

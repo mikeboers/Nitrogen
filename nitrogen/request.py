@@ -11,10 +11,8 @@ from __future__ import print_function
 from StringIO import StringIO
 
 try:
-    from .input import Get, Post, Cookies
     from .status import resolve_status
 except ValueError:
-    from input import Get, Post, Cookies
     from status import resolve_status
 
 class HeaderList(list):
