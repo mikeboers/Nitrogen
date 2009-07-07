@@ -45,7 +45,7 @@ def test_compress_deflate():
         yield "Hello, world!"
     
     server = WSGIServer(compressor(app))
-    server.environ['HTTP_ACCEPT_ENCODING'] = 'opt1,deflate,opt2'
+    server.environ['HTTP_ACCEPT_ENCODING'] = 'other1,deflate,other2'
     status, headers, output = server.run()
     
     headers = dict(headers)

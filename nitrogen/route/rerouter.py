@@ -6,16 +6,18 @@ and environ.
 
 The first pattern to match wins (from order of registration).
 
-This router does NOT maintain the (un)routed path elements of the environ.
-Therefore, it is not safe to use this before any other routers. It is suitable
-as the last routing (or into another set of rerouters).
+This router does maintain the nitrogen.path values in the environ, but only
+moves the part that it explicitly removed. Therefore a slash may prefix the
+unrouted path if you are not careful, and so the unrouted path will then be
+absolute.
 
 """
 
 import re
 import logging
 
-from .tools import get_routed, get_unrouted, NotFoundError
+from .tools import *
+from ..uri import Path
 
 class ReRouter(object):
     
@@ -41,7 +43,13 @@ class ReRouter(object):
         for pattern, app in self._apps:
             m = pattern.search(path)
             if m is not None:
+                
+                # Update the routing information.
+                # NOTE that 
+                environ['nitrogen.path.unrouted'] = Path(path[m.end():])
+                record_routed_segment(environ, m.group())
+                
                 return app(environ, start, *m.groups())
         if self.default:
             return self.default(environ, start)
-        raise NotFoundError(get_routed(environ))
+        raise NotFoundError('Could not find match.')

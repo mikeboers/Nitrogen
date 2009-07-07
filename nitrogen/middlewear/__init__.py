@@ -63,8 +63,8 @@ def utf8_encoder(app):
             yield x.encode('utf8', 'xmlcharrefreplace')
     return inner
 
-def cookie_parser(app, signature_key=None):
-    class_ = cookie.make_signed_container(signature_key) if signature_key else cookie.Container
+def cookie_parser(app, hmac_key=None):
+    class_ = cookie.make_signed_container(hmac_key) if hmac_key else cookie.Container
     def inner(environ, start):
         environ['nitrogen.cookies'] = class_(environ.get('HTTP_COOKIE', ''))
         return app(environ, start)    
@@ -97,9 +97,9 @@ def cookie_builder(app, strict=True):
                 raise ValueError('Cookies have been modified since WSGI start.', self.headers, headers)
     return inner
 
-def full_parser(app, signature_key=None, strict=True):
+def full_parser(app, hmac_key=None, strict=True):
     return cookie_builder(
-        input_parser(cookie_parser(app, signature_key=signature_key)),
+        input_parser(cookie_parser(app, hmac_key=hmac_key)),
         strict=strict
     )
 

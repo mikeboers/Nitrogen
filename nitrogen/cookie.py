@@ -526,7 +526,7 @@ def make_encrypted_container(entropy):
     
     return EncryptedContainer
 
-def make_signed_container(entropy, maxage=None):
+def make_signed_container(hmac_key, maxage=None):
     """Builds a signed cookie container class.
     
     Examples:
@@ -575,7 +575,7 @@ def make_signed_container(entropy, maxage=None):
                 if maxages:
                     query['x'] = int(time.time()) + min(maxages)
                 query['n'] = os.urandom(4).encode('hex')
-                query['s'] = hmac.new(entropy, str(query), hashlib.md5).hexdigest()
+                query['s'] = hmac.new(hmac_key, str(query), hashlib.md5).hexdigest()
                 return str(query)
             
             @staticmethod
@@ -584,7 +584,7 @@ def make_signed_container(entropy, maxage=None):
                     query = Query(value)
                     sig = query['s']
                     del query['s']
-                    if hmac.new(entropy, str(query), hashlib.md5).hexdigest() != sig:
+                    if hmac.new(hmac_key, str(query), hashlib.md5).hexdigest() != sig:
                         raise Error("Bad signature.")
                     if 'x' in query and int(query['x']) < time.time():
                         raise Error("Expired cookie.")

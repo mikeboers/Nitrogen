@@ -16,7 +16,7 @@ def get_unrouted(environ):
 
 def get_routed(environ):
     if ROUTED_ENVIRON_KEY not in environ:
-        environ[ROUTED_ENVIRON_KEY] = Path('/')
+        environ[ROUTED_ENVIRON_KEY] = []
     return environ[ROUTED_ENVIRON_KEY]
 
 def get_route_segment(environ):
@@ -24,12 +24,16 @@ def get_route_segment(environ):
     unrouted = get_unrouted(environ)
     if unrouted:
         segment = unrouted.pop(0)
-        get_routed(environ).append(segment)
+        record_routed_segment(environ, segment)
         return segment
     return None
 
+def record_routed_segment(environ, segment):
+    get_routed(environ).append(segment)
+
 class NotFoundError(ValueError):
-    pass
+    def __init__(self, *args, **kwargs):
+        ValueError.__init__(self, *args, get_unrouted(), get_routed(), **kwargs)
 
 class Chain(list):
     
