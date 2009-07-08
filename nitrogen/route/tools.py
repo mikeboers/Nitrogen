@@ -33,7 +33,7 @@ def record_routed_segment(environ, segment):
 
 class NotFoundError(ValueError):
     def __init__(self, *args, **kwargs):
-        ValueError.__init__(self, *args, get_unrouted(), get_routed(), **kwargs)
+        ValueError.__init__(self, *args, **kwargs)
 
 class Chain(list):
     
