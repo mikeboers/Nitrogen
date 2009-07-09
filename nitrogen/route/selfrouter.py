@@ -14,7 +14,7 @@ if __name__ == '__main__':
     import sys
     sys.path.insert(0, __file__[:__file__.rfind('/nitrogen')])
 
-from nitrogen.route.tools import get_routed, get_route_segment, NotFoundError
+from tools import get_routed, get_route_segment, NotFoundError
 
 class SelfRouter(object):
     

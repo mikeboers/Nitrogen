@@ -16,6 +16,8 @@ from ..route import NotFoundError
 from .. import view
 from ..view import render, TYPE_HEADER_HTML
 
+from .. import config, server
+
 from .compressor import compressor
 from .input import cookie_parser, cookie_builder, input_parser, full_parser
 from .logs import log_extra_filler
@@ -48,8 +50,8 @@ def not_found_catcher(app):
 def environ_config(app):
     """Adds a number of app-specific items to the environ dict."""
     def inner(environ, start):
-        environ['nitrogen.config'] = nitrogen.config
-        environ['nitrogen.server'] = nitrogen.server
+        environ['nitrogen.config'] = config
+        environ['nitrogen.server'] = server
         # environ['nitrogen.local']  = nitrogen.local
         return app(environ, start)
     return inner

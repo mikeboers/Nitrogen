@@ -12,7 +12,7 @@ class log_extra_filler(object):
     def __call__(self, environ, start):
         self.lock.acquire()
         self.thread_count += 1
-        nitrogen.local.thread_i = self.thread_count
+        logs.extra.thread_i = self.thread_count
         self.lock.release()
-        nitrogen.local.ip = environ.get('REMOTE_ADDR')
+        logs.extra.ip = environ.get('REMOTE_ADDR')
         return self.app(environ, start)

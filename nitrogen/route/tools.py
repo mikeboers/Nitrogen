@@ -5,8 +5,8 @@ if __name__ == '__main__':
     import sys
     sys.path.insert(0, __file__[:__file__.rfind('/nitrogen')])
 
-from nitrogen.uri import URI
-from nitrogen.uri.path import Path
+from ..uri import URI
+from ..uri.path import Path
 
 UNROUTED_ENVIRON_KEY = 'nitrogen.path.unrouted'
 ROUTED_ENVIRON_KEY = 'nitrogen.path.routed'
