@@ -213,7 +213,7 @@ class Path(list):
                 i += 1
 
 if __name__ == '__main__':
-    import doctest
-    print "Testing..."
-    doctest.testmod()
-    print "Done."
+    import sys
+    sys.path.insert(0, '..')
+    from test import run
+    run()
