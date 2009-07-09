@@ -43,13 +43,13 @@ import collections
 import sys
 import tempfile
 
-try:
-    from ..uri.query import Query
-    from ..cookie import Container as CookieContainer
-except ValueError:
-    sys.path.insert(0, '..')
-    from uri.query import Query
-    from cookie import Container as CookieContainer
+# Setup path for local testing.
+if __name__ == '__main__':
+    import sys
+    sys.path.insert(0, __file__[:__file__.rfind('/nitrogen')])
+
+from nitrogen.uri.query import Query
+import nitrogen.cookie as cookie
 
 class ReadOnlyMapping(collections.Mapping):
   
@@ -211,6 +211,45 @@ def input_parser(app, accept=False, make_file=None, max_size=None):
     
     return inner
 
+def cookie_parser(app, hmac_key=None):
+    class_ = cookie.make_signed_container(hmac_key) if hmac_key else cookie.Container
+    def inner(environ, start):
+        environ['nitrogen.cookies'] = class_(environ.get('HTTP_COOKIE', ''))
+        return app(environ, start)    
+    return inner
+
+def cookie_builder(app, strict=True):
+    class inner(object):
+        def __init__(self, environ, start):
+            self.environ = environ
+            self.start = start
+            self.headers = None
+
+        def inner_start(self, status, headers):
+            cookies = self.environ.get('nitrogen.cookies')
+            if cookies:
+                self.headers = cookies.build_headers()
+                headers.extend(self.headers)
+            self.start(status, headers)
+
+        def __iter__(self):    
+            for x in app(self.environ, self.inner_start):
+                yield x
+            if not strict:
+                return
+            cookies = self.environ.get('nitrogen.cookies')
+            if cookies is None:
+                raise ValueError('Cookies have been removed from environ.')
+            headers = cookies.build_headers()
+            if self.headers is not None and self.headers != headers:
+                raise ValueError('Cookies have been modified since WSGI start.', self.headers, headers)
+    return inner
+
+def full_parser(app, hmac_key=None, strict=True):
+    return cookie_builder(
+        input_parser(cookie_parser(app, hmac_key=hmac_key)),
+        strict=strict
+    )
 
 def test_ReadOnlyMapping_1():
     def gen():
@@ -251,5 +290,5 @@ def test_post():
         
         
 if __name__ == '__main__':
-    from test import run, WSGIServer
+    from nitrogen.test import run, WSGIServer
     run()

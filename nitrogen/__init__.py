@@ -22,8 +22,11 @@ class ConfigDict(dict):
 
 config = ConfigDict()
 server = None
+
 def setup(config_module):
     global server
+    assert not server, 'You can only setup nitrogen once!'
+    
     config.update(extract_locals(config_module))
     server = config.server = get_server()
     for (k, v) in config.server.items():
