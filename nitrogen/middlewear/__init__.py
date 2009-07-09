@@ -7,7 +7,6 @@ if __name__ == '__main__':
     import sys
     sys.path.insert(0, '../..')
 
-import nitrogen
 
 from nitrogen.status import resolve_status
 
@@ -16,12 +15,12 @@ from nitrogen.route import NotFoundError
 import nitrogen.view as view
 from nitrogen.view import render, TYPE_HEADER_HTML
 
-from nitrogen.middlewear.compressor import compressor
-from nitrogen.middlewear.input import cookie_parser, cookie_builder, input_parser, full_parser
-from nitrogen.middlewear.logs import log_extra_filler
-from nitrogen.middlewear.unicode import utf8_encoder
-from nitrogen.middlewear.error import debugger, server_error_catcher, absolute_error_catcher
-from nitrogen.middlewear.view import template_context_setup, straight_templater
+from compressor import compressor
+from input import cookie_parser, cookie_builder, input_parser, full_parser
+from logs import log_extra_filler
+from unicode import utf8_encoder
+from error import debugger, server_error_catcher, absolute_error_catcher
+from view import template_context_setup, straight_templater
 
                         
 

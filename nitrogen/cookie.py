@@ -127,13 +127,8 @@ try:
 except ImportError:
     import pickle
 
-# Setup path for local testing.
-if __name__ == '__main__':
-    import sys
-    sys.path.insert(0, __file__[:__file__.rfind('/nitrogen')])
-
 # For signed cookies
-from nitrogen.uri.query import Query
+from uri.query import Query
 
 
 # Define an exception visible to External modules

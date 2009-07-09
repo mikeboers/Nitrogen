@@ -15,11 +15,9 @@ import logging.handlers
 import threading
 import time
 
-import nitrogen
-
 # This object will be used to populate all of the logging records.
 # There is middlewear that sets the attributes on this object.
-# extra = threading.local()
+extra = threading.local()
 
 root = logging.getLogger()
 
@@ -35,7 +33,7 @@ class Formatter(logging.Formatter):
             'message': 'MESSAGE'
         }
         data.update(record.__dict__)
-        data.update(nitrogen.local.__dict__)
+        data.update(extra.__dict__)
         
         if '%(asctime)' in base_format:
             data['asctime'] = self.formatTime(record)
