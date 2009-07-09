@@ -16,4 +16,5 @@ class log_extra_filler(object):
             logs.extra.thread_i = self.thread_count
             self.lock.release()
         logs.extra.ip = environ.get('REMOTE_ADDR')
+        print 'CURRENT THREAD:', threading.current_thread().name
         return self.app(environ, start)

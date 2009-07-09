@@ -21,7 +21,7 @@ extra = threading.local()
 
 root = logging.getLogger()
 
-base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(thread_i)d ip:%(ip)s -- %(message)s"
+base_format = "%(asctime)s %(levelname)-8s pid:%(process)d name:%(thread_name) req:%(thread_i)d ip:%(ip)s -- %(message)s"
 class Formatter(logging.Formatter):
     def format(self, record):
         data = {
@@ -30,7 +30,8 @@ class Formatter(logging.Formatter):
             'process': 0,
             'asctime': 'DATETIME',
             'levelname': 'LEVELNAME',
-            'message': 'MESSAGE'
+            'message': 'MESSAGE',
+            'thread_name': threading.current_thread().name
         }
         data.update(record.__dict__)
         data.update(extra.__dict__)
