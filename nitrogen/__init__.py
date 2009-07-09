@@ -13,7 +13,7 @@ import lib
 # Somewhere to hold threadsafe stuff.
 # It should work just fine for cgi and fcgi.
 # NOTE: I am assuming that this will work for the run_as_socket runner as well.
-# local = threading.local()
+local = threading.local()
 
 class ConfigDict(dict):
     def __getattr__(self, key):
@@ -31,3 +31,14 @@ def setup(config_module):
     for (k, v) in config.server.items():
         if config.get(k) is None:
             config[k] = v
+
+def debug():
+    import pdb
+    import socket
+    import sys
+    import io
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect(('localhost', 9000))
+    stdin = io.open(sock.fileno(), 'rb')
+    stdout = io.open(sock.fileno(), 'wb')
+    pdb.Pdb(stdin=stdin, stdout=stdout).set_trace()
