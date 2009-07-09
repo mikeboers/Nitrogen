@@ -59,7 +59,7 @@ def environ_config(app):
     def inner(environ, start):
         environ['nitrogen.config'] = nitrogen.config
         environ['nitrogen.server'] = nitrogen.server
-        environ['nitrogen.local']  = nitrogen.local
+        # environ['nitrogen.local']  = nitrogen.local
         return app(environ, start)
     return inner
 

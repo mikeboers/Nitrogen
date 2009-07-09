@@ -16,7 +16,7 @@ import threading
 import time
 
 # This object will be used to populate all of the logging records.
-# There (will) be middlewear that will set attributes on this object.
+# There is middlewear that sets the attributes on this object.
 extra = threading.local()
 
 root = logging.getLogger()
