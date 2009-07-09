@@ -22,7 +22,7 @@ def compressor(app):
 def test_compress_plain():
     """Nose test, checking that plaintext is returned."""
     
-    from nitrogen.test import WSGIServer
+    from test import WSGIServer
     
     def app(environ, start):
         start('200 OK', [])
@@ -38,7 +38,7 @@ def test_compress_plain():
 def test_compress_deflate():
     """Nose test, checking that compressed data is returned."""
     
-    from nitrogen.test import WSGIServer
+    from test import WSGIServer
     
     def app(environ, start):
         start('200 OK', [])
@@ -59,6 +59,6 @@ def test_compress_deflate():
 
 if __name__ == '__main__':
     import sys
-    sys.path.insert(0, '../..')
-    from nitrogen.test import run
+    sys.path.insert(0, '..')
+    from test import run
     run()

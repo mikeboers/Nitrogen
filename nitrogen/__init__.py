@@ -1,4 +1,6 @@
 import threading
+import logging
+import sys
 
 # Setup path for local testing.
 if __name__ == '__main__':
@@ -23,6 +25,20 @@ class ConfigDict(dict):
 config = ConfigDict()
 server = None
 
+def log(*args):
+    sys.stderr.write(' '.join(str(x) for x in args))
+    sys.stderr.write('\n')
+    sys.stderr.flush()
+
+if __package__:
+    log('package:', __package__)
+    try:
+        config_module = __import__(__name__ + 'config', level=2)
+        log(config_module)
+    except ImportError as e:
+        log('Could not find the config module.')
+        log(e)
+    
 def setup(config_module):
     global server
     assert not server, 'You can only setup nitrogen once!'
