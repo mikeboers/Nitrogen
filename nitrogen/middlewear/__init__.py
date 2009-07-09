@@ -3,22 +3,24 @@ import logging
 import zlib
 import threading
 
-try:
-    from .. import cookie
-    from ..status import resolve_status
-    from ..error import format_error_report
-    from .compressor import compressor
-    from .input import input_parser
-    from .. import logs
-except ValueError: # In case we are running local tests.
+if __name__ == '__main__':
     import sys
-    sys.path.insert(0, '..')
-    import cookie
-    from status import resolve_status
-    from error import format_error_report
-    from compressor import compressor
-    import logs
+    sys.path.insert(0, '../..')
 
+import nitrogen.cookie as cookie
+from nitrogen.status import resolve_status
+from nitrogen.error import format_error_report
+import nitrogen.logs as logs
+
+from nitrogen.route import NotFoundError
+
+import nitrogen.view as view
+from nitrogen.view import render, TYPE_HEADER_HTML
+
+from nitrogen import config
+
+from compressor import compressor
+from input import input_parser
 
 class log_extra_filler(object):
     def __init__(self, app):
@@ -145,6 +147,149 @@ def debugger(app):
     return inner
 
 
+
+def straight_templater(app):
+    """Look for a template at the path indicated by the request, and display
+    it if found. Otherwise, play out the wrapped app like normal."""
+    def inner(environ, start):
+        try:
+            for x in app(environ, start):
+                yield x
+        except NotFoundError as e:
+            uri = URI(environ.get('REQUEST_URI', ''))
+            path = str(uri.path).lstrip('/') + '.tpl'
+            if path.startswith('_'):
+                raise
+            fullpath = os.path.dirname(__file__) + '/app/view/' + path
+            if not os.path.exists(fullpath):
+                raise
+            start('200 OK', [TYPE_HEADER_HTML])
+            yield render(path)            
+    return inner
+
+def not_found_catcher(app):
+    """Displays the _404.tpl template along with a "404 Not Found" status if a
+    NotFoundError is thrown within the app that it wraps. This error is
+    normally thrown by routers.
+    """
+    def inner(environ, start):
+        try:
+            for x in app(environ, start):
+                yield x
+        except NotFoundError as e:
+            logging.warning(repr(e))
+            start('404 Not Found', [TYPE_HEADER_HTML])
+            yield render('_404.tpl')
+    return inner        
+
+def server_error_catcher(app):
+    """Catch all errors and display the _500.tpl template after logging.
+
+    If on a development server, a stack trace and dump of the environment will
+    be displayed along with an error message.
+
+    Note that this must buffer then entire response to work effectively.
+    """
+    class inner(object):
+        def __init__(self, environ, start):
+            self.environ = environ
+            self.start = start
+            self.output = []
+            self.status = None
+            self.headers = None
+        def inner_start(self, status, headers):
+            self.status = status
+            self.headers = headers
+        def __iter__(self):
+            try:
+                for x in app(self.environ, self.inner_start):
+                    self.output.append(x)
+                self.start(self.status, self.headers)
+                for x in self.output:
+                    yield x
+            except Exception as e:
+                logging.error('server_error_catcher caught %r\n' % (e, ) +
+                    format_error_report(self.environ, output=self.output)
+                )
+                try:
+                    self.start('500 Server Error', [TYPE_HEADER_HTML])
+                except:
+                    pass
+                yield render('_500.tpl',
+                    environ=self.environ if config.is_dev else None,
+                    error=e if config.is_dev else None,
+                    traceback=traceback.format_exc() if config.is_dev else None,
+                    output=self.output if config.is_dev else None
+                )
+    return inner
+
+def environ_config(app):
+    """Adds a number of app-specific items to the environ dict."""
+    def inner(environ, start):
+        environ['app.config'] = config
+        environ['app.server'] = config.server
+        return app(environ, start)
+    return inner
+
+def template_context_setup(app):
+    """Adds a number of items from the environ to the template envionment.
+
+    Adds:
+        - environ
+        - config
+        - server
+        - admin (None, or an instance of the User model)
+    """
+    def inner(environ, start):
+        view.defaults.update(dict(
+            environ=environ,
+            config=config,
+            server=config.server,
+            user=environ.get('app.user')
+        ))
+        return app(environ, start)
+    return inner
+
+def absolute_error_catcher(app):
+    """Last resort error catcher.
+
+    Does not display a nice looking message, but it is more robust in how it
+    handles errors, so my hope is that this will catch errors within the
+    higher level error catcher itself.
+
+    This will attempt to send a critical log (which on production servers
+    should result in an email being sent).
+
+    Note that this must buffer the entire response.
+    """
+    def inner(environ, start):
+        output = []
+        try:
+            for x in app(environ, start):
+                output.append(x)
+            for x in output:
+                yield x
+        except Exception as e:
+            try:
+                logging.critical('absolute_error_catcher caught %r\n' % e + format_error_report(environ, output=output))
+            except:
+                logging.critical(
+                    'absolute_error_catcher caught an exception while logging an error report. WTF?!\n' +
+                    traceback.format_exc()
+                )
+            try:
+                start('500 Server Error', [])
+            except:
+                pass
+            yield "\n"
+            yield "A server error has occurred. The administrator has been notified.\n"
+            yield "If this error continues to occur please wait a little while before trying again.\n"
+            yield "\n"
+            yield "Thank you for you understanding and support.\n"
+            yield "\tThe Administrator."
+
+    return inner
+
 if __name__ == '__main__':
-    from test import run
+    from nitrogen.test import run
     run()
