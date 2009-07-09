@@ -29,19 +29,19 @@ defaults['sorted'] = sorted
 defaults['repr'] = repr
 
 def build_lookup(*paths):
-    return mako.lookup.TemplateLookup(directories=paths)
+    return mako.lookup.TemplateLookup(directories=paths, input_encoding='utf-8')
 
 def build_render(lookup):
     def render(template_name, **data):
         '''Find a template file and render it with the given keyword arguments.'''
         template = lookup.get_template(template_name)
         data.update(defaults)
-        return template.render(**data)
+        return template.render_unicode(**data)
     return render
 
 def build_render_string(lookup):
     def render_string(template, **data):
         template = make.template.Template(template, lookup=lookup)
         data.update(defaults)
-        return template.render(**data)
+        return template.render_unicode(**data)
     return render_string
