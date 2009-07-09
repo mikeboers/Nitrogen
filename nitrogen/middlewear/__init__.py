@@ -6,27 +6,22 @@ import threading
 if __name__ == '__main__':
     import sys
     sys.path.insert(0, '../..')
+    import nitrogen.middlewear as junk
+    __package__ = 'nitrogen.middlewear'
 
 
-from nitrogen.status import resolve_status
+from ..status import resolve_status
+from ..route import NotFoundError
 
-from nitrogen.route import NotFoundError
+from .. import view
+from ..view import render, TYPE_HEADER_HTML
 
-import nitrogen.view as view
-from nitrogen.view import render, TYPE_HEADER_HTML
-
-from compressor import compressor
-from input import cookie_parser, cookie_builder, input_parser, full_parser
-from logs import log_extra_filler
-from unicode import utf8_encoder
-from error import debugger, server_error_catcher, absolute_error_catcher
-from view import template_context_setup, straight_templater
-
-                        
-
-
-
-
+from .compressor import compressor
+from .input import cookie_parser, cookie_builder, input_parser, full_parser
+from .logs import log_extra_filler
+from .unicode import utf8_encoder
+from .error import debugger, server_error_catcher, absolute_error_catcher
+from .view import template_context_setup, straight_templater
 
 def status_resolver(app):
     def inner(environ, start):
@@ -34,9 +29,6 @@ def status_resolver(app):
             start(resolve_status(status), headers)
         return app(environ, inner_start)
     return inner
-
-
-
 
 def not_found_catcher(app):
     """Displays the _404.tpl template along with a "404 Not Found" status if a

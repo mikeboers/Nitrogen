@@ -10,12 +10,7 @@ from __future__ import print_function
 
 from StringIO import StringIO
 
-# Setup path for local testing.
-if __name__ == '__main__':
-    import sys
-    sys.path.insert(0, __file__[:__file__.rfind('/nitrogen')])
-
-from nitrogen.status import resolve_status
+from status import resolve_status
 
 class HeaderList(list):
     '''A more dict-like list for headers.'''

@@ -1,9 +1,7 @@
 import threading
 import logging
 
-import nitrogen.logs as logs
-import nitrogen
-import sys
+from .. import logs
 
 class log_extra_filler(object):
     def __init__(self, app):

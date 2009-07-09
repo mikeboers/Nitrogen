@@ -1,9 +1,9 @@
 import logging
 import traceback
 
-from nitrogen.error import format_error_report
-from nitrogen.view import render, TYPE_HEADER_HTML
-from nitrogen import config
+from ..error import format_error_report
+from ..view import render, TYPE_HEADER_HTML
+from .. import config
 
 def debugger(app):
     class inner(object):

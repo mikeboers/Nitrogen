@@ -43,13 +43,13 @@ import collections
 import sys
 import tempfile
 
-# Setup path for local testing.
 if __name__ == '__main__':
-    import sys
-    sys.path.insert(0, __file__[:__file__.rfind('/nitrogen')])
+    sys.path.append('../..')
+    import nitrogen.middlewear as junk
+    __package__ = 'nitrogen.middlewear'
 
-from nitrogen.uri.query import Query
-import nitrogen.cookie as cookie
+from ..uri.query import Query
+from .. import cookie
 
 class ReadOnlyMapping(collections.Mapping):
   

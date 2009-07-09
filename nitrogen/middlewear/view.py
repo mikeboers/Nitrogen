@@ -1,7 +1,7 @@
 
-import nitrogen.view as view
-from nitrogen.view import render, TYPE_HEADER_HTML
-from nitrogen import config
+from .. import view
+from ..view import render, TYPE_HEADER_HTML
+from .. import config
 
 def straight_templater(app):
     """Look for a template at the path indicated by the request, and display
