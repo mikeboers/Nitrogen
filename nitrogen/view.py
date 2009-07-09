@@ -5,55 +5,43 @@ import json
 import datetime
 import random
 
-try:
-    from .lib import jinja2 as jinja
-    from .lib.markdown import markdown
-    from .lib.BeautifulSoup import BeautifulSoup
-except ValueError:
-    import lib.jinja2 as jinja
-    from lib.markdown import markdown
-    from lib.BeautifulSoup import BeautifulSoup
+if __name__ == '__main__':
+    import sys
+    sys.path.insert(0, '..')
+    import nitrogen
+    
+import mako.template
+import mako.lookup
+import markdown
+import BeautifulSoup
 
 def clean_html(html):
     """Asserts the "cleanliness" of html. Closes tags and such."""
     return BeautifulSoup(html).prettify()
 
-def build_environment(*paths):
-    # setup a loader and environment
-    loader = jinja.FileSystemLoader(paths)
-    environment = jinja.Environment(
-        loader=loader
-    )
+defaults = {}
+defaults['nl2br'] = lambda s: s.replace("\n", "<br />")
+defaults['json'] = json.dumps
+defaults['markdown'] = lambda x: clean_html(markdown(x.encode('utf8'))).decode('utf8')
+defaults['format_date'] = lambda d, f: (d.strftime(f) if d else '')
+defaults['randomize'] = lambda x: sorted(x, key=lambda y: random.random())
+defaults['sorted'] = sorted
+defaults['repr'] = repr
 
-    # Setup nl2br and escape.
-    # This could be done better. nl2br can be smart about working on Markup
-    # objects so that we don't have to replace the built in escape filter.
-    # The question then becomes, do I WANT to keep using the Markup objects?
-    nl2br = lambda s: s.replace("\n", "<br />")
-    escape = lambda s: unicode(jinja.escape(s))
+def build_lookup(*paths):
+    return mako.lookup.TemplateLookup(directories=paths)
 
-    environment.filters['nl2br'] = nl2br
-    environment.filters['escape'] = escape
-    environment.filters['e'] = escape
-    environment.filters['json'] = json.dumps
-    environment.filters['markdown'] = lambda x: clean_html(markdown(x.encode('utf8'))).decode('utf8')
-    environment.filters['format_date'] = lambda d, f: (d.strftime(f) if d else '')
-    environment.filters['randomize'] = lambda x: sorted(x, key=lambda y: random.random())
-    environment.filters['sorted'] = sorted
-    environment.filters['repr'] = repr
-    
-    return environment
-
-def build_render(environ):
+def build_render(lookup):
     def render(template_name, **data):
         '''Find a template file and render it with the given keyword arguments.'''
-        template = environ.get_template(template_name)
+        template = lookup.get_template(template_name)
+        data.update(defaults)
         return template.render(**data)
     return render
-    
-def build_iter_render(environ):
-    def iter_render(template_name, **data):
-        '''Find a template file and render it with the given keyword arguments.'''
-        template = environ.get_template(template_name)
-        return template.generate(**data)
-    return iter_render
+
+def build_render_string(lookup):
+    def render_string(template, **data):
+        template = make.template.Template(template, lookup=lookup)
+        data.update(defaults)
+        return template.render(**data)
+    return render_string

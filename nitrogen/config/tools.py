@@ -10,6 +10,6 @@ class Server(collections.Mapping):
     def __len__(self):
         return len(self._data)
     def __getattr__(self, key):
-        return self._data[key]
+        return self._data.get(key)
     def __repr__(self):
         return 'Server(%s)' % ', '.join('%s=%r' % x for x in sorted(self._data.items()))
