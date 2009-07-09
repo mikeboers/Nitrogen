@@ -7,14 +7,14 @@ if __name__ == '__main__':
     import sys
     sys.path.insert(0, '../..')
 
+import nitrogen
+
 from nitrogen.status import resolve_status
 
 from nitrogen.route import NotFoundError
 
 import nitrogen.view as view
 from nitrogen.view import render, TYPE_HEADER_HTML
-
-from nitrogen import config
 
 from nitrogen.middlewear.compressor import compressor
 from nitrogen.middlewear.input import cookie_parser, cookie_builder, input_parser, full_parser
@@ -57,8 +57,9 @@ def not_found_catcher(app):
 def environ_config(app):
     """Adds a number of app-specific items to the environ dict."""
     def inner(environ, start):
-        environ['app.config'] = config
-        environ['app.server'] = config.server
+        environ['nitrogen.config'] = nitrogen.config
+        environ['nitrogen.server'] = nitrogen.server
+        environ['nitrogen.local']  = nitrogen.local
         return app(environ, start)
     return inner
 

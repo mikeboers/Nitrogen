@@ -35,7 +35,7 @@ class Formatter(logging.Formatter):
         data.update(record.__dict__)
         data.update(extra.__dict__)
         
-        if '(asctime)' in base_format:
+        if '%(asctime)' in base_format:
             data['asctime'] = self.formatTime(record)
         try:
             data['message'] = record.msg % record.args
@@ -97,12 +97,3 @@ def setup_smtp(args, level=logging.CRITICAL):
     email_handler.setLevel(level)
     email_handler.setFormatter(formatter)
     root.addHandler(email_handler)
-
-
-if __name__ == '__main__':
-    setup()
-    logging.debug('Message.')
-    logging.info('Message.')
-    logging.warning('Message.')
-    logging.error('Message.')
-    logging.critical('Message.')
