@@ -9,7 +9,6 @@ from configtools import extract_locals, get_server
 
 # Setup the lib
 import lib
-lib.setup_path()
 
 # Somewhere to hold threadsafe stuff.
 # It should work just fine for cgi and fcgi.
