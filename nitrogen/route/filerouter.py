@@ -34,15 +34,16 @@ class FileRouter(object):
     
     def load_app(self, environ, path):
         if not os.path.exists(path):
-            raise NotFoundError('Could not find file.')
+            raise_not_found_error(environ, 'Could not find file.')
         scope = {}
         execfile(path, scope)
         if self.app_key not in scope:
-            raise NotFoundError('Could not find app in module.')
+            raise_not_found_error(environ, 'Could not find app in module.')
         self.apps[path] = (os.path.getmtime(path), scope[self.app_key])
     
     def __call__(self, environ, start):
-        name = get_route_segment(environ) or 'index'
+        unrouted = get_unrouted(environ)
+        name = unrouted[0] if unrouted else 'index'
         path = self.build_path(name)
         
         if path not in self.apps:
@@ -51,6 +52,9 @@ class FileRouter(object):
         if self.reload_modifications and os.path.getmtime(path) != self.apps[path][0]:
             logging.debug("App %r modified. Reloading." % name)
             self.load_app(environ, path)
+        
+        # Move the segment from unrouted to routed.
+        get_routed(environ).append(unrouted.pop(0) if unrouted else None)
         
         logging.info('Routing %r...' % name)
         return self.apps[path][1](environ, start)

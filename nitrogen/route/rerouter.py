@@ -9,7 +9,10 @@ The first pattern to match wins (from order of registration).
 This router does maintain the nitrogen.path values in the environ, but only
 moves the part that it explicitly removed. Therefore a slash may prefix the
 unrouted path if you are not careful, and so the unrouted path will then be
-absolute.
+absolute (and all the fun that goes with that. Ie. you will be able to pop off
+the next segment and the uri remain absolute.)
+
+You have been warned!
 
 """
 
@@ -52,9 +55,9 @@ class ReRouter(object):
                 # Update the routing information.
                 # NOTE that 
                 environ['nitrogen.path.unrouted'] = Path(path[m.end():])
-                record_routed_segment(environ, m.group())
+                get_routed(environ).append(m.group())
                 
                 return app(environ, start, *m.groups())
         if self.default:
             return self.default(environ, start)
-        raise NotFoundError('Could not find match.')
+        raise_not_found_error(environ, 'Could not find match.')

@@ -14,7 +14,7 @@ if __name__ == '__main__':
     import sys
     sys.path.insert(0, __file__[:__file__.rfind('/nitrogen')])
 
-from tools import get_routed, get_route_segment, NotFoundError
+from tools import *
 
 class SelfRouter(object):
     
@@ -23,10 +23,16 @@ class SelfRouter(object):
         self.start = start
     
     def __iter__(self):
-        segment = get_route_segment(self.environ) or 'index'
-        method_name = 'do_' + segment
-        if not hasattr(self, method_name):
-            raise NotFoundError('Could not find match.')
-        method = getattr(self, method_name)
-        for x in method(self.environ, self.start):
+        unrouted = get_unrouted(environ)
+        name = unrouted[0] if unrouted else 'index'
+        name = 'do_' + name
+        if not hasattr(self, name):
+            raise_not_found_error(environ, 'Could not find match.')
+        
+        # Move segment from unrouted to routed.
+        get_routed(environ).append(unrouted.pop(0) if unrouted else None)
+        
+        # Run the found app.
+        app = getattr(self, name)
+        for x in app(self.environ, self.start):
             yield x

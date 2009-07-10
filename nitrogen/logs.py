@@ -41,6 +41,7 @@ class Formatter(logging.Formatter):
             data['message'] = record.msg
         
         return base_format % data
+
 formatter = Formatter()
 
 

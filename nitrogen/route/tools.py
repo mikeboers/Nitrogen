@@ -24,21 +24,14 @@ def get_routed(environ):
         environ[ROUTED_ENVIRON_KEY] = []
     return environ[ROUTED_ENVIRON_KEY]
 
-def get_route_segment(environ):
-    """Returns the next segment of the requested URI to be routed."""
-    unrouted = get_unrouted(environ)
-    if unrouted:
-        segment = unrouted.pop(0)
-        record_routed_segment(environ, segment)
-        return segment
-    return None
-
-def record_routed_segment(environ, segment):
-    get_routed(environ).append(segment)
-
 class NotFoundError(ValueError):
-    def __init__(self, *args, **kwargs):
-        ValueError.__init__(self, *args, **kwargs)
+    """Please do not raise this yourself. Use raise_not_found_error instead
+    as it will automatically add the unrouted and routed segments to the args.
+    """
+    pass
+
+def raise_not_found_error(environ, *args):
+    raise NotFoundError(get_unrouted(environ), get_routed(environ), *args)
 
 class Chain(list):
     
