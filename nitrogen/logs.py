@@ -19,8 +19,6 @@ import time
 # There is middlewear that sets the attributes on this object.
 extra = threading.local()
 
-root = logging.getLogger()
-
 base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(thread_i)d ip:%(ip)s -- %(message)s"
 class Formatter(logging.Formatter):
     def format(self, record):
@@ -45,55 +43,30 @@ class Formatter(logging.Formatter):
         return base_format % data
 formatter = Formatter()
 
-def _setup():
-    root.setLevel(logging.DEBUG)
 
-def setup_stderr():
-    _setup()
+class FileHandler(logging.Handler):
+    """File log handler which writes out to a path aftet running it
+    through time.strftime.
     
-    stderr_handler = logging.StreamHandler(sys.stderr)
-    stderr_handler.setFormatter(formatter)
-    root.addHandler(stderr_handler)
-     
-def setup_timed_file(path_format):
-    _setup()
+    Tests to see if this path changes for every log
+    so that records will always end up in the right file.
+    """
+    def __init__(self, path_format):
+        logging.Handler.__init__(self)
+        self.path_format = path_format
+        self.fh = None
+        self.last_path = None
     
-    class FileHandler(logging.Handler):
-        """File log handler which writes out to a path aftet running it
-        through time.strftime.
+    def emit(self, record):
+        path = time.strftime(self.path_format, time.localtime(record.created))
+        if path != self.last_path:
+            if self.fh:
+                self.fh.close()
+            umask = os.umask(0113)
+            self.fh = open(path, 'a')
+            os.umask(umask)
+        self.last_path = path
         
-        Tests to see if this path changes for every log
-        so that records will always end up in the right file.
-        """
-        def __init__(self, path_format):
-            logging.Handler.__init__(self)
-            self.path_format = path_format
-            self.fh = None
-            self.last_path = None
-        
-        def emit(self, record):
-            path = time.strftime(self.path_format, time.localtime(record.created))
-            if path != self.last_path:
-                if self.fh:
-                    self.fh.close()
-                umask = os.umask(0113)
-                self.fh = open(path, 'a')
-                os.umask(umask)
-            self.last_path = path
-            
-            self.fh.write(self.format(record))
-            self.fh.write('\n')
-            self.fh.flush()
-    
-    file_handler = FileHandler(path_format)
-    file_handler.setFormatter(formatter)
-    root.addHandler(file_handler)
-
-
-    
-def setup_smtp(args, level=logging.CRITICAL):
-    _setup()
-    email_handler = logging.handlers.SMTPHandler(*args)
-    email_handler.setLevel(level)
-    email_handler.setFormatter(formatter)
-    root.addHandler(email_handler)
+        self.fh.write(self.format(record))
+        self.fh.write('\n')
+        self.fh.flush()

@@ -4,11 +4,11 @@ import sys
 import os
 
 # Setup path for local testing.
+# When copying to another file, just change the __package__ to be accurate.
 if __name__ == '__main__':
-    import sys
     sys.path.insert(0, __file__[:__file__.rfind('/nitrogen')])
-    import nitrogen
     __package__ = 'nitrogen'
+    __import__(__package__)
 
 def rawlog(*args):
     """Just in case I REALLY need to debug."""
@@ -30,8 +30,6 @@ from configtools import AttrDict, extract_locals, get_server
 import configtools.base
 config = AttrDict(extract_locals(configtools.base))
 
-server = None
-
 # Try to get the nitrogenconfig module from the same level as nitrogen itself.
 # This really is just a nasty hack...
 if __package__:
@@ -47,4 +45,15 @@ if __package__:
         else:
             raise
 
-# TODO: Setup the logs here.
+server = get_server()
+
+# Setup the logs.
+import logs
+root = logging.getLogger()
+root.setLevel(config.log_level)
+for handler in config.log_handlers:
+    handler.setFormatter(logs.formatter)
+    root.addHandler(handler)
+
+
+
