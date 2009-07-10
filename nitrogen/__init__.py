@@ -26,9 +26,9 @@ sys.path.insert(0, os.path.dirname(__file__) + '/lib')
 # NOTE: I am assuming that this will work for the run_as_socket runner as well.
 local = threading.local()
 
-from configtools import AttrDict, extract_locals, get_server
+import configtools
 import configtools.base
-config = AttrDict(extract_locals(configtools.base))
+config = configtools.Config(configtools.extract_locals(configtools.base))
 
 # Try to get the nitrogenconfig module from the same level as nitrogen itself.
 # This really is just a nasty hack...
@@ -36,7 +36,7 @@ if __package__:
     try:
         config_name = __package__ + 'config'
         config_module = __import__(config_name, fromlist=[''])
-        config.update(extract_locals(config_module))
+        config.update(configtools.extract_locals(config_module))
     except ImportError as e:
         config_module = None
         if str(e) == 'No module named %s' % config_name:
@@ -45,7 +45,7 @@ if __package__:
         else:
             raise
 
-server = get_server()
+server = configtools.get_server()
 
 # Setup the logs.
 import logs
@@ -54,6 +54,5 @@ root.setLevel(config.log_level)
 for handler in config.log_handlers:
     handler.setFormatter(logs.formatter)
     root.addHandler(handler)
-
 
 

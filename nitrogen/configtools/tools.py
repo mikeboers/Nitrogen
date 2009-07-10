@@ -32,9 +32,18 @@ def get_server():
 def extract_locals(module, all=False):
     return dict((k, getattr(module, k)) for k in dir(module) if all or not k.startswith('_'))
 
-class AttrDict(dict):
+class Config(dict):
+    """An object to represent configuration of the system. It supports both
+    dict-like access and property access.
+    
+    Properties will return None if they don't exist. Also, values which are
+    property objects will have their getter called if accessed as a property.
+    """
     def __getattr__(self, key):
-        return self.get(key)
+        v = self.get(key)
+        if isinstance(v, property):
+            return v.fget()
+        return v
     def __setattr__(self, key, value):
         self[key] = value
     def __delattr__(self, key):
