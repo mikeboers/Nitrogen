@@ -6,8 +6,9 @@ import os
 # Setup path for local evaluation.
 # When copying to another file, just change the __package__ to be accurate.
 if __name__ == '__main__':
-    sys.path.insert(0, __file__[:__file__.rfind('/nitrogen')])
+    import sys
     __package__ = 'nitrogen'
+    sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
     __import__(__package__)
 
 def rawlog(*args):

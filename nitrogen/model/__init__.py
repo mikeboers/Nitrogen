@@ -2,11 +2,13 @@
 # When copying to another file, just change the __package__ to be accurate.
 if __name__ == '__main__':
     import sys
-    sys.path.insert(0, __file__[:__file__.rfind('/nitrogen')])
-    __package__ = 'nitrogen'
+    __package__ = 'nitrogen.model'
+    sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
     __import__(__package__)
 
-from nitrogen import config
+import logging
+
+from .. import config
 
 from sqlalchemy import *
 import sqlalchemy.orm as orm
@@ -15,9 +17,12 @@ from sqlalchemy.types import TypeDecorator
     
 Base = declarative_base()
 
-engine = create_engine(config.database_uri, echo=config.database_log)
+engine = create_engine(config.database_uri)
 Session = orm.sessionmaker(bind=engine)
 session = orm.scoped_session(Session)
+
+logger = logging.getLogger('sqlalchemy')
+logger.setLevel(1000)
 
 ### {
 # Monkey patching the declarative base to add some convenience features, such
@@ -33,6 +38,8 @@ def _Base_delete(self):
 Base.delete = _Base_delete
 
 ### }
+
+from forms import *
 
 
 

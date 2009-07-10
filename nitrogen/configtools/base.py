@@ -22,6 +22,3 @@ cookie_hmac_key = 'Please set this in nitrogenconfig.py for the application.'
 # The URI to use to create the sqlalchemy engine.
 # Defaults to an in-memory database that will not be saved.
 database_uri = 'sqlite:///:memory:'
-
-# Echo all the SQLite commands through the logger?
-database_log = False
