@@ -20,7 +20,9 @@ class Server(collections.Mapping):
         return 'Server(%s)' % ', '.join('%s=%r' % x for x in sorted(self._data.items()))
 
 def register_server(**kwargs):
-    _servers.append(Server(**kwargs))
+    server = Server(**kwargs)
+    _servers.append(server)
+    return server
 
 def get_server():
     path = os.path.abspath(__file__)
@@ -31,3 +33,7 @@ def get_server():
 
 def extract_locals(module, all=False):
     return dict((k, getattr(module, k)) for k in dir(module) if all or not k.startswith('_'))
+
+class AttrDict(dict):
+    def __getattr__(self, key):
+        return self.get(key)
