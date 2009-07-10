@@ -20,7 +20,7 @@ def run_via_fcgi(app, multithreaded=True):
             if the server is under load.
     """
     
-    from lib.fcgi import WSGIServer
+    from fcgi import WSGIServer
     WSGIServer(app, multithreaded=multithreaded).run()
 
 def run_via_socket(app, host='', port=8000, once=False):
@@ -33,7 +33,7 @@ def run_via_socket(app, host='', port=8000, once=False):
         once -- Only accept a single connection.
     """
     
-    from ef.simple_server import make_server
+    from wsgiref.simple_server import make_server
     httpd = make_server(host, port, app)
     if once:
         httpd.handle_request()
