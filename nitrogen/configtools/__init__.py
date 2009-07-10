@@ -26,7 +26,7 @@ def get_server():
     path = os.path.abspath(__file__)
     possible_servers = [server for server in _servers if path.startswith(server.www_root)]
     if not possible_servers:
-        raise ValueError('Could not identify the server we are on.')
+        raise ValueError('Could not identify the server we are on.', os.path.abspath(__file__))
     return possible_servers[0]
 
 def extract_locals(module, all=False):

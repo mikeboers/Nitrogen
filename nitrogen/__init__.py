@@ -25,19 +25,19 @@ class ConfigDict(dict):
 config = ConfigDict()
 server = None
 
-def log(*args):
+def rawlog(*args):
     sys.stderr.write(' '.join(str(x) for x in args))
     sys.stderr.write('\n')
     sys.stderr.flush()
 
 if __package__:
-    log('package:', __package__)
     try:
-        config_module = __import__(__name__ + 'config', level=2)
-        log(config_module)
+        config_module = __import__(__name__ + 'config', fromlist=[''])
     except ImportError as e:
-        log('Could not find the config module.')
-        log(e)
+        if str(e) == 'No module named nitrogenconfig':
+            pass
+        else:
+            raise
     
 def setup(config_module):
     global server
