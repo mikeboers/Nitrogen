@@ -3,7 +3,7 @@ import logging
 import sys
 import os
 
-# Setup path for local testing.
+# Setup path for local evaluation.
 # When copying to another file, just change the __package__ to be accurate.
 if __name__ == '__main__':
     sys.path.insert(0, __file__[:__file__.rfind('/nitrogen')])

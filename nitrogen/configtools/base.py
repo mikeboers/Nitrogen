@@ -9,11 +9,19 @@ log_level = logging.DEBUG
 # and ready to be added to a logger. You can set the level of individual
 # handlers via the setLevel method. For much more information, see:
 # http://docs.python.org/library/logging.html .
+stderr_log_handler = logging.StreamHandler(sys.stderr)
 log_handlers = [
-    logging.StreamHandler(sys.stderr)
+    stderr_log_handler
 ]
 
 # The key to use to sign cookies. PLEASE set this to something different in
 # the application configuration. If this is None, then a normal cookie
 # container will be used, and nothing will be signed.
 cookie_hmac_key = 'Please set this in nitrogenconfig.py for the application.'
+
+# The URI to use to create the sqlalchemy engine.
+# Defaults to an in-memory database that will not be saved.
+database_uri = 'sqlite:///:memory:'
+
+# Echo all the SQLite commands through the logger?
+database_log = False

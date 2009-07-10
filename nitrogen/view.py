@@ -5,7 +5,7 @@ import json
 import datetime
 import random
 
-# Setup path for local testing.
+# Setup path for local evaluation.
 if __name__ == '__main__':
     import sys
     sys.path.insert(0, __file__[:__file__.rfind('/nitrogen')])
