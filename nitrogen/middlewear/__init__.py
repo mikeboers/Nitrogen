@@ -25,6 +25,14 @@ from .unicode import utf8_encoder
 from .error import debugger, server_error_catcher, absolute_error_catcher
 from .view import template_context_setup, straight_templater
 
+def wsgi_style(app):
+    def inner(*args):
+        if len(args) == 1:
+            req = args[0]
+            return app(req.environ, req.start)
+        return app(*args)
+    return inner
+
 def status_resolver(app):
     def inner(environ, start):
         def inner_start(status, headers):
