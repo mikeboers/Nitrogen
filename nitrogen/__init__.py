@@ -2,6 +2,7 @@ import threading
 import logging
 import sys
 import os
+import collections
 
 # Setup path for local evaluation.
 # When copying to another file, just change the __package__ to be accurate.
@@ -25,7 +26,20 @@ sys.path.insert(0, os.path.dirname(__file__) + '/lib')
 # Somewhere to hold threadsafe stuff.
 # It should work just fine for cgi and fcgi.
 # NOTE: I am assuming that this will work for the run_as_socket runner as well.
-# local = threading.local()
+local = threading.local()
+
+def local_proxy(local_key):
+    """Build a class that proxies a key on the thread-local object."""
+    class LocalProxy(object):
+        def __getattr__(self, key):
+            return getattr(local.__dict__[local_key], key)
+        def __setattr__(self, key, value):
+            setattr(local.__dict__[local_key], key, value)
+        def __delattr__(self, key):
+            delattr(local.__dict__[local_key], key)
+    return LocalProxy()
+
+environ = local_proxy('environ')
 
 import configtools
 import configtools.base
