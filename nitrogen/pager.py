@@ -17,7 +17,7 @@ Examples:
     
     >>> pager = Pager(range(100))
     >>> pager.render()
-    u'[1]<a href="2">2</a><a href="3">3</a><a href="4">4</a>..<a href="10">10</a><a href="2">&gt;</a><a href="10">&gt;&gt;</a>'
+    u'<span class="pager"><span class="current">[1]</span><a href="2">2</a><a href="3">3</a><a href="4">4</a>..<a href="10">10</a><a class="next" href="2">&gt;</a><a class="last" href="10">&gt;&gt;</a></span>'
     
     >>> pager.rendertest()
     u'[1] 2 3 4 .. 10 > >>'
@@ -29,6 +29,9 @@ Examples:
     >>> pager.page = 5
     >>> pager.rendertest()
     u'<< < 1 2 3 4 [5] 6 7 8 .. 10 > >>'
+    
+    >>> pager.render()
+    u'<span class="pager"><a class="first" href="1">&lt;&lt;</a><a class="prev" href="4">&lt;</a><a href="1">1</a><a href="2">2</a><a href="3">3</a><a href="4">4</a><span class="current">[5]</span><a href="6">6</a><a href="7">7</a><a href="8">8</a>..<a href="10">10</a><a class="next" href="6">&gt;</a><a class="last" href="10">&gt;&gt;</a></span>'
     
     >>> pager.page = 6
     >>> pager.rendertest()
@@ -60,7 +63,21 @@ from webhelpers.html import HTML
 
 class Pager(object):
     
-    def __init__(self, data, page=1, count=None, per_page=10):
+    WRAPPER_CLASS = 'pager'
+    FIRST_CLASS = 'first'
+    PREV_CLASS = 'prev'
+    CURRENT_CLASS = 'current'
+    NEXT_CLASS = 'next'
+    LAST_CLASS = 'last'
+    
+    FIRST_TOKEN = '<<'
+    PREV_TOKEN = '<'
+    SEPERATOR = '..'
+    CURRENT_WRAPPER = '[%d]'
+    NEXT_TOKEN = '>'
+    LAST_TOKEN = '>>'
+    
+    def __init__(self, data, page=1, count=None, per_page=10, page_radius=3):
         self.data = data
         self.page = page
         
@@ -71,7 +88,11 @@ class Pager(object):
             self.count = count
         
         self.per_page = per_page
-        self.page_radius = 3
+        self.page_radius = page_radius
+        
+        for k in '''wrapper_class first_class prev_class current_class next_class last_class
+                    first_token prev_token seperator current_wrapper next_token last_token'''.split():
+            setattr(self, k, getattr(self, k.upper()))
     
     def __iter__(self):
         for x in self.data[(self.page - 1) * self.per_page: self.page * self.per_page]:
@@ -90,22 +111,22 @@ class Pager(object):
         
         def link(page):
             if page == self.page:
-                chunks.append('[%d]' % page)
+                chunks.append(HTML.tag('span', self.current_wrapper % page, class_=self.current_class))
             else:
                 chunks.append(HTML.tag('a', str(page), href=href(page)))
         
         if self.page > 1:
             # Start
-            chunks.append(HTML.tag('a', '<<', href=href(1)))
+            chunks.append(HTML.tag('a', self.first_token, href=href(1), class_=self.first_class))
             # Previous page
-            chunks.append(HTML.tag('a', '<', href=href(self.page - 1)))
+            chunks.append(HTML.tag('a', self.prev_token, href=href(self.page - 1), class_=self.prev_class))
         
         # First one
         link(1)
         
         # The first seperator.
         if self.page - self.page_radius > 2:
-            chunks.append('..')
+            chunks.append(self.seperator)
         
         # The middle ones.
         for i in range(
@@ -116,7 +137,7 @@ class Pager(object):
         
         # The end seperator
         if self.page_count - self.page > self.page_radius + 1:
-            chunks.append('..')
+            chunks.append(self.seperator)
         
         # The last one.
         if self.page_count > 1:
@@ -124,10 +145,10 @@ class Pager(object):
         
         if self.page < self.page_count:
             # Next page
-            chunks.append(HTML.tag('a', '>', href=href(self.page + 1)))
-            chunks.append(HTML.tag('a', '>>', href=href(self.page_count)))
+            chunks.append(HTML.tag('a', self.next_token, href=href(self.page + 1), class_=self.next_class))
+            chunks.append(HTML.tag('a', self.last_token, href=href(self.page_count), class_=self.last_class))
         
-        return ''.join(chunks)
+        return unicode(HTML.tag('span', *chunks, class_=self.wrapper_class))
     
     def _render_href(self, page):
         return self.href_format % page
