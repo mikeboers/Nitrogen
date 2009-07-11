@@ -4,6 +4,7 @@ import os
 import json
 import datetime
 import random
+import threading
 
 # Setup path for local evaluation.
 if __name__ == '__main__':
@@ -24,7 +25,18 @@ TYPE_HEADER_TEXT = ('Content-Type', 'text/plain;charset=UTF-8')
 def clean_html(html):
     """Asserts the "cleanliness" of html. Closes tags and such."""
     return BeautifulSoup(html).prettify()
+    
+local = threading.local()
 
+def add_flash_message(class_, message):
+    get_flash_messages().append((class_, message))
+
+def get_flash_messages():
+    if not hasattr(local, 'flash_messages'):
+        local.flash_messages = []
+    return local.flash_messages
+
+    
 defaults = {}
 defaults['nl2br'] = lambda s: s.replace("\n", "<br />")
 defaults['json'] = json.dumps
@@ -48,6 +60,7 @@ def _set_defaults(data):
         data['server'] = server
     except:
         pass
+    data['flash_messages'] = get_flash_messages()
     
 def render(template_name, **data):
     '''Find a template file and render it with the given keyword arguments.'''
