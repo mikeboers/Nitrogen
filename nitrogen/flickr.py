@@ -4,6 +4,7 @@ import urllib
 import json
 import hashlib
 import pprint
+import collections
 
 REST_URL     = 'http://api.flickr.com/services/rest/';
 AUTH_URL     = 'http://flickr.com/services/auth/';
@@ -19,6 +20,33 @@ REPLACE_URL  = 'http://api.flickr.com/services/replace/';
 class Error(ValueError):
     pass
 
+class ResultPart(collections.Mapping):
+    def __init__(self, raw):
+        self._keys = raw.keys()
+        for k, v in raw.items():
+            if isinstance(v, dict):
+                setattr(self, k, ResultPart(v))
+            elif isinstance(v, list):
+                setattr(self, k, [ResultPart(x) for x in v])
+            else:
+                setattr(self, k, v)
+    
+    def __repr__(self):
+        d = dict((k, getattr(self, k)) for k in self)
+        return repr(d)
+    
+    def __iter__(self):
+        return iter(self._keys)
+    
+    def __getitem__(self, key):
+        return getattr(self, key)
+    
+    def __len__(self):
+        return len(self._keys)
+
+class Result(ResultPart):
+    pass
+                
 class Flickr(object):
     
     def __init__(self, key, secret, token=None):
@@ -50,9 +78,9 @@ class Flickr(object):
         self._sign_data(data)
         
         url = REST_URL + '?' + urllib.urlencode(data)
-        res = json.loads(urllib.urlopen(url).read())
-        if res['stat'] == 'fail':
-            raise Error(res['message'], res['code'])
+        res = Result(json.loads(urllib.urlopen(url).read()))
+        if res.stat == 'fail':
+            raise Error(res.message, res.code)
         return res
     
     def build_web_auth_link(self, perms=PERMS_READ):
@@ -147,23 +175,23 @@ class Flickr(object):
             raise ValueError('Token is not set.')
         if self._last_checked_token != self.token:
             res = self.call('auth.checkToken', auth_token=self.token)
-            self._user = res['auth']['user']
+            self._user = res.auth.user
             self._last_checked_token = self.token
     
     @property
     def username(self):
         self._assert_user_properties()
-        return self._user['username']
+        return self._user.username
         
     @property
     def fullname(self):
         self._assert_user_properties()
-        return self._user['fullname']
+        return self._user.fullname
                     
     @property
     def nsid(self):
         self._assert_user_properties()
-        return self._user['nsid']       
+        return self._user.nsid
         
 
 if __name__ == '__main__':
