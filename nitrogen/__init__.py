@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.dirname(__file__) + '/lib')
 # Somewhere to hold threadsafe stuff.
 # It should work just fine for cgi and fcgi.
 # NOTE: I am assuming that this will work for the run_as_socket runner as well.
-local = threading.local()
+# local = threading.local()
 
 import configtools
 import configtools.base
