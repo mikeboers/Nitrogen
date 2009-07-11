@@ -166,7 +166,8 @@ def PostStorage(environ, accept, make_file, max_size):
             chunk.file.seek(0)
     return fs
 
-def input_parser(app, accept=False, make_file=None, max_size=None):
+def input_parser(app=None, accept=False, make_file=None, max_size=None, environ=None):
+    outer_environ = environ
     def inner(environ, start):
         
         # Build the get object
@@ -207,9 +208,14 @@ def input_parser(app, accept=False, make_file=None, max_size=None):
         post.supplier = builder_builder(False)
         files.supplier = builder_builder(True)
         
-        return app(environ, start)
+        if not outer_environ:
+            return app(environ, start)
     
-    return inner
+    if outer_environ:
+        inner(outer_environ, None)
+    else:
+        return inner
+        
 
 def cookie_parser(app, hmac_key=None):
     class_ = cookie.make_signed_container(hmac_key) if hmac_key else cookie.Container

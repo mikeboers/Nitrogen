@@ -37,6 +37,13 @@ def local_proxy(local_key):
             setattr(local.__dict__[local_key], key, value)
         def __delattr__(self, key):
             delattr(local.__dict__[local_key], key)
+        def __getitem__(self, key):
+            return local.__dict__[local_key][key]
+        def __setitem__(self, key, value):
+            local.__dict__[local_key][key] = value
+        def __delitem__(self, key):
+            del local.__dict__[local_key][key]
+        
     return LocalProxy()
 
 environ = local_proxy('environ')

@@ -12,6 +12,9 @@ from StringIO import StringIO
 
 from status import resolve_status
 
+from middlewear.input import input_parser
+from cookie import Container as CookieContainer
+
 class HeaderList(list):
     '''A more dict-like list for headers.'''
     
@@ -36,16 +39,17 @@ class Request(object):
         self._has_started = False
         self._buffer = StringIO()
         
-        self.get = environ.get('nitrogen.get')
-        if self.get is None:
-            self.get = Get(environ)
-        self.post = environ.get('nitrogen.post')
-        if self.post is None:
-            self.post = Post(environ)
+        if environ.get('nitrogen.get') is None:
+            input_parser(environ=environ)
+            
+        self.get = environ['nitrogen.get']    
+        self.post = environ['nitrogen.post']
+        self.files = environ['nitrogen.files']
+        
         self.cookies = environ.get('nitrogen.cookies')    
         self._cookies_provided = self.cookies is not None
         if self.cookies is None:
-            self.cookies = Cookies(environ)
+            self.cookies = CookieContainer(environ.get('HTTP_COOKIE', ''))
         
         # self.unrouted = environ.get('nitrogen.path.unrouted')
         # self.routed = environ.get('nitrogen.path.routed')
