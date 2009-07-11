@@ -1,3 +1,4 @@
+import logging
 def utf8_encoder(app):
     """Encodes everything to a UTF-8 string.
     Forces test/* content types to have a UTF-8 charset.

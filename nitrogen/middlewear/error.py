@@ -62,7 +62,7 @@ def server_error_catcher(app):
             try:
                 for x in app(self.environ, self.inner_start):
                     self.output.append(x)
-                self.start(self.status, self.headers)
+                self.start(self.status, self.headers or [])
                 for x in self.output:
                     yield x
             except Exception as e:

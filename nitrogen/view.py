@@ -16,6 +16,8 @@ import mako.lookup
 from markdown import markdown
 from BeautifulSoup import BeautifulSoup
 
+from . import environ, config, server
+
 TYPE_HEADER_HTML = ('Content-Type', 'text/html;charset=UTF-8')
 TYPE_HEADER_TEXT = ('Content-Type', 'text/plain;charset=UTF-8')
 
@@ -36,13 +38,24 @@ defaults['repr'] = repr
 paths = [os.path.abspath(__file__ + '/../../view')]
 lookup = mako.lookup.TemplateLookup(directories=paths, input_encoding='utf-8')
 
+def _set_defaults(data):
+    data.update(defaults)
+    try:
+        data['is_admin_area'] = environ['SERVER_NAME'].startswith('admin.')
+        data['user'] = environ['app.user']
+        data['config'] = config
+        data['environ'] = environ
+        data['server'] = server
+    except:
+        pass
+    
 def render(template_name, **data):
     '''Find a template file and render it with the given keyword arguments.'''
     template = lookup.get_template(template_name)
-    data.update(defaults)
+    _set_defaults(data)
     return template.render_unicode(**data)
 
 def render_string(template, **data):
     template = make.template.Template(template, lookup=lookup)
-    data.update(defaults)
+    _set_defaults(data)
     return template.render_unicode(**data)

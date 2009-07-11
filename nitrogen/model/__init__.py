@@ -30,7 +30,7 @@ logger.setLevel(1000)
 
 @property
 def _Base_session(self):
-    return object_session(self)
+    return orm.object_session(self)
 Base.session = _Base_session
 
 def _Base_delete(self):

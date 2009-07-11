@@ -48,6 +48,7 @@ if __name__ == '__main__':
     import nitrogen.middlewear as junk
     __package__ = 'nitrogen.middlewear'
 
+from ..uri import URI
 from ..uri.query import Query
 from .. import cookie
 
@@ -250,12 +251,19 @@ def cookie_builder(app, strict=True):
             if self.headers is not None and self.headers != headers:
                 raise ValueError('Cookies have been modified since WSGI start.', self.headers, headers)
     return inner
+    
+def requested_uri_builder(app):
+    def inner(environ, start):
+        environ['nitrogen.uri'] = URI('http://' + environ['SERVER_NAME'] + environ['REQUEST_URI'])
+        return app(environ, start)
+    return inner
+
 
 def full_parser(app, hmac_key=None, strict=True):
-    return cookie_builder(
+    return requested_uri_builder(cookie_builder(
         input_parser(cookie_parser(app, hmac_key=hmac_key)),
         strict=strict
-    )
+    ))
 
 def test_ReadOnlyMapping_1():
     def gen():

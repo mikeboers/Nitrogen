@@ -21,22 +21,3 @@ def straight_templater(app):
             start('200 OK', [TYPE_HEADER_HTML])
             yield render(path)            
     return inner
-
-def template_context_setup(app):
-    """Adds a number of items from the environ to the template envionment.
-
-    Adds:
-        - environ
-        - config
-        - server
-        - admin (None, or an instance of the User model)
-    """
-    def inner(environ, start):
-        view.defaults.update(dict(
-            environ=environ,
-            config=config,
-            server=config.server,
-            user=environ.get('app.user')
-        ))
-        return app(environ, start)
-    return inner
