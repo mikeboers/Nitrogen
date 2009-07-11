@@ -11,20 +11,27 @@ from . import *
 
 class TextBlob(Base):
     __tablename__ = 'textblobs'
-    key = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True)
+    key = Column(Text, nullable=False)
     value = Column(Text, nullable=False)
 
 class MarkdownBlob(Base):
     __tablename__ = 'markdownblobs'
-    key = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True)
+    key = Column(Text, nullable=False)
     value = Column(Text, nullable=False)
 
 TextBlob.__table__.create(engine, checkfirst=True)
 MarkdownBlob.__table__.create(engine, checkfirst=True)
 
-text_fieldset = formalchemy.FieldSet(TextBlob)
+textblob_fieldset = formalchemy.FieldSet(TextBlob)
+textblob_fieldset.configure(include=[textblob_fieldset.value], options=[
+    # textblob_fieldset.value.with_renderer(formalchemy.fields.TextAreaFieldRenderer)
+])
 
-markdown_fieldset = formalchemy.FieldSet(MarkdownBlob)
-markdown_fieldset.configure(options=[
-    markdown_fieldset.value.with_renderer(MarkdownRenderer)
+markdownblob_fieldset = formalchemy.FieldSet(MarkdownBlob)
+markdownblob_fieldset.configure(include=[
+    markdownblob_fieldset.value
+], options=[
+    markdownblob_fieldset.value.with_renderer(MarkdownRenderer)
 ])

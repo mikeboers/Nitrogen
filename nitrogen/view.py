@@ -39,7 +39,22 @@ def get_flash_messages():
         local.flash_messages = []
     return local.flash_messages
 
-    
+def textblob(key):
+    blob = session.query(TextBlob).filter_by(key=key).first()
+    if not blob:
+        blob = TextBlob(key=key, value='JUST CREATED. Add some content!')
+        session.add(blob)
+        session.commit()
+    return render('_textblob.tpl', blob=blob)
+
+def markdownblob(key):
+    blob = session.query(MarkdownBlob).filter_by(key=key).first()
+    if not blob:
+        blob = MarkdownBlob(key=key, value='**JUST CREATED.** *Add some content!*')
+        session.add(blob)
+        session.commit()
+    return render('_markdownblob.tpl', blob=blob)
+       
 defaults = {}
 defaults['nl2br'] = lambda s: s.replace("\n", "<br />")
 defaults['json'] = json.dumps
@@ -48,6 +63,8 @@ defaults['format_date'] = lambda d, f: (d.strftime(f) if d else '')
 defaults['randomize'] = lambda x: sorted(x, key=lambda y: random.random())
 defaults['sorted'] = sorted
 defaults['repr'] = repr
+defaults['textblob'] = textblob
+defaults['markdownblob'] = markdownblob
 
 # TODO: Change the assumed path location. Move this into the configs.
 paths = [os.path.abspath(__file__ + '/../../view')]
