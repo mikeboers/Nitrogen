@@ -19,6 +19,9 @@ from BeautifulSoup import BeautifulSoup
 
 from . import environ, config, server
 
+from model.textblob import TextBlob, MarkdownBlob
+from model import session
+
 TYPE_HEADER_HTML = ('Content-Type', 'text/html;charset=UTF-8')
 TYPE_HEADER_TEXT = ('Content-Type', 'text/plain;charset=UTF-8')
 
