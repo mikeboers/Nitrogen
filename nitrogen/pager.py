@@ -181,6 +181,8 @@ class Pager(object):
         stuff = stuff.replace('&lt;', '<')
         stuff = stuff.replace('&gt;', '>')
         return stuff
+    
+    pager = render
 
 if __name__ == '__main__':
     from .test import run
