@@ -3,7 +3,7 @@ import traceback
 
 from ..error import format_error_report
 from ..view import render, TYPE_HEADER_HTML
-from .. import config
+from .. import config, server
 
 def debugger(app):
     class inner(object):
@@ -74,10 +74,10 @@ def server_error_catcher(app):
                 except:
                     pass
                 yield render('_500.tpl',
-                    environ=self.environ if config.is_dev else None,
-                    error=e if config.is_dev else None,
-                    traceback=traceback.format_exc() if config.is_dev else None,
-                    output=self.output if config.is_dev else None
+                    environ=self.environ if server.is_dev else None,
+                    error=e if server.is_dev else None,
+                    traceback=traceback.format_exc() if server.is_dev else None,
+                    output=self.output if server.is_dev else None
                 )
     return inner
 

@@ -13,8 +13,8 @@ if __name__ == '__main__':
     
 import mako.template
 import mako.lookup
-import markdown
-import BeautifulSoup
+from markdown import markdown
+from BeautifulSoup import BeautifulSoup
 
 TYPE_HEADER_HTML = ('Content-Type', 'text/html;charset=UTF-8')
 TYPE_HEADER_TEXT = ('Content-Type', 'text/plain;charset=UTF-8')

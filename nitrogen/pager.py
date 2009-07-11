@@ -88,7 +88,6 @@ class Pager(object):
         href_format=HREF_FORMAT
     ):
         self.data = data
-        self.page = page
         
         if count is None:
             self.data = list(data)
@@ -97,6 +96,10 @@ class Pager(object):
             self.count = count
         
         self.per_page = per_page
+        
+        # Need to set this after the count/per_page are set cause ranges must be checked.
+        self.page = page
+        
         self.page_radius = page_radius
         
         for k in '''wrapper_class first_class prev_class current_class next_class last_class
@@ -108,6 +111,14 @@ class Pager(object):
     def __iter__(self):
         for x in self.data[(self.page - 1) * self.per_page: self.page * self.per_page]:
             yield x
+    
+    @property
+    def page(self):
+        return self._page
+    
+    @page.setter
+    def page(self, v):
+        self._page = max(1, min(self.page_count, int(v)))
     
     @property
     def page_count(self):
