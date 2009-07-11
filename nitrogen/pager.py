@@ -54,6 +54,7 @@ class Pager(object):
             self.count = count
         
         self.per_page = per_page
+        self.page_radius = 3
     
     def __iter__(self):
         for x in self.data[(self.page - 1) * self.per_page: self.page * self.per_page]:
@@ -68,47 +69,51 @@ class Pager(object):
         
         def href(page):
             return format % page
+        
         def link(page):
-            if i == self.page:
+            if page == self.page:
                 chunks.append('[%d]' % page)
             else:
-                chunks.append(HTML.tag('a', str(i), href=href(page)))
+                chunks.append(HTML.tag('a', str(page), href=href(page)))
         
-        # Previous page
         if self.page > 1:
-            chunks.append(HTML.tag('a', '<<', href=href(self.page - 1)))
+            # Start
+            chunks.append(HTML.tag('a', '<<', href=href(1)))
+            # Previous page
+            chunks.append(HTML.tag('a', '<', href=href(self.page - 1)))
         
-        # First couple
-        for i in range(1, min(3, self.pagecount)):
-            link(i)
+        # First one
+        link(1)
         
         # The seperator if it should be there
-        if self.page > 5:
+        if self.page > self.page_radius + 2:
             chunks.append('..')
         
         # The middle ones.
-        for i in range(max(3, self.page - 3), min(self.pagecount, self.page + 4)):
+        for i in range(max(2, self.page - 3), min(self.pagecount, self.page + self.page_radius + 1)):
             link(i)
         
         # The end sepeartor
-        if self.pagecount - self.page > 5:
+        if self.pagecount - self.page > self.page_radius + 1:
             chunks.append('..')
         
-        # The last two.
-        for i in range(max(3, self.pagecount - 1), self.pagecount + 1):
-            link(i)
+        # The last one.
+        if self.pagecount - self.page > self.page_radius:
+            link(self.pagecount)
         
-        # Next page
         if self.page < self.pagecount:
-            chunks.append(HTML.tag('a', '>>', href=href(self.page + 1)))
+            # Next page
+            chunks.append(HTML.tag('a', '>', href=href(self.page + 1)))
+            chunks.append(HTML.tag('a', '>>', href=href(self.pagecount)))
         
         return ''.join(chunks)
     
     def rendertest(self, format='%d'):
-        stuff = re.sub(r'[^\d\.\[\]&a-w;]+', ' ', self.render(format))
+        """Strips out all of the html."""
+        stuff = re.sub(r'(<[^>]+?>)+', ' ', self.render(format)).strip()
         stuff = stuff.replace('&lt;', '<')
         stuff = stuff.replace('&gt;', '>')
-        return re.sub(r'[^\d\[\]<>\.]+', ' ', stuff).strip()
+        return stuff
 
 if __name__ == '__main__':
     from .test import run
