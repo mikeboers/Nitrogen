@@ -12,19 +12,36 @@ Examples:
     >>> list(pager)
     [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
     
-    >>> pager.pagecount
+    >>> pager.page_count
     10
     
+    >>> pager = Pager(range(100))
     >>> pager.render()
-    u'<a href="1">&lt;&lt;</a><a href="1">1</a>[2]<a href="3">3</a><a href="4">4</a><a href="5">5</a>..<a href="9">9</a><a href="10">10</a><a href="3">&gt;&gt;</a>'
+    u'[1]<a href="2">2</a><a href="3">3</a><a href="4">4</a>..<a href="10">10</a><a href="2">&gt;</a><a href="10">&gt;&gt;</a>'
     
     >>> pager.rendertest()
-    u'1 << 1 1 [2] 3 3 4 4 5 5 .. 9 9 10 10 3 >>'
+    u'[1] 2 3 4 .. 10 > >>'
+    
+    >>> pager.page = 2
+    >>> pager.rendertest()
+    u'<< < 1 [2] 3 4 5 .. 10 > >>'
     
     >>> pager.page = 5
     >>> pager.rendertest()
-    u'4 << 1 1 2 2 3 3 4 4 [5] 6 6 7 7 8 8 9 9 10 10 6 >>'
-
+    u'<< < 1 2 3 4 [5] 6 7 8 .. 10 > >>'
+    
+    >>> pager.page = 6
+    >>> pager.rendertest()
+    u'<< < 1 .. 3 4 5 [6] 7 8 9 10 > >>'
+    
+    >>> pager.page = 9
+    >>> pager.rendertest()
+    u'<< < 1 .. 6 7 8 [9] 10 > >>'
+    
+    >>> pager.page = 10
+    >>> pager.rendertest()
+    u'<< < 1 .. 7 8 9 [10]'
+    
 """
 
 from __future__ import division
@@ -61,14 +78,15 @@ class Pager(object):
             yield x
     
     @property
-    def pagecount(self):
+    def page_count(self):
         return self.count // self.per_page
     
     def render(self, format='%d'):
         chunks = []
         
+        self.href_format = format
         def href(page):
-            return format % page
+            return self._render_href(page)
         
         def link(page):
             if page == self.page:
@@ -85,28 +103,34 @@ class Pager(object):
         # First one
         link(1)
         
-        # The seperator if it should be there
-        if self.page > self.page_radius + 2:
+        # The first seperator.
+        if self.page - self.page_radius > 2:
             chunks.append('..')
         
         # The middle ones.
-        for i in range(max(2, self.page - 3), min(self.pagecount, self.page + self.page_radius + 1)):
+        for i in range(
+            max(2, self.page - self.page_radius),
+            min(self.page_count, self.page + self.page_radius + 1)
+        ):
             link(i)
         
-        # The end sepeartor
-        if self.pagecount - self.page > self.page_radius + 1:
+        # The end seperator
+        if self.page_count - self.page > self.page_radius + 1:
             chunks.append('..')
         
         # The last one.
-        if self.pagecount - self.page > self.page_radius:
-            link(self.pagecount)
+        if self.page_count > 1:
+            link(self.page_count)
         
-        if self.page < self.pagecount:
+        if self.page < self.page_count:
             # Next page
             chunks.append(HTML.tag('a', '>', href=href(self.page + 1)))
-            chunks.append(HTML.tag('a', '>>', href=href(self.pagecount)))
+            chunks.append(HTML.tag('a', '>>', href=href(self.page_count)))
         
         return ''.join(chunks)
+    
+    def _render_href(self, page):
+        return self.href_format % page
     
     def rendertest(self, format='%d'):
         """Strips out all of the html."""
