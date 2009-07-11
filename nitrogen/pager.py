@@ -50,6 +50,7 @@ Examples:
 from __future__ import division
 
 import re
+from math import ceil
 
 # Setup path for local evaluation.
 # When copying to another file, just change the __package__ to be accurate.
@@ -77,7 +78,15 @@ class Pager(object):
     NEXT_TOKEN = '>'
     LAST_TOKEN = '>>'
     
-    def __init__(self, data, page=1, count=None, per_page=10, page_radius=3):
+    HREF_FORMAT = '%d'
+    
+    def __init__(self, data,
+        page=1,
+        count=None,
+        per_page=10,
+        page_radius=3,
+        href_format=HREF_FORMAT
+    ):
         self.data = data
         self.page = page
         
@@ -93,6 +102,8 @@ class Pager(object):
         for k in '''wrapper_class first_class prev_class current_class next_class last_class
                     first_token prev_token seperator current_wrapper next_token last_token'''.split():
             setattr(self, k, getattr(self, k.upper()))
+        
+        self.href_format = href_format
     
     def __iter__(self):
         for x in self.data[(self.page - 1) * self.per_page: self.page * self.per_page]:
@@ -100,12 +111,12 @@ class Pager(object):
     
     @property
     def page_count(self):
-        return self.count // self.per_page
+        return int(ceil(self.count / self.per_page))
     
-    def render(self, format='%d'):
+    def render(self, href_format=None):
         chunks = []
         
-        self.href_format = format
+        self._href_format = href_format or self.href_format
         def href(page):
             return self._render_href(page)
         
@@ -151,7 +162,7 @@ class Pager(object):
         return unicode(HTML.tag('span', *chunks, class_=self.wrapper_class))
     
     def _render_href(self, page):
-        return self.href_format % page
+        return self._href_format % page
     
     def rendertest(self, format='%d'):
         """Strips out all of the html."""
