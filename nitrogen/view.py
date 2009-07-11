@@ -53,7 +53,7 @@ def markdownblob(key):
         blob = MarkdownBlob(key=key, value='**JUST CREATED.** *Add some content!*')
         session.add(blob)
         session.commit()
-    return render('_markdownblob.tpl', blob=blob)
+    return render('_textblob_md.tpl', blob=blob)
        
 defaults = {}
 defaults['nl2br'] = lambda s: s.replace("\n", "<br />")
@@ -64,7 +64,7 @@ defaults['randomize'] = lambda x: sorted(x, key=lambda y: random.random())
 defaults['sorted'] = sorted
 defaults['repr'] = repr
 defaults['textblob'] = textblob
-defaults['markdownblob'] = markdownblob
+defaults['textblob_md'] = markdownblob
 
 # TODO: Change the assumed path location. Move this into the configs.
 paths = [os.path.abspath(__file__ + '/../../view')]
