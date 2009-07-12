@@ -1,6 +1,6 @@
 
-from .. import view
-from ..view import render, TYPE_HEADER_HTML
+from .. import views
+from ..views import render, TYPE_HEADER_HTML
 from .. import config
 
 def straight_templater(app):

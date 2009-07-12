@@ -2,7 +2,7 @@ import logging
 import traceback
 
 from ..error import format_error_report
-from ..view import render, TYPE_HEADER_HTML
+from ..views import render, TYPE_HEADER_HTML
 from .. import config, server
 
 def debugger(app):

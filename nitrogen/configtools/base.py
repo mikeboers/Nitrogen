@@ -23,3 +23,7 @@ cookie_hmac_key = 'Please set this in nitrogenconfig.py for the application.'
 # The URI to use to create the sqlalchemy engine.
 # Defaults to an in-memory database that will not be saved.
 database_uri = 'sqlite:///:memory:'
+
+# Where to look for templates, in order. It is recommended that you insert
+# your directory on the front of this list.
+template_path = [os.path.absolute(__path__ + '/../../templates')]

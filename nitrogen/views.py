@@ -71,9 +71,7 @@ defaults['textblob_md'] = markdownblob
 defaults['truncate'] = webhelpers.text.truncate
 defaults['html'] = webhelpers.html.HTML
 
-# TODO: Change the assumed path location. Move this into the configs.
-paths = [os.path.abspath(__file__ + '/../../view')]
-lookup = mako.lookup.TemplateLookup(directories=paths, input_encoding='utf-8')
+lookup = mako.lookup.TemplateLookup(directories=config.template_path, input_encoding='utf-8')
 
 def _set_defaults(data):
     data.update(defaults)
