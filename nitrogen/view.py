@@ -17,6 +17,9 @@ import mako.lookup
 from markdown import markdown
 from BeautifulSoup import BeautifulSoup
 
+import webhelpers.text
+import webhelpers.html
+
 from . import environ, config, server
 
 from model.textblob import TextBlob, MarkdownBlob
@@ -65,6 +68,8 @@ defaults['sorted'] = sorted
 defaults['repr'] = repr
 defaults['textblob'] = textblob
 defaults['textblob_md'] = markdownblob
+defaults['truncate'] = webhelpers.text.truncate
+defaults['html'] = webhelpers.html.HTML
 
 # TODO: Change the assumed path location. Move this into the configs.
 paths = [os.path.abspath(__file__ + '/../../view')]
