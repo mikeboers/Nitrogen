@@ -30,8 +30,21 @@ def get_server():
     path = os.path.abspath(__file__)
     possibleservers = [server for server in servers if path.startswith(server.www_root)]
     if not possibleservers:
-        raise ValueError('Could not identify the server we are on.', os.path.abspath(__file__))
+        raise ValueError('Could not identify server.')
     return possibleservers[0]
+    
+def get_server_by(**kwargs):
+    """Find a server from those which are registered. Takes a single keyword
+    argument specifying the attribute to match on.
+    """
+    
+    if len(kwargs) != 1:
+        raise ValueError('Can only search with one parameter.')
+
+    key, value in kwargs.items()[0]
+    possibleservers = [x for x in servers if getattr(x, key) == value]
+    
+    return possibleservers[0] if possibleservers else None
 
 def extract_locals(module, all=False):
     return dict((k, getattr(module, k)) for k in dir(module) if all or not k.startswith('_'))
