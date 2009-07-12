@@ -39,7 +39,10 @@ class ResultPart(collections.Mapping):
         return iter(self._keys)
     
     def __getitem__(self, key):
-        return getattr(self, key)
+        try:
+            return getattr(self, key)
+        except AttributeError:
+            raise KeyError(key)
     
     def __len__(self):
         return len(self._keys)
