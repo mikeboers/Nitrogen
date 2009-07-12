@@ -41,7 +41,7 @@ def get_server_by(**kwargs):
     if len(kwargs) != 1:
         raise ValueError('Can only search with one parameter.')
 
-    key, value in kwargs.items()[0]
+    key, value = kwargs.items()[0]
     possibleservers = [x for x in servers if getattr(x, key) == value]
     
     return possibleservers[0] if possibleservers else None
