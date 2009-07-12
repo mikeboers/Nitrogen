@@ -2,7 +2,7 @@ import collections
 import os
 import re
 
-_servers = []
+servers = []
 
 from .. import environ
 
@@ -23,15 +23,15 @@ class Server(object):
     
 def register_server(**kwargs):
     server = Server(**kwargs)
-    _servers.append(server)
+    servers.append(server)
     return server
 
 def get_server():
     path = os.path.abspath(__file__)
-    possible_servers = [server for server in _servers if path.startswith(server.www_root)]
-    if not possible_servers:
+    possibleservers = [server for server in servers if path.startswith(server.www_root)]
+    if not possibleservers:
         raise ValueError('Could not identify the server we are on.', os.path.abspath(__file__))
-    return possible_servers[0]
+    return possibleservers[0]
 
 def extract_locals(module, all=False):
     return dict((k, getattr(module, k)) for k in dir(module) if all or not k.startswith('_'))
