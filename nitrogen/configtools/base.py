@@ -26,4 +26,4 @@ database_uri = 'sqlite:///:memory:'
 
 # Where to look for templates, in order. It is recommended that you insert
 # your directory on the front of this list.
-template_path = [os.path.absolute(__path__ + '/../../templates')]
+template_path = [os.path.abspath(__file__ + '/../../templates')]

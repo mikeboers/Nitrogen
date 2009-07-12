@@ -24,7 +24,7 @@ from .input import cookie_parser, cookie_builder, input_parser, full_parser
 from .logs import log_extra_filler
 from .unicode import utf8_encoder
 from .error import debugger, server_error_catcher, absolute_error_catcher
-from .views import straight_templater
+from .view import straight_templater
 
 def wsgi_style(app):
     def inner(*args):
