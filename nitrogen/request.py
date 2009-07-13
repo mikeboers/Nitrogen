@@ -106,6 +106,10 @@ class Request(object):
     @property
     def method(self):
         return self.environ.get('REQUEST_METHOD')
+    
+    @property
+    def user(self):
+        return self.environ.get('app.user')
 
 # This has a bad name... Shame on me.
 # TODO: Name this better.

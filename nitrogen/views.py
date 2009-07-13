@@ -7,10 +7,12 @@ import random
 import threading
 
 # Setup path for local evaluation.
+# When copying to another file, just change the __package__ to be accurate.
 if __name__ == '__main__':
     import sys
-    sys.path.insert(0, __file__[:__file__.rfind('/nitrogen')])
-    import nitrogen
+    __package__ = 'nitrogen'
+    sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
+    __import__(__package__)
     
 import mako.template
 import mako.lookup
@@ -19,6 +21,7 @@ from BeautifulSoup import BeautifulSoup
 
 import webhelpers.text
 import webhelpers.html
+HTML = webhelpers.html.HTML
 
 from . import environ, config, server
 
@@ -57,7 +60,10 @@ def markdownblob(key):
         session.add(blob)
         session.commit()
     return render('_textblob_md.tpl', blob=blob)
-       
+
+def button(message, silk=None, href=None, id=None):
+    pass
+           
 defaults = {}
 defaults['nl2br'] = lambda s: s.replace("\n", "<br />")
 defaults['json'] = json.dumps
@@ -69,7 +75,7 @@ defaults['repr'] = repr
 defaults['textblob'] = textblob
 defaults['textblob_md'] = markdownblob
 defaults['truncate'] = webhelpers.text.truncate
-defaults['html'] = webhelpers.html.HTML
+defaults['html'] = HTML
 
 lookup = mako.lookup.TemplateLookup(directories=config.template_path, input_encoding='utf-8')
 

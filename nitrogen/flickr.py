@@ -46,6 +46,7 @@ class ResultPart(collections.Mapping):
     
     def __len__(self):
         return len(self._keys)
+    
 
 class Result(ResultPart):
     pass
