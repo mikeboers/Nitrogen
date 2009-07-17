@@ -17,7 +17,7 @@ Examples:
     
     >>> pager = Pager(range(100))
     >>> pager.render()
-    u'<span class="pager"><span class="current">[1]</span><a href="2">2</a><a href="3">3</a><a href="4">4</a>..<a href="10">10</a><a class="next" href="2">&gt;</a><a class="last" href="10">&gt;&gt;</a></span>'
+    u'<span class="pager"><span class="current">[1]</span><a href="2" title="Page 2">2</a><a href="3" title="Page 3">3</a><a href="4" title="Page 4">4</a>..<a href="10" title="Page 10">10</a><a class="next" href="2" title="Next page: 2">&gt;</a><a class="last" href="10" title="Last page: 10">&gt;&gt;</a></span>'
     
     >>> pager.rendertest()
     u'[1] 2 3 4 .. 10 > >>'
@@ -31,7 +31,7 @@ Examples:
     u'<< < 1 2 3 4 [5] 6 7 8 .. 10 > >>'
     
     >>> pager.render()
-    u'<span class="pager"><a class="first" href="1">&lt;&lt;</a><a class="prev" href="4">&lt;</a><a href="1">1</a><a href="2">2</a><a href="3">3</a><a href="4">4</a><span class="current">[5]</span><a href="6">6</a><a href="7">7</a><a href="8">8</a>..<a href="10">10</a><a class="next" href="6">&gt;</a><a class="last" href="10">&gt;&gt;</a></span>'
+    u'<span class="pager"><a class="first" href="1" title="First page: 1">&lt;&lt;</a><a class="prev" href="4" title="Previous page: 4">&lt;</a><a href="1" title="Page 1">1</a><a href="2" title="Page 2">2</a><a href="3" title="Page 3">3</a><a href="4" title="Page 4">4</a><span class="current">[5]</span><a href="6" title="Page 6">6</a><a href="7" title="Page 7">7</a><a href="8" title="Page 8">8</a>..<a href="10" title="Page 10">10</a><a class="next" href="6" title="Next page: 6">&gt;</a><a class="last" href="10" title="Last page: 10">&gt;&gt;</a></span>'
     
     >>> pager.page = 6
     >>> pager.rendertest()
@@ -135,13 +135,13 @@ class Pager(object):
             if page == self.page:
                 chunks.append(HTML.tag('span', self.current_wrapper % page, class_=self.current_class))
             else:
-                chunks.append(HTML.tag('a', str(page), href=href(page)))
+                chunks.append(HTML.tag('a', str(page), title="Page %d" % page, href=href(page)))
         
         if self.page > 1:
             # Start
-            chunks.append(HTML.tag('a', self.first_token, href=href(1), class_=self.first_class))
+            chunks.append(HTML.tag('a', self.first_token, title="First page: 1", href=href(1), class_=self.first_class))
             # Previous page
-            chunks.append(HTML.tag('a', self.prev_token, href=href(self.page - 1), class_=self.prev_class))
+            chunks.append(HTML.tag('a', self.prev_token,  title="Previous page: %d" % (self.page - 1), href=href(self.page - 1), class_=self.prev_class))
         
         # First one
         link(1)
@@ -167,8 +167,8 @@ class Pager(object):
         
         if self.page < self.page_count:
             # Next page
-            chunks.append(HTML.tag('a', self.next_token, href=href(self.page + 1), class_=self.next_class))
-            chunks.append(HTML.tag('a', self.last_token, href=href(self.page_count), class_=self.last_class))
+            chunks.append(HTML.tag('a', self.next_token, title="Next page: %d" % (self.page + 1), href=href(self.page + 1), class_=self.next_class))
+            chunks.append(HTML.tag('a', self.last_token, title="Last page: %d" % (self.page_count), href=href(self.page_count), class_=self.last_class))
         
         return unicode(HTML.tag('span', *chunks, class_=self.wrapper_class))
     
