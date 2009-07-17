@@ -33,6 +33,7 @@ def _reporter(environ, output=None):
             if not x.endswith('\n'):
                 yield '\n'
             yield '=' * 80
+        yield '\n'
 
 def format_error_report(environ, output=None):
     """Builds an error report with traceback, environment, and buffered
