@@ -1,9 +1,11 @@
 import logging
 import traceback
+import sys
 
-from ..error import format_error_report
+from ..error import format_error_report, get_cleaned_traceback
 from ..views import render, TYPE_HEADER_HTML
 from .. import config, server
+
 
 def debugger(app):
     class inner(object):
@@ -76,7 +78,7 @@ def server_error_catcher(app):
                 yield render('_500.tpl',
                     environ=self.environ if server.is_dev else None,
                     error=e if server.is_dev else None,
-                    traceback=traceback.format_exc() if server.is_dev else None,
+                    traceback=get_cleaned_traceback() if server.is_dev else None,
                     output=self.output if server.is_dev else None
                 )
     return inner

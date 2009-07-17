@@ -56,18 +56,6 @@ def not_found_catcher(app):
             yield render('_404.tpl')
     return inner        
 
-def environ_config(app):
-    """Adds a number of app-specific items to the environ dict."""
-    def inner(environ, start):
-        environ['nitrogen.config'] = config
-        environ['nitrogen.server'] = server
-        # environ['nitrogen.local']  = nitrogen.local
-        return app(environ, start)
-    return inner
-
-
-
-
 if __name__ == '__main__':
     from nitrogen.test import run
     run()
