@@ -42,6 +42,7 @@ import cgi
 import collections
 import sys
 import tempfile
+import logging
 
 if __name__ == '__main__':
     sys.path.append('../..')
@@ -234,8 +235,9 @@ def cookie_builder(app, strict=True):
 
         def inner_start(self, status, headers):
             cookies = self.environ.get('nitrogen.cookies')
-            if cookies:
+            if cookies is not None:
                 self.headers = cookies.build_headers()
+                # logging.debug('Cookie headers: %r' % self.headers)
                 headers.extend(self.headers)
             self.start(status, headers)
 
