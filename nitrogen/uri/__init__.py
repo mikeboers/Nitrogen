@@ -303,6 +303,16 @@ class URI(object):
         self.query = uri["query"]
         self.fragment = uri["fragment"] and decode(uri["fragment"])
     
+    def copy(self):
+        copy = URI()
+        copy.scheme = self.scheme
+        copy.userinfo = str(self.userinfo)
+        copy.host = self.host
+        copy.path = str(self.path)
+        copy.query = str(self.query)
+        copy.fragment = self.fragment
+        return copy
+    
     @property
     def path(self):
         return self._path
