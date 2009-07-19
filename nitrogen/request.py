@@ -110,6 +110,10 @@ class Request(object):
     @property
     def user(self):
         return self.environ.get('app.user')
+    
+    @property
+    def is_admin_area(self):
+        return self.environ.get('SERVER_NAME', '').startswith('admin.')
 
 # This has a bad name... Shame on me.
 # TODO: Name this better.
