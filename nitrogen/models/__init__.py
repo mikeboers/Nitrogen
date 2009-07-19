@@ -13,8 +13,9 @@ from .. import config
 from sqlalchemy import *
 import sqlalchemy.orm as orm
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.types import TypeDecorator
-    
+from sqlalchemy.types import TypeDecorator, MutableType
+from sqlalchemy.orm.attributes import instance_state
+
 Base = declarative_base()
 
 engine = create_engine(config.database_uri)
@@ -36,6 +37,11 @@ Base.session = _Base_session
 def _Base_delete(self):
     self.session.delete(self)
 Base.delete = _Base_delete
+
+def _Base_mark_dirty(self):
+    self.session.dirty.add(self)
+    # instance_state(self).modified = True
+Base.mark_dirty = _Base_mark_dirty
 
 ### }
 
