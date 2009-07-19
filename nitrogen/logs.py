@@ -40,7 +40,20 @@ class Formatter(logging.Formatter):
         except:
             data['message'] = record.msg
         
-        return base_format % data
+        message = base_format % data
+        
+        if record.exc_info:
+            # Cache the traceback text to avoid converting it multiple times
+            # (it's constant anyway)
+            if not record.exc_text:
+                record.exc_text = self.formatException(record.exc_info)
+        if record.exc_text:
+            if message[-1] != "\n":
+                message += "\n"
+            message += record.exc_text
+        
+        return message
+        
 
 formatter = Formatter()
 
