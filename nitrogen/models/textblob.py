@@ -24,12 +24,12 @@ class MarkdownBlob(Base):
 TextBlob.__table__.create(engine, checkfirst=True)
 MarkdownBlob.__table__.create(engine, checkfirst=True)
 
-textblob_fieldset = formalchemy.FieldSet(TextBlob)
+textblob_fieldset = FieldSet(TextBlob)
 textblob_fieldset.configure(include=[textblob_fieldset.value], options=[
     # textblob_fieldset.value.with_renderer(formalchemy.fields.TextAreaFieldRenderer)
 ])
 
-markdownblob_fieldset = formalchemy.FieldSet(MarkdownBlob)
+markdownblob_fieldset = FieldSet(MarkdownBlob)
 markdownblob_fieldset.configure(include=[
     markdownblob_fieldset.value
 ], options=[

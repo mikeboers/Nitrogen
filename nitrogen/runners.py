@@ -11,10 +11,9 @@ if __name__ == '__main__':
 from . import local
 from .request import Request
 
-def wrap_wsgi_style(app):
+def environment_localizer(app):
     def inner(environ, start):
         local.environ = environ
-        local.start = start
         return app(environ, start)
     return inner
 
@@ -26,7 +25,7 @@ def run_via_cgi(app):
     """
     
     import wsgiref.handlers
-    wsgiref.handlers.CGIHandler().run(wrap_wsgi_style(app))
+    wsgiref.handlers.CGIHandler().run(environment_localizer(app))
 
 def run_via_fcgi(app, multithreaded=True):
     """Run a web application via a FastCGI interface of a web server.
@@ -39,7 +38,7 @@ def run_via_fcgi(app, multithreaded=True):
     """
     
     from fcgi import WSGIServer
-    WSGIServer(wrap_wsgi_style(app), multithreaded=multithreaded).run()
+    WSGIServer(environment_localizer(app), multithreaded=multithreaded).run()
 
 def run_via_socket(app, host='', port=8000, once=False):
     """Run a web aplication directly via a socket.
@@ -52,7 +51,7 @@ def run_via_socket(app, host='', port=8000, once=False):
     """
     
     from wsgiref.simple_server import make_server
-    httpd = make_server(host, port, wrap_wsgi_style(app))
+    httpd = make_server(host, port, environment_localizer(app))
     if once:
         httpd.handle_request()
     else:
