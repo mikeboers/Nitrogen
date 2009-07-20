@@ -18,7 +18,7 @@ log_handlers = [
 # The key to use to sign cookies. PLEASE set this to something different in
 # the application configuration. If this is None, then a normal cookie
 # container will be used, and nothing will be signed.
-cookie_hmac_key = 'Please set this in nitrogenconfig.py for the application.'
+hmac_key = 'Please set this in nitrogenconfig.py for the application.'
 
 # The URI to use to create the sqlalchemy engine.
 # Defaults to an in-memory database that will not be saved.

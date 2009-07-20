@@ -15,10 +15,14 @@ class Server(object):
     
     @property
     def admin_domain(self):
+        if 'admin_domain' in self._data:
+            return self._data['admin_domain']
         return 'admin.' + self.domain
     
     @property
     def cookie_domain(self):
+        if 'cookie_domain' in self._data:
+            return self._data['cookie_domain']
         return '.' + self.domain
     
 def register_server(**kwargs):
