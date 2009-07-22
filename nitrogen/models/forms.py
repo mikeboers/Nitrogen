@@ -10,6 +10,10 @@ import datetime
 import formalchemy
 import logging
 
+class TextFieldRenderer(formalchemy.fields.TextFieldRenderer):
+    def render(self, **kwargs):
+        return formalchemy.helpers.text_field(self.name, class_='text', value=self._value, maxlength=self.length, **kwargs)
+
 class DateTimeRenderer(formalchemy.fields.FieldRenderer):
     """Date input that relies on the editable plugin to manage the input with
     date.js
@@ -48,3 +52,4 @@ class FieldSet(formalchemy.FieldSet):
 
 
 FieldSet.default_renderers[formalchemy.types.DateTime] = DateTimeRenderer
+FieldSet.default_renderers[formalchemy.types.String] = TextFieldRenderer
