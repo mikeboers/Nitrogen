@@ -14,6 +14,10 @@ class TextFieldRenderer(formalchemy.fields.TextFieldRenderer):
     def render(self, **kwargs):
         return formalchemy.helpers.text_field(self.name, class_='text', value=self._value, maxlength=self.length, **kwargs)
 
+class FloatFieldRenderer(formalchemy.fields.FloatFieldRenderer):
+    def render(self, **kwargs):
+        return formalchemy.helpers.text_field(self.name, class_='text', value=self._value, **kwargs)
+
 class DateTimeRenderer(formalchemy.fields.FieldRenderer):
     """Date input that relies on the editable plugin to manage the input with
     date.js
@@ -26,7 +30,7 @@ class DateTimeRenderer(formalchemy.fields.FieldRenderer):
             value = self._value.strftime("%A, %B %d, %Y %I:%M:%S %p")
         else:
             value = self._value
-        return formalchemy.helpers.text_field(self.name, value=value, class_="datetime", **kwargs)
+        return formalchemy.helpers.text_field(self.name, value=value, class_="text datetime", **kwargs)
 
 
 class MarkdownRenderer(formalchemy.fields.FieldRenderer):
@@ -53,3 +57,5 @@ class FieldSet(formalchemy.FieldSet):
 
 FieldSet.default_renderers[formalchemy.types.DateTime] = DateTimeRenderer
 FieldSet.default_renderers[formalchemy.types.String] = TextFieldRenderer
+FieldSet.default_renderers[formalchemy.types.Float] = FloatFieldRenderer
+FieldSet.default_renderers[formalchemy.types.Numeric] = FloatFieldRenderer
