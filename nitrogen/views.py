@@ -82,16 +82,11 @@ lookup = mako.lookup.TemplateLookup(directories=config.template_path, input_enco
 
 def _set_defaults(data):
     data.update(defaults)
-    try:
-        data['is_admin_area'] = environ['SERVER_NAME'].startswith('admin.')
-        data['config'] = config
-        data['environ'] = environ
-        data['server'] = server
-        data['user'] = environ['app.user']
-    except:
-        logging.exception('Error while setting render defaults.')
-        if server.esplode_on_render_set_defaults_error:
-            raise
+    data['is_admin_area'] = environ['SERVER_NAME'].startswith('admin.')
+    data['config'] = config
+    data['environ'] = environ
+    data['server'] = server
+    data['user'] = environ.get('app.user')
     
     data['flash_messages'] = get_flash_messages()
     
