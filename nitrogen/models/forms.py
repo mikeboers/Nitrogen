@@ -46,13 +46,13 @@ class FieldSet(formalchemy.FieldSet):
     
     def __init__(self, *args, **kwargs):
         formalchemy.FieldSet.__init__(self, *args, **kwargs)
-        self._render = None
-        self._render_readonly = None
+        # self._render = None
+        # self._render_readonly = None
     
-    def render(self, **kwargs):
+    def _render(self, fieldset, **kwargs):
         from ..views import render
         logging.debug('FieldSet.render(**%r)' % kwargs)
-        return render('_formalchemy.tpl', fieldset=self, **kwargs)
+        return render('_formalchemy.tpl', fieldset=fieldset, **kwargs)
 
 
 FieldSet.default_renderers[formalchemy.types.DateTime] = DateTimeRenderer
