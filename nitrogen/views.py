@@ -5,6 +5,7 @@ import json
 import datetime
 import random
 import threading
+import logging
 
 # Setup path for local evaluation.
 # When copying to another file, just change the __package__ to be accurate.
@@ -83,12 +84,15 @@ def _set_defaults(data):
     data.update(defaults)
     try:
         data['is_admin_area'] = environ['SERVER_NAME'].startswith('admin.')
-        data['user'] = environ['app.user']
         data['config'] = config
         data['environ'] = environ
         data['server'] = server
+        data['user'] = environ['app.user']
     except:
-        pass
+        logging.exception('Error while setting render defaults.')
+        if server.esplode_on_render_set_defaults_error:
+            raise
+    
     data['flash_messages'] = get_flash_messages()
     
 def render(template_name, **data):
