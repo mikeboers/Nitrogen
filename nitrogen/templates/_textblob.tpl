@@ -1,4 +1,4 @@
-<div class="textblob">
+<div id="textblob-${blob.key|h}" class="textblob">
 	## Unfortunately this does need to have a div wrapper around the p. I
 	## wanted to just have a p with the content, but the way the editable works
 	## it wont really allow it. We could go and show different markup for admin
@@ -6,5 +6,5 @@
 	% if is_admin_area and (permission is None or (user and user.has_permission(permission))):
 	<!--{id:${blob.id}}-->
 	% endif
-	<p>${blob.value|h}</p>
+	<p >${blob.value|h}</p>
 </div>
