@@ -6,6 +6,7 @@ import datetime
 import random
 import threading
 import logging
+import re
 
 # Setup path for local evaluation.
 # When copying to another file, just change the __package__ to be accurate.
@@ -64,7 +65,15 @@ def markdownblob(key, permission=None):
 
 def button(message, silk=None, href=None, id=None):
     pass
-           
+
+def urlify_name(name):
+    """Converts a name or title into something we can put into a URI.
+
+    This is designed to only be for one way usage (ie. we can't use the
+    urlified names to figure out what photo or photoset we are talking about).
+    """
+    return re.sub(r'\W+', '-', name).strip('-')
+               
 defaults = {}
 defaults['nl2br'] = lambda s: s.replace("\n", "<br />")
 defaults['json'] = json.dumps
@@ -77,6 +86,7 @@ defaults['textblob'] = textblob
 defaults['textblob_md'] = markdownblob
 defaults['truncate'] = webhelpers.text.truncate
 defaults['html'] = HTML
+defaults['urlify_name'] = urlify_name
 
 lookup = mako.lookup.TemplateLookup(directories=config.template_path, input_encoding='utf-8')
 
