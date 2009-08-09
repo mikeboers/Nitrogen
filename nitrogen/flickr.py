@@ -203,15 +203,30 @@ if __name__ == '__main__':
     nsid = '24585471@N05'
     flickr = Flickr('455486bdcbef56f033eb6b1fa9c06904', '0f5b3c7c71e21d5e')
     
-    # res = flickr.call('photosets.getList', user_id=nsid)
     
-    frob = '72157619404120930-92b4aa1e4a556a96-340372' or flickr.get_frob()
+    frob = '72157621859939455-094639bf91886163-235409' or flickr.get_frob()
     print 'frob    :', frob
-    # print flickr.build_desktop_auth_link(frob=frob)
-    token = '72157619403956088-e74622cbe4505b9f' or flickr.get_token(frob)
+    # print flickr.build_desktop_auth_link(frob=frob, perms='write')
+    token = '72157621859940537-b999efdd20da1866' or flickr.get_token(frob)
     print 'token   :', token
     
     flickr.token = token
     print 'username:', flickr.username
     print 'fullname:', flickr.fullname
     print 'nsid    :', flickr.nsid
+    
+    exit()
+    
+    res = flickr.call('photosets.getList', user_id=flickr.nsid)
+    for photoset in res['photosets']['photoset']:
+        photoset_id = photoset['id']
+        res = flickr.call('photosets.getPhotos', photoset_id=photoset_id)
+        for photo in res['photoset']['photo']:
+            photo_id = photo['id']
+            res = flickr.call('photos.getInfo', photo_id=photo_id)
+            title = res['photo']['title']['_content']
+            desc = res['photo']['description']['_content']
+            
+            print title, desc
+            # flickr.call('photos.setMeta', photo_id=photo_id, title=desc, description=title)
+            # exit()
