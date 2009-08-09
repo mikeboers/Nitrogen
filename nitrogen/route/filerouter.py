@@ -22,11 +22,12 @@ from tools import *
 
 class FileRouter(object):
     
-    def __init__(self, path, app_key='app', reload_modifications=True):
+    def __init__(self, path, app_key='app', default='index', reload_modifications=True):
         """Initialize the file router."""
         self.path = path
         self.app_key = app_key
         self.apps = {}
+        self.default = default
         self.reload_modifications = reload_modifications
     
     def build_path(self, name):
@@ -43,7 +44,7 @@ class FileRouter(object):
     
     def __call__(self, environ, start):
         unrouted = get_unrouted(environ)
-        name = unrouted[0] if unrouted else 'index'
+        name = unrouted[0] if unrouted else self.default
         path = self.build_path(name)
         
         if path not in self.apps:
