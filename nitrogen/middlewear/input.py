@@ -276,35 +276,40 @@ def test_ReadOnlyMapping_1():
     assert map.values() == [x**2 for x in range(10)]
 
 def test_get():
+    import webtest
     def app(environ, start):
-        start('200 OK', [])
+        start('200 OK', [('Content-Type', 'text/plain')])
         yield "START|"
         for k, v in environ.get('nitrogen.get').allitems():
             yield ('%s=%s|' % (k, v)).encode('utf8')
         yield "END"
     app = input_parser(app)
-    status, headers, output = WSGIServer(app).run()
-    assert output == 'START|END'
+    app = webtest.TestApp(app)
     
-    status, headers, output = WSGIServer(app).run(QUERY_STRING='key=value&key2=value2')
-    assert output == 'START|key=value|key2=value2|END'
+    res = app.get('/')
+    assert res.body == 'START|END'
+    
+    res = app.get('/?key=value&key2=value2')
+    assert res.body == 'START|key=value|key2=value2|END'
 
 def test_post():
+    import webtest
     def app(environ, start):
-        start('200 OK', [])
+        start('200 OK', [('Content-Type', 'text/plain')])
         yield "START|"
         for k, v in environ.get('nitrogen.post').allitems():
             yield ('%s=%s|' % (k, v)).encode('utf8')
         yield "END"
     app = input_parser(app)
-    status, headers, output = WSGIServer(app).run(REQUEST_METHOD='POST')
-    assert output == 'START|END'
+    app = webtest.TestApp(app)
     
-    status, headers, output = WSGIServer(app,
-        input='key=value&same=first&same=second').run(REQUEST_METHOD='POST')
-    assert output == 'START|key=value|same=first|same=second|END'
+    res = app.post('/')
+    assert res.body == 'START|END'
+    
+    res = app.post('/', 'key=value&same=first&same=second')
+    assert res.body == 'START|key=value|same=first|same=second|END'
         
         
 if __name__ == '__main__':
-    from nitrogen.test import run, WSGIServer
+    from nitrogen.test import run
     run()

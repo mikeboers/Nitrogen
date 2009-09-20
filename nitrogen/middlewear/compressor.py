@@ -22,38 +22,36 @@ def compressor(app):
 def test_compress_plain():
     """Nose test, checking that plaintext is returned."""
     
-    from test import WSGIServer
+    from webtest import TestApp
     
     def app(environ, start):
-        start('200 OK', [])
+        start('200 OK', [('Content-Type', 'text-plain')])
         yield 'Hello, world!'
+    app = TestApp(app)
     
-    status, headers, output = WSGIServer(compressor(app)).run()
-    
-    headers = dict(headers)
-    assert 'Content-Encoding' not in headers, "Content encoding is set."
-    
-    assert output == 'Hello, world!', "Output is wrong."
+    res = app.get('/')
+    assert 'Content-Encoding' not in res.headers, "Content encoding is set."
+    assert res.body == 'Hello, world!', "Output is wrong."
 
 def test_compress_deflate():
     """Nose test, checking that compressed data is returned."""
     
-    from test import WSGIServer
+    from webtest import TestApp
     
     def app(environ, start):
-        start('200 OK', [])
+        start('200 OK', [('Content-Type', 'text/plain')])
         yield "Hello, world!"
+    app = compressor(app)
+    app = TestApp(app)
     
-    server = WSGIServer(compressor(app))
-    server.environ['HTTP_ACCEPT_ENCODING'] = 'other1,deflate,other2'
-    status, headers, output = server.run()
     
-    headers = dict(headers)
-    assert 'Content-Encoding' in headers, "Did not get content encoding."
-    assert headers['Content-Encoding'] == 'deflate', "Wrong content encoding."
+    res = app.get('/', extra_environ={'HTTP_ACCEPT_ENCODING': 'other1,deflate,other2'})
     
-    assert output != 'Hello, world!', "Recieved plaintext."
-    output = zlib.decompress(output)
+    assert 'Content-Encoding' in res.headers, "Did not get content encoding."
+    assert res.headers['Content-Encoding'] == 'deflate', "Wrong content encoding."
+    
+    assert res.body != 'Hello, world!', "Recieved plaintext."
+    output = zlib.decompress(res.body)
     assert output == "Hello, world!", "Failed decode."
     
 
