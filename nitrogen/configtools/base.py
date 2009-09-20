@@ -15,10 +15,11 @@ log_handlers = [
     stderr_log_handler
 ]
 
-# The key to use to sign cookies. PLEASE set this to something different in
-# the application configuration. If this is None, then a normal cookie
-# container will be used, and nothing will be signed.
-hmac_key = 'Please set this in nitrogenconfig.py for the application.'
+# For use as key material. Feel free to slice this up. This is assumed to always
+# be atleast 512 bits (64 bytes) long. Notice that it is being decoded from hex
+# into a binary string. This can easily be built by running:
+#   python -c "import os, hashlib; print hashlib.sha512(os.urandom(8096)).hexdigest()"
+crypto_entropy = 'Please set this in nitrogenconfig.py for the application.'
 
 # The URI to use to create the sqlalchemy engine.
 # Defaults to an in-memory database that will not be saved.

@@ -16,14 +16,23 @@ import os
 import sys
 import unittest
 import doctest
+import logging
+
+# Turn off nose logging.
+logger = logging.getLogger('nose')
+logger.setLevel(1000)
 
 # Add the path ABOVE nitrogen to the path
 root_path = os.path.abspath(__file__ + '/../../..')
 sys.path.append(root_path)
 sys.path.append(root_path + '/nitrogen/lib')
 
+
+
 import nose.loader
 nose_loader = nose.loader.TestLoader()
+
+
 
 suites = []
 

@@ -29,7 +29,18 @@ sys.path.insert(0, os.path.dirname(__file__) + '/lib')
 local = threading.local()
 
 def local_proxy(local_key):
-    """Build a class that proxies a key on the thread-local object."""
+    """Get an object that proxies to an object stored on the thread-local
+    object.
+    
+    Params:
+        local_key -- The name that the object is stored under on the thread-
+            local object.
+    
+    Returns:
+        An object which proxies attribute and dict-style access to the object
+        stored on the thread-local object under the given key.        
+    """
+    
     class LocalProxy(object):
         def __getattr__(self, key):
             return getattr(local.__dict__[local_key], key)
@@ -50,23 +61,24 @@ environ = local_proxy('environ')
 
 import configtools
 import configtools.base
-config = configtools.Config(configtools.extract_locals(configtools.base))
+
+config = configtools.Config(configtools.extract_attributes(configtools.base))
 
 # Try to get the nitrogenconfig module from the same level as nitrogen itself.
 # This really is just a nasty hack...
-if __package__:
-    try:
-        config_name = __package__ + 'config'
-        config_module = __import__(config_name, fromlist=[''])
-        config.update(configtools.extract_locals(config_module))
-    except ImportError as e:
-        config_module = None
-        if str(e) == 'No module named %s' % config_name:
-            # Could not find the module... Damn.
-            pass
-        else:
-            raise
+config_module = None
+try:
+    config_name = __package__ + 'config'
+    config_module = __import__(config_name, fromlist=['']) 
+except ImportError as e:
+    if str(e) != 'No module named %s' % config_name:
+        raise
+if config_module:
+    config.update(configtools.extract_attributes(config_module))
+else:
+    print 'Could not find the nitrogenconfig.py file.'
 
+    
 server = configtools.get_server()
 
 # Setup the logs.

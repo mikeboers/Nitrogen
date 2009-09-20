@@ -18,7 +18,7 @@ from sqlalchemy.orm.attributes import instance_state
 
 Base = declarative_base()
 
-engine = create_engine(config.database_uri)
+engine = create_engine(config.database_sqla_uri)
 Session = orm.sessionmaker(bind=engine)
 session = orm.scoped_session(Session)
 
