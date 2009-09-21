@@ -9,14 +9,20 @@ Runs all of the files that are of the form *.test as doctests.
 
 """
 
-print "Nitrogen test runner."
-print
-
 import os
 import sys
 import unittest
 import doctest
 import logging
+
+# usage = """USAGE: %s path
+# 
+# nitrogen test runner. Runs tests in the module at path, or in all of the
+# modules under path.""" % sys.argv[0]
+# 
+# if len(sys.argv) != 2:
+#     print usage
+#     exit(1)
 
 # Turn off nose logging.
 logger = logging.getLogger('nose')
