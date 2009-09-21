@@ -20,6 +20,9 @@ def run():
     import os
     import sys
     import doctest
+    import logging
+    
+    logging.getLogger('nose').setLevel(1000)
     
     sys.path.append(os.path.abspath(__file__ + '/../../lib'))
     import nose.loader
