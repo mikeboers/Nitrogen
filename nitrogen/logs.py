@@ -15,11 +15,13 @@ import logging.handlers
 import threading
 import time
 
+from . import config
+
 # This object will be used to populate all of the logging records.
 # There is middlewear that sets the attributes on this object.
 extra = threading.local()
 
-base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(thread_i)d ip:%(ip)s -- %(message)s"
+base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(thread_i)d ip:%(ip)s -- %(name)s: %(message)s"
 class Formatter(logging.Formatter):
     def format(self, record):
         data = {
@@ -84,3 +86,19 @@ class FileHandler(logging.Handler):
         self.fh.write(self.format(record))
         self.fh.write('\n')
         self.fh.flush()
+
+
+_is_setup = False
+def setup():
+    global _is_setup
+    if _is_setup:
+        return
+    root = logging.getLogger()
+    root.setLevel(config.log_level)
+    for handler in config.log_handlers:
+        handler.setFormatter(formatter)
+        root.addHandler(handler)
+    _is_setup = True
+    
+    logger = logging.getLogger(__name__)
+    logger.debug('Logs setup.')

@@ -4,6 +4,8 @@ import sys
 import os
 import collections
 
+logger = logging.getLogger(__name__)
+
 # Setup path for local evaluation.
 # When copying to another file, just change the __package__ to be accurate.
 if __name__ == '__main__':
@@ -31,16 +33,16 @@ local = threading.local()
 def local_proxy(local_key):
     """Get an object that proxies to an object stored on the thread-local
     object.
-    
+
     Params:
         local_key -- The name that the object is stored under on the thread-
             local object.
-    
+
     Returns:
         An object which proxies attribute and dict-style access to the object
-        stored on the thread-local object under the given key.        
+        stored on the thread-local object under the given key.
     """
-    
+
     class LocalProxy(object):
         def __getattr__(self, key):
             return getattr(local.__dict__[local_key], key)
@@ -54,7 +56,7 @@ def local_proxy(local_key):
             local.__dict__[local_key][key] = value
         def __delitem__(self, key):
             del local.__dict__[local_key][key]
-        
+
     return LocalProxy()
 
 environ = local_proxy('environ')
@@ -62,31 +64,36 @@ environ = local_proxy('environ')
 import configtools
 import configtools.base
 
-config = configtools.Config(configtools.extract_attributes(configtools.base))
 
-# Try to get the nitrogenconfig module from the same level as nitrogen itself.
-# This really is just a nasty hack...
+# Load the configuration.
+config = configtools.Config(configtools.extract_attributes(configtools.base))
 config_module = None
 try:
-    config_name = __package__ + 'config'
-    config_module = __import__(config_name, fromlist=['']) 
-except ImportError as e:
-    if str(e) != 'No module named %s' % config_name:
-        raise
+    import nitrogenconfig as config_module
+except ImportError:
+    pass
+if not config_module and __package__:
+    try:
+        # Try to get the nitrogenconfig module from the same level as nitrogen itself.
+        # This really is just a nasty hack...
+        config_name = __package__ + 'config'
+        config_module = __import__(config_name, fromlist=[''])
+    except ImportError:
+        pass
 if config_module:
     config.update(configtools.extract_attributes(config_module))
 else:
-    print 'Could not find the nitrogenconfig.py file.'
+    logger.warning('Could not find nitrogenconfig module.')
 
-    
-server = configtools.get_server()
-
-# Setup the logs.
-import logs
-root = logging.getLogger()
-root.setLevel(config.log_level)
-for handler in config.log_handlers:
-    handler.setFormatter(logs.formatter)
-    root.addHandler(handler)
+# Pull out the server.
+server = config.server
+if not server:
+    raise ValueError('could not identify server')
 
 
+
+
+# Setup the logs if it is requested.
+if config.log_auto_setup:
+    import logs
+    logs.setup()

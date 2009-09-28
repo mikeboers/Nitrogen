@@ -1,6 +1,10 @@
 import os
 import sys
 import logging
+import tools
+
+# If logs should be setup on nitrogen import.
+log_auto_setup = False
 
 # The lowest level of log that the system should consider.
 # Note that individual handlers can have a higher threshold than this.
@@ -28,3 +32,5 @@ database_uri = 'sqlite:///:memory:'
 # Where to look for templates, in order. It is recommended that you insert
 # your directory on the front of this list.
 template_path = [os.path.abspath(__file__ + '/../../templates')]
+
+server = tools.get_server_by(name='default')
