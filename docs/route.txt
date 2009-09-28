@@ -1,0 +1,18 @@
+Determine if the path for routing should from from REQUEST_URI or PATH_INFO.
+    PATH_INFO appears to be blank. What is it for?
+
+The path the ReRouters match against should be relative.
+    Just like in .htaccess
+
+nitrogen.path.unrouted is the relative path of what is unrouted.
+    The ReRouter should strip off the front whatever it matched against.
+
+nitrogen.path.routed should be a list of chunks that we matched.
+    The parts should be encoded.
+    
+    Directory and SelfRouter should append a trailing slash to a segment if
+    there were still segments to be routed. If it is the last one, then it
+    should not have a trailing slash.
+    
+    The ReRouter will add the entire encoded path secdion
+    

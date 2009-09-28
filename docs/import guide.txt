@@ -1,0 +1,15 @@
+One needs to be VERY careful about how imports are handled, both within
+nitrogen itself or externally. If you import nitrogen in such a way that it
+actually gets imported twice (ie 'app' is in the sys.path, and so import
+app.nitrogen and import nitrogen will return DIFFERENT copies of the package)
+terrible things will happen.
+
+Don't do it! It leads terrible places! (I am using threading.local objects in
+a few places, and if you import nitrogen as a module in a larger package then
+some of those objects will be created multiple times, as the modules that
+contain them are imported multiple times. Then data is stored on different
+objects (which look like the same one) and you will waste many hours trying to
+figure out WTF went wront.)
+
+Nitrogen SHOULD be using relative imports for all of it's own work to allow
+for it to exist alone or as a subpackage.

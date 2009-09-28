@@ -1,0 +1,6 @@
+There are a number of 3rd party libraries in nitrogen/lib that I did not want
+to install into the Python sitepackages (because we may be dependant upon
+certain versions, and I feel that having many sites running off the same libs
+that might change is fragile).
+
+The nitrogen/lib directory is added to sys.path upon import of nitrogen.
