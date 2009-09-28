@@ -18,34 +18,38 @@ import logging
 # usage = """USAGE: %s path
 # 
 # nitrogen test runner. Runs tests in the module at path, or in all of the
-# modules under path.""" % sys.argv[0]
+# reachable modules under path.""" % sys.argv[0]
 # 
-# if len(sys.argv) != 2:
-#     print usage
-#     exit(1)
+if len(sys.argv) > 1:
+    root = os.path.abspath(sys.argv[1])
+else:
+    root = os.path.abspath(__file__ + '/../../../nitrogen')
+
+root_dir = os.path.dirname(root)
+root_name = os.path.basename(root)
+
+print 'Finding tests in %r package rooted at %r.' % (root_name, root_dir)
 
 # Turn off nose logging.
 logger = logging.getLogger('nose')
 logger.setLevel(1000)
 
-# Add the path ABOVE nitrogen to the path
-root_path = os.path.abspath(__file__ + '/../../..')
-sys.path.append(root_path)
-sys.path.append(root_path + '/nitrogen/lib')
 
-
-
+sys.path.append(os.path.abspath(__file__ + '/../../lib'))
 import nose.loader
 nose_loader = nose.loader.TestLoader()
 
-
-
+sys.path.append(os.path.dirname(root))
 suites = []
 
 # Searching for paths...
-for dirpath, dirnames, filenames in os.walk(root_path + '/nitrogen'):
+for dirpath, dirnames, filenames in os.walk(root):
     for name in filenames:
         if name.endswith('.py'):
+            
+            doc_suite = None
+            nose_suite = None
+            
             path = dirpath + '/' + name
             
             # Skip the library or "binaries".
@@ -53,33 +57,53 @@ for dirpath, dirnames, filenames in os.walk(root_path + '/nitrogen'):
                 continue
             
             # Turn it into a module
-            name = path[len(root_path) + 1:-3].replace('/', '.')
+            name = path[len(root_dir) + 1:-3].replace('/', '.')
+            
+            # Make sure we can even get to it.
+            if not os.path.exists(os.path.dirname(path) + '/__init__.py'):
+                print '\t%s is unreachable' % name
+                continue
+            
             try:
                 m = __import__(name, fromlist=['force']) # Needs something in fromlist.
                 
+            except Exception as e:
+                print '\terror while importing %s: %r' % (name, e)
+            
+            else:
+                
                 # Nose and unit tests
-                suite = nose_loader.loadTestsFromModule(m)
-                suites.append(suite)
+                nose_suite = nose_loader.loadTestsFromModule(m)
                 
                 # Doc tests
                 try:
-                    suite = doctest.DocTestSuite(m)
-                    suites.append(suite)
+                    doc_suite = doctest.DocTestSuite(m)
                 except ValueError as e:
                     if e.args[1] != 'has no tests':
                         raise
-                        
                 
-            except Exception as e:
-                print 'Could not import module %s:' % name
-                print '\t%r' % e
+            nose_count = len(list(nose_suite._get_tests())) if nose_suite else 0
+            if nose_count:
+                suites.append(nose_suite)
+                # print "\t\tFound %d nose/unittest test%s." % (nose_count, 's' if nose_count > 1 else '')
+                
             
-        elif name.endswith('.test'):
+            doc_count = doc_suite.countTestCases() if doc_suite else 0
+            if doc_count:
+                suites.append(doc_suite)
+                # print "\t\tFound %d doc test%s." % (doc_count, 's' if doc_count > 1 else '')
+            
+            if not (nose_count or doc_count):
+                print '\t%s has no tests' % name
+                
+            
+        elif name.endswith('.doctest'):
             path = dirpath + '/' + name
             suite = doctest.DocFileSuite(path, module_relative=False, encoding='UTF-8')
             suites.append(suite)
 
-runner = unittest.TextTestRunner()
-suite = unittest.TestSuite()
-suite.addTests(suites)
-runner.run(suite)
+print 'Running tests.'
+# runner = unittest.TextTestRunner()
+# suite = unittest.TestSuite()
+# suite.addTests(suites)
+# runner.run(suite)

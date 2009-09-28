@@ -5,7 +5,7 @@ import re
 
 class TestTestRunner(unittest.TestCase):
     """This module is for testing the test runner.
-    
+
     Doctest:
         >>> True
         True
@@ -47,48 +47,57 @@ def test_nose():
 
 
 
-def basic_app(env, start):
-    start('200 OK', [])
-    yield 'Hiya!'
 
-def test_app():
-    status, headers, output = WSGIServer(basic_app).run()
-    assert status == '200 OK'
-    assert headers == []
-    assert output == 'Hiya!', "Output was not as expected."
-    
-def env_app(env, start):
-    start('200 OK', [])
-    for x in sorted(env.items()):
-        yield '%s: %r\n' % x
-    
+def test_basic_app():
+    from webtest import TestApp
+
+    def app(env, start):
+        start('200 OK', [('Content-Type', 'text/plain')])
+        yield 'Hiya!'
+    app = TestApp(app)
+
+    res = app.get('/')
+    assert res.body == 'Hiya!', "Output is wrong."
+
+
 def test_env_app():
-    status, headers, output = WSGIServer(env_app).run()
-    assert re.match(r"""HTTP_HOST: 'test.example.com'
+    from webtest import TestApp
+    def app(env, start):
+        start('200 OK', [('Content-Type', 'text/plain')])
+        for x in sorted(env.items()):
+            yield '%s: %r\n' % x
+    app = TestApp(app)
+
+    res = app.get('/')
+    assert re.match(r"""HTTP_HOST: 'localhost:80'
 PATH_INFO: '/'
+QUERY_STRING: ''
 REQUEST_METHOD: 'GET'
 SCRIPT_NAME: ''
-SERVER_NAME: '127.0.0.1'
+SERVER_NAME: 'localhost'
 SERVER_PORT: '80'
 SERVER_PROTOCOL: 'HTTP/1.0'
-wsgi.errors: <cStringIO.StringO object at 0x\w+>
-wsgi.input: <cStringIO.StringI object at 0x\w+>
-wsgi.multiprocess: 0
-wsgi.multithread: 0
-wsgi.run_once: 0
+paste.testing: True
+paste.testing_variables: {}
+paste.throw_errors: True
+wsgi.errors: <webtest.lint.ErrorWrapper object at 0x\w+>
+wsgi.input: <webtest.lint.InputWrapper object at 0x\w+>
+wsgi.multiprocess: False
+wsgi.multithread: False
+wsgi.run_once: False
 wsgi.url_scheme: 'http'
 wsgi.version: \(1, 0\)
-""", output)
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+""", res.body)
+
+
+
+
+
+
+
+
+
+
 
 if __name__ == '__main__':
     run()

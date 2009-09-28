@@ -8,7 +8,7 @@ try:
 except:
     from StringIO import StringIO
 
-__all__ = 'unittest WSGIServer run'.split()
+__all__ = 'unittest run'.split()
 
 
 def run():
@@ -45,7 +45,7 @@ def run():
         doc_suite = None
     
     # Try to find coresponding test file.
-    test_path = m.__file__[:-3] + '.test'
+    test_path = m.__file__[:-3] + '.doctest'
     if os.path.exists(test_path):
         try:
             suite.addTest(doctest.DocFileSuite(test_path, module_relative=False, encoding='utf8'))

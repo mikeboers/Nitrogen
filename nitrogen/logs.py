@@ -15,7 +15,6 @@ import logging.handlers
 import threading
 import time
 
-from . import config
 
 # This object will be used to populate all of the logging records.
 # There is middlewear that sets the attributes on this object.
@@ -61,7 +60,7 @@ formatter = Formatter()
 
 
 class FileHandler(logging.Handler):
-    """File log handler which writes out to a path aftet running it
+    """File log handler which writes out to a path after running it
     through time.strftime.
     
     Tests to see if this path changes for every log
@@ -93,12 +92,10 @@ def setup():
     global _is_setup
     if _is_setup:
         return
+    from . import config
     root = logging.getLogger()
     root.setLevel(config.log_level)
     for handler in config.log_handlers:
         handler.setFormatter(formatter)
         root.addHandler(handler)
     _is_setup = True
-    
-    logger = logging.getLogger(__name__)
-    logger.debug('Logs setup.')

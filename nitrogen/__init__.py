@@ -91,8 +91,6 @@ if not server:
     raise ValueError('could not identify server')
 
 
-
-
 # Setup the logs if it is requested.
 if config.log_auto_setup:
     import logs
