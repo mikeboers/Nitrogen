@@ -14,6 +14,7 @@ import sys
 import unittest
 import doctest
 import logging
+import traceback
 
 # usage = """USAGE: %s path
 # 
@@ -68,7 +69,9 @@ for dirpath, dirnames, filenames in os.walk(root):
                 m = __import__(name, fromlist=['force']) # Needs something in fromlist.
                 
             except Exception as e:
-                print '\terror while importing %s: %r' % (name, e)
+                tb = ''.join(traceback.format_exception(*sys.exc_info())).strip()
+                tb = tb.replace('\n', '\n\t\t')
+                print '\t%s:' % name, 'exception while importing: ' + tb
             
             else:
                 
@@ -102,8 +105,7 @@ for dirpath, dirnames, filenames in os.walk(root):
             suite = doctest.DocFileSuite(path, module_relative=False, encoding='UTF-8')
             suites.append(suite)
 
-print 'Running tests.'
-# runner = unittest.TextTestRunner()
-# suite = unittest.TestSuite()
-# suite.addTests(suites)
-# runner.run(suite)
+runner = unittest.TextTestRunner()
+suite = unittest.TestSuite()
+suite.addTests(suites)
+runner.run(suite)

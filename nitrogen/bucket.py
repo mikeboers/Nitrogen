@@ -10,11 +10,16 @@ except ImportError:
 
 class BsddbWrapper(collections.MutableMapping):
 
-    def __init__(self, db):
+    def __init__(self, db, env):
         self.db = db
+        self.env = env
         class _default(object):
             pass
         self._default = _default
+    
+    def __del__(self):
+        self.db.close()
+        self.env.close()
 
     def get(self, key, default=None):
         v = self.db.get(key, self._default)
@@ -55,6 +60,6 @@ def open(path, name='bucket'):
     db = bsddb.DB(env)
     db.open(name, dbtype=bsddb.DB_HASH, flags=bsddb.DB_CREATE)
 
-    return shelve.Shelf(BsddbWrapper(db), protocol=2)
+    return shelve.Shelf(BsddbWrapper(db, env), protocol=2)
 
 
