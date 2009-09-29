@@ -3,8 +3,9 @@
 # License: MIT (http://www.opensource.org/licenses/mit-license.php)
 
 r"""
-Mike Boers has added a couple of lines around 930 to support arbitrary link-
-like syntax. Search for Boers.
+I (Mike Boers) have added a couple of lines around 930 to support arbitrary
+link-like syntax. Look at the very bottom for an example. Search for Boers for
+the changes I made.
 
 Original docs are as follows:
 
@@ -151,7 +152,7 @@ class Markdown(object):
     _ws_only_line_re = re.compile(r"^[ \t]+$", re.M)
 
     def __init__(self, html4tags=False, tab_width=4, safe_mode=None,
-                 extras=None, link_patterns=None, use_file_vars=False):
+                 extras=None, link_patterns=None, use_file_vars=False, linkish_map=None):
         if html4tags:
             self.empty_element_suffix = ">"
         else:
@@ -179,6 +180,11 @@ class Markdown(object):
         self.link_patterns = link_patterns
         self.use_file_vars = use_file_vars
         self._outdent_re = re.compile(r'^(\t|[ ]{1,%d})' % tab_width, re.M)
+        
+        # Boers added:
+        self.linkish_map = {}
+        if linkish_map:
+            self.linkish_map.update(linkish_map)
 
     def reset(self):
         self.urls = {}
@@ -936,9 +942,9 @@ class Markdown(object):
                         title_str = ''
                     
                     # Boers has added the linkish stuff.
-                    if start_idx > 0 and text[start_idx-1] in _linkish_map:
+                    if start_idx > 0 and text[start_idx-1] in self.linkish_map:
                         start_idx -= 1
-                        linkish_handler = _linkish_map[text[start_idx]]
+                        linkish_handler = self.linkish_map[text[start_idx]]
                         text = text[:start_idx] + linkish_handler(
                             url=url, text=link_text, title=title_str
                         ) + text[match.end():]
@@ -1875,16 +1881,18 @@ def main(argv=None):
         if opts.compare:
             print "==== match? %r ====" % (perl_html == html)
 
-_linkish_map = {}
-def _linkish_at(url, text, title):
-    """
+def test_linkish_markdown():
     
-    >>> markdown('@[link](text "title")').strip()
-    u'<p><a class="file" src="text>link</a></p>'
+    class LinkishMarkdown(Markdown):
+        def __init__(self, *args, **kwargs):
+            Markdown.__init__(self, *args, **kwargs)
+            self.linkish_map['@'] = self._linkish_at
+        
+        def _linkish_at(self, url, text, title):
+            return '<a class="file" src="%(url)s>%(text)s</a>' % locals()
     
-    """
-    return '<a class="file" src="%(url)s>%(text)s</a>' % locals()
-_linkish_map['@'] = _linkish_at
+    assert (LinkishMarkdown().convert('@[link](text "title")').strip() ==
+        u'<p><a class="file" src="text>link</a></p>')
     
 if __name__ == "__main__":
     from test import run
