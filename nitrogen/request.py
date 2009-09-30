@@ -41,12 +41,12 @@ class Request(object):
         
         if environ.get('nitrogen.get') is None:
             input_parser(environ=environ)
-            
-        self.get = environ['nitrogen.get']    
-        self.post = environ['nitrogen.post']
-        self.files = environ['nitrogen.files']
         
-        self.cookies = environ.get('nitrogen.cookies')    
+        self.get = environ.get('nitrogen.get')
+        self.post = environ.get('nitrogen.post')
+        self.files = environ.get('nitrogen.files')
+        self.cookies = environ.get('nitrogen.cookies')   
+         
         self._cookies_provided = self.cookies is not None
         if self.cookies is None:
             self.cookies = CookieContainer(environ.get('HTTP_COOKIE', ''))
