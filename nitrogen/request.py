@@ -12,7 +12,7 @@ from StringIO import StringIO
 
 from status import resolve_status
 
-from middlewear.input import input_parser
+from middlewear.input import request_param_wrapper
 from cookie import Container as CookieContainer
 
 class HeaderList(list):
@@ -40,7 +40,7 @@ class Request(object):
         self._buffer = StringIO()
         
         if environ.get('nitrogen.get') is None:
-            input_parser(environ=environ)
+            request_param_wrapper(environ=environ)
         
         self.get = environ.get('nitrogen.get')
         self.post = environ.get('nitrogen.post')

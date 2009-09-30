@@ -20,13 +20,13 @@ from ..uri import URI
 from .. import config, server
 
 # Old middlewear that needs moving out of this package.
-from .input import cookie_parser, cookie_builder, input_parser, full_parser
-from .unicode import utf8_encoder
+from .input import cookie_request_wrapper, cookie_response_wrapper, request_param_wrapper, full_parser
 from .error import debugger, server_error_catcher, absolute_error_catcher
 from .view import straight_templater
 
 # Newly placed middlewear.
 from ..compressor import compressor
+from ..encoding import utf8_encoder
 
 def wsgi_style(app):
     def inner(*args):

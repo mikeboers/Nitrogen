@@ -53,7 +53,16 @@ from ..uri import URI
 from ..uri.query import Query
 from .. import cookie
 
-class ReadOnlyMapping(collections.Mapping):
+class DelayedMultiMap(collections.Mapping):
+    """A class which lazily supports dict-like access to an ordered, multi-key
+    mapping.
+    
+    The given supplier (an iterable of key-value pairs) is only called when
+    the mapping is accessed for the first time.
+    
+    General supports the same interface as nitrogen.uri.query.
+    
+    """
   
     def __init__(self, supplier=None):
         self.supplier = supplier
@@ -63,11 +72,11 @@ class ReadOnlyMapping(collections.Mapping):
         self._is_setup = True
         self.__pairs = []
         self.__keys = []
-        self.__key_i = {}
+        self.__first_key_i = {}
         for key, value in self.supplier():
-            if key not in self.__key_i:
+            if key not in self.__first_key_i:
                 self.__keys.append(key)
-                self.__key_i[key] = len(self.__pairs)
+                self.__first_key_i[key] = len(self.__pairs)
             self.__pairs.append((key, value))
         self.supplier = None
     
@@ -87,7 +96,7 @@ class ReadOnlyMapping(collections.Mapping):
     def _key_i(self):
         if not self._is_setup:
             self._setup()
-        return self.__key_i
+        return self.__first_key_i
     
     def __repr__(self):
         return repr(self._pairs)
@@ -121,6 +130,7 @@ class ReadOnlyMapping(collections.Mapping):
 
 
 class DefaultFile(object):
+    """Class for file uploads in default state."""
     def __init__(self, max_size):
         self.fh = tempfile.TemporaryFile("w+b")
         self.max_size = max_size
@@ -137,7 +147,7 @@ class DefaultFile(object):
         return self.fh.write(stuff)
 
 
-def PostStorage(environ, accept, make_file, max_size):
+def build_raw_field_storage(environ, accept, make_file, max_size):
     class FieldStorage(cgi.FieldStorage):    
         def make_file(self, binary=None):
             if not accept:
@@ -168,32 +178,30 @@ def PostStorage(environ, accept, make_file, max_size):
             chunk.file.seek(0)
     return fs
 
-def input_parser(app=None, accept=False, make_file=None, max_size=None, environ=None):
+def request_param_wrapper(app=None, accept=False, make_file=None, max_size=None, environ=None):
     outer_environ = environ
     def inner(environ, start):
         
         # Build the get object
         query = environ.get('QUERY_STRING', '')
         query = Query(query)
-        environ['nitrogen.get'] = ReadOnlyMapping(query.iterallitems)
+        environ['nitrogen.get'] = DelayedMultiMap(query.iterallitems)
         
         # Post and files.
-        post  = environ['nitrogen.post']  = ReadOnlyMapping()
-        files = environ['nitrogen.files'] = ReadOnlyMapping()
+        post  = environ['nitrogen.post']  = DelayedMultiMap()
+        files = environ['nitrogen.files'] = DelayedMultiMap()
         
-        state = {
-            'fs': None
-        }
-        def builder_builder(is_files):
+        def map_supplier_builder(is_files):
             def inner():
-                if not state['fs']:
-                    state['fs'] = PostStorage(
+                fs = map_supplier_builder.fs
+                if not fs:
+                    fs = map_supplier_builder.fs = build_raw_field_storage(
                         environ=environ,
                         accept=files.accept,
                         make_file=files.make_file,
                         max_size=files.max_size
                     )
-                for chunk in state['fs'].list:
+                for chunk in fs.list:
                     # sys.stderr.write(str(chunk.filename) + '\n')
                     if chunk.filename and is_files:
                         # Send to files object.
@@ -202,13 +210,14 @@ def input_parser(app=None, accept=False, make_file=None, max_size=None, environ=
                         # Send to post object.
                         yield (chunk.name.decode('utf8', 'replace'), chunk.value.decode('utf8', 'replace'))
             return inner
+        map_supplier_builder.fs = None
         
         files.accept = accept
         files.make_file = make_file
         files.max_size = max_size
         
-        post.supplier = builder_builder(False)
-        files.supplier = builder_builder(True)
+        post.supplier = map_supplier_builder(False)
+        files.supplier = map_supplier_builder(True)
         
         if not outer_environ:
             return app(environ, start)
@@ -219,39 +228,35 @@ def input_parser(app=None, accept=False, make_file=None, max_size=None, environ=
         return inner
         
 
-def cookie_parser(app, hmac_key=None):
+def cookie_request_wrapper(app, hmac_key=None):
+    """WSGI middlewear which parses incoming cookies and places them into a
+    standard cookie container keyed under 'nitrogen.cookies'.
+    
+    Params:
+        app - The WSGI app to wrap.
+        hmac_key - If provided cookies will be signed on output, and the
+            signatures verified on import.
+    """
+    
     class_ = cookie.make_signed_container(hmac_key) if hmac_key else cookie.Container
     def inner(environ, start):
         environ['nitrogen.cookies'] = class_(environ.get('HTTP_COOKIE', ''))
         return app(environ, start)    
     return inner
 
-def cookie_builder(app, strict=True):
-    class inner(object):
-        def __init__(self, environ, start):
-            self.environ = environ
-            self.start = start
-            self.headers = None
-
-        def inner_start(self, status, headers):
-            cookies = self.environ.get('nitrogen.cookies')
-            if cookies is not None:
-                self.headers = cookies.build_headers()
-                # logging.debug('Cookie headers: %r' % self.headers)
-                headers.extend(self.headers)
-            self.start(status, headers)
-
-        def __iter__(self):    
-            for x in app(self.environ, self.inner_start):
-                yield x
-            if not strict:
-                return
-            cookies = self.environ.get('nitrogen.cookies')
-            if cookies is None:
-                raise ValueError('Cookies have been removed from environ.')
-            headers = cookies.build_headers()
-            if self.headers is not None and self.headers != headers:
-                raise ValueError('Cookies have been modified since WSGI start.', self.headers, headers)
+def cookie_response_wrapper(app):
+    """WSGI middlewear which sends Set-Cookie headers as nessesary so that the
+    client's cookies will resemble the cookie container stored in the environ
+    at 'nitrogen.cookies'.
+    
+    This tends to be used along with the cookie_request_wrapper.
+    """
+    def inner(environ, start):
+        def inner_start(status, headers):
+            cookies = self.environ['nitrogen.cookies']
+            headers.extend(cookies.build_headers())
+            start(status, headers)
+        return app(environ, start)
     return inner
     
 def requested_uri_builder(app):
@@ -261,17 +266,18 @@ def requested_uri_builder(app):
     return inner
 
 
-def full_parser(app, hmac_key=None, strict=True):
-    return requested_uri_builder(cookie_builder(
-        input_parser(cookie_parser(app, hmac_key=hmac_key)),
-        strict=strict
+def full_parser(app, hmac_key=None):
+    return requested_uri_builder(cookie_response_wrapper(
+        request_param_wrapper(cookie_request_wrapper(app, hmac_key=hmac_key))
     ))
 
-def test_ReadOnlyMapping_1():
+
+
+def test_DelayedMultiMap_1():
     def gen():
         for x in xrange(10):
             yield x, x**2
-    map = ReadOnlyMapping(gen)
+    map = DelayedMultiMap(gen)
     assert map.keys() == range(10)
     assert map.values() == [x**2 for x in range(10)]
 
@@ -283,7 +289,7 @@ def test_get():
         for k, v in environ.get('nitrogen.get').allitems():
             yield ('%s=%s|' % (k, v)).encode('utf8')
         yield "END"
-    app = input_parser(app)
+    app = request_param_wrapper(app)
     app = webtest.TestApp(app)
     
     res = app.get('/')
@@ -300,7 +306,7 @@ def test_post():
         for k, v in environ.get('nitrogen.post').allitems():
             yield ('%s=%s|' % (k, v)).encode('utf8')
         yield "END"
-    app = input_parser(app)
+    app = request_param_wrapper(app)
     app = webtest.TestApp(app)
     
     res = app.post('/')
