@@ -19,12 +19,15 @@ from ..uri import URI
 
 from .. import config, server
 
-from ..compressor import middlewear as compressor
+# Old middlewear that needs moving out of this package.
 from .input import cookie_parser, cookie_builder, input_parser, full_parser
-from .logs import log_extra_filler
 from .unicode import utf8_encoder
 from .error import debugger, server_error_catcher, absolute_error_catcher
 from .view import straight_templater
+
+# Newly placed middlewear.
+from ..compressor import middlewear as compressor
+from ..logs import log_formater_middlewear as log_formatter
 
 def wsgi_style(app):
     def inner(*args):

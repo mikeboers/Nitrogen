@@ -99,3 +99,23 @@ def setup():
         handler.setFormatter(formatter)
         root.addHandler(handler)
     _is_setup = True
+
+
+class log_formater_middlewear(object):
+    """WSGI middlewear that allows the formatter in this module to log the IP
+    of the client.
+    
+    """
+    
+    def __init__(self, app):
+        self.app = app
+        self.thread_count = 0
+        self.lock = threading.Lock()
+
+    def __call__(self, environ, start):
+        self.lock.acquire()
+        self.thread_count += 1
+        extra.thread_i = self.thread_count
+        self.lock.release()
+        extra.ip = environ.get('REMOTE_ADDR')
+        return self.app(environ, start)
