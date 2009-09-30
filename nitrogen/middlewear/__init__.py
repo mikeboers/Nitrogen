@@ -26,7 +26,7 @@ from .error import debugger, server_error_catcher, absolute_error_catcher
 from .view import straight_templater
 
 # Newly placed middlewear.
-from ..compressor import middlewear as compressor
+from ..compressor import compressor
 
 def wsgi_style(app):
     def inner(*args):

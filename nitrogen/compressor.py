@@ -2,7 +2,7 @@ import zlib
 
 __all__ = ['middlewear']
 
-def middlewear(app):
+def compressor(app):
     def inner(environ, start):
         if 'deflate' not in environ.get('HTTP_ACCEPT_ENCODING', '').split(','):
             for x in app(environ, start):
@@ -41,7 +41,7 @@ def test_compress_deflate():
     def app(environ, start):
         start('200 OK', [('Content-Type', 'text/plain')])
         yield "Hello, world!"
-    app = middlewear(app)
+    app = compressor(app)
     app = TestApp(app)
     
     
