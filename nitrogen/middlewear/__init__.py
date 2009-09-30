@@ -27,7 +27,6 @@ from .view import straight_templater
 
 # Newly placed middlewear.
 from ..compressor import middlewear as compressor
-from ..logs import log_formater_middlewear as log_formatter
 
 def wsgi_style(app):
     def inner(*args):

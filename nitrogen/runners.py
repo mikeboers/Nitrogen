@@ -7,15 +7,33 @@ if __name__ == '__main__':
     __package__ = 'nitrogen'
     sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
     __import__(__package__)
-    
+
+import threading
+   
 from . import local
 from .request import Request
 
-def environment_localizer(app):
-    def inner(environ, start):
+class app_localizer(object):
+    """WSGI middlewear that stores information about the request on the
+    framework thread-local object
+    
+    Currently stores the environment on environ, and a zero-based thread
+    counter on thread_index.
+    
+    """
+    
+    def __init__(self, app):
+        self.app = app
+        self.thread_count = 0
+        self.lock = threading.Lock()
+
+    def __call__(self, environ, start):
+        self.lock.acquire()
+        self.thread_count += 1
+        local.thread_index = self.thread_count
+        self.lock.release()
         local.environ = environ
-        return app(environ, start)
-    return inner
+        return self.app(environ, start)
 
 def run_via_cgi(app):
     """Run a web application via the CGI interface of a web server.
@@ -25,7 +43,7 @@ def run_via_cgi(app):
     """
     
     import wsgiref.handlers
-    wsgiref.handlers.CGIHandler().run(environment_localizer(app))
+    wsgiref.handlers.CGIHandler().run(app_localizer(app))
 
 def run_via_fcgi(app, multithreaded=True):
     """Run a web application via a FastCGI interface of a web server.
@@ -38,7 +56,7 @@ def run_via_fcgi(app, multithreaded=True):
     """
     
     from fcgi import WSGIServer
-    WSGIServer(environment_localizer(app), multithreaded=multithreaded).run()
+    WSGIServer(app_localizer(app), multithreaded=multithreaded).run()
 
 def run_via_socket(app, host='', port=8000, once=False):
     """Run a web aplication directly via a socket.
@@ -51,7 +69,7 @@ def run_via_socket(app, host='', port=8000, once=False):
     """
     
     from wsgiref.simple_server import make_server
-    httpd = make_server(host, port, environment_localizer(app))
+    httpd = make_server(host, port, app_localizer(app))
     if once:
         httpd.handle_request()
     else:

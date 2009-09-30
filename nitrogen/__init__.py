@@ -30,36 +30,40 @@ sys.path.insert(0, os.path.dirname(__file__) + '/lib')
 # NOTE: I am assuming that this will work for the run_as_socket runner as well.
 local = threading.local()
 
-def local_proxy(local_key):
-    """Get an object that proxies to an object stored on the thread-local
-    object.
+
+class LocalProxy(object):
+    """An object that proxies attribute and dict-like access to an object
+    stored on the thread-local object under a given key.
 
     Params:
-        local_key -- The name that the object is stored under on the thread-
-            local object.
-
-    Returns:
-        An object which proxies attribute and dict-style access to the object
-        stored on the thread-local object under the given key.
+        key -- The name that the object is stored under on the thread-local
+            object.
+    
     """
+    
+    def __init__(self, key):
+        object.__setattr__(self, '_local_key', key)
+    
+    def __getattr__(self, key):
+        return getattr(local.__dict__[self._local_key], key)
+        
+    def __setattr__(self, key, value):
+        setattr(local.__dict__[self._local_key], key, value)
+        
+    def __delattr__(self, key):
+        delattr(local.__dict__[self._local_key], key)
+        
+    def __getitem__(self, key):
+        return local.__dict__[self._local_key][key]
+        
+    def __setitem__(self, key, value):
+        local.__dict__[self._local_key][key] = value
+        
+    def __delitem__(self, key):
+        del local.__dict__[self._local_key][key]
 
-    class LocalProxy(object):
-        def __getattr__(self, key):
-            return getattr(local.__dict__[local_key], key)
-        def __setattr__(self, key, value):
-            setattr(local.__dict__[local_key], key, value)
-        def __delattr__(self, key):
-            delattr(local.__dict__[local_key], key)
-        def __getitem__(self, key):
-            return local.__dict__[local_key][key]
-        def __setitem__(self, key, value):
-            local.__dict__[local_key][key] = value
-        def __delitem__(self, key):
-            del local.__dict__[local_key][key]
 
-    return LocalProxy()
-
-environ = local_proxy('environ')
+environ = LocalProxy('environ')
 
 import configtools
 import configtools.base
@@ -93,5 +97,8 @@ if not server:
 
 # Setup the logs if it is requested.
 if config.log_auto_setup:
-    import logs
+    from . import logs
     logs.setup()
+
+
+logger.debug('Imported nitrogen as %r.' % __name__)

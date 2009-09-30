@@ -15,24 +15,25 @@ import logging.handlers
 import threading
 import time
 
+from . import local
 
-# This object will be used to populate all of the logging records.
-# There is middlewear that sets the attributes on this object.
-extra = threading.local()
-
-base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(thread_i)d ip:%(ip)s -- %(name)s: %(message)s"
+base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(thread_index)d ip:%(ip)s -- %(name)s: %(message)s"
 class Formatter(logging.Formatter):
     def format(self, record):
         data = {
             'ip': None,
-            'thread_i': 0,
+            'thread_index': 0,
             'process': 0,
             'asctime': 'DATETIME',
             'levelname': 'LEVELNAME',
             'message': 'MESSAGE'
         }
-        data.update(record.__dict__)
-        data.update(extra.__dict__)
+        data.update(record.__dict__)        
+        try:
+            data['ip'] = local.environ.get('REMOTE_ADDR')
+            data['thread_index'] = local.thread_index
+        except AttributeError:
+            pass
         
         if '%(asctime)' in base_format:
             data['asctime'] = self.formatTime(record)
@@ -99,23 +100,3 @@ def setup():
         handler.setFormatter(formatter)
         root.addHandler(handler)
     _is_setup = True
-
-
-class log_formater_middlewear(object):
-    """WSGI middlewear that allows the formatter in this module to log the IP
-    of the client.
-    
-    """
-    
-    def __init__(self, app):
-        self.app = app
-        self.thread_count = 0
-        self.lock = threading.Lock()
-
-    def __call__(self, environ, start):
-        self.lock.acquire()
-        self.thread_count += 1
-        extra.thread_i = self.thread_count
-        self.lock.release()
-        extra.ip = environ.get('REMOTE_ADDR')
-        return self.app(environ, start)
