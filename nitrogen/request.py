@@ -36,20 +36,10 @@ class Request(object):
         self.environ = environ
         self._start = start
         
-        self._has_started = False
-        self._buffer = StringIO()
-        
-        if environ.get('nitrogen.get') is None:
-            request_param_wrapper(environ=environ)
-        
         self.get = environ.get('nitrogen.get')
         self.post = environ.get('nitrogen.post')
         self.files = environ.get('nitrogen.files')
         self.cookies = environ.get('nitrogen.cookies')   
-         
-        self._cookies_provided = self.cookies is not None
-        if self.cookies is None:
-            self.cookies = CookieContainer(environ.get('HTTP_COOKIE', ''))
         
         # self.unrouted = environ.get('nitrogen.path.unrouted')
         # self.routed = environ.get('nitrogen.path.routed')
@@ -67,33 +57,12 @@ class Request(object):
         added to self.headers.
         """
         
-        if self._has_started:
-            raise ValueError("wsgi start has already been called.")
-        self._has_started = True
-        
         headers = self.headers + (list(headers) if headers else [])
-        if not self._cookies_provided:
-            headers.extend(self.cookies.build_headers())
         
         if html:
             headers.append(('Content-Type', 'text/html'))
         
         self._start(resolve_status(status or self.status), headers)
-    
-    def write(self, *args, **kwargs):
-        self._buffer.write(*args, **kwargs)
-    
-    def print(self, *args, **kwargs):
-        kwargs['file'] = kwargs.get('file', self._buffer)
-        print(*args, **kwargs)
-    
-    def __str__(self):
-        return self._buffer.getvalue()
-    
-    def __iter__(self):
-        if not self._has_started:
-            self.start()
-        yield self._buffer.getvalue()
     
     @property
     def is_get(self):
