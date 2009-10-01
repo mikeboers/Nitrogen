@@ -5,3 +5,6 @@ dashes converted to underscores, and all uppercase. For example:
 
 It appears the most headers should only ever be sent once. The notable exception
 is Set-Cookie, which is sent for every cookie.
+
+A good class for handling headers is the wsgiref.headers.Header class. It does
+everything that I need it to.
