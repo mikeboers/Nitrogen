@@ -26,21 +26,8 @@ from .error import debugger, server_error_catcher, absolute_error_catcher
 # Newly placed middlewear.
 from ..compressor import compressor
 from ..encoding import utf8_encoder
+from ..status import status_resolver
 
-def wsgi_style(app):
-    def inner(*args):
-        if len(args) == 1:
-            req = args[0]
-            return app(req.environ, req.start)
-        return app(*args)
-    return inner
-
-def status_resolver(app):
-    def inner(environ, start):
-        def inner_start(status, headers):
-            start(resolve_status(status), headers)
-        return app(environ, inner_start)
-    return inner
 
 def not_found_catcher(app):
     """Displays the _404.tpl template along with a "404 Not Found" status if a
