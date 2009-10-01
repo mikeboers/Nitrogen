@@ -206,7 +206,7 @@ import os
 import hashlib
 import hmac
 
-from ..multimap import MultiMap
+from ..multimap import MutableMultiMap
 from .transcode import *
 
 def parse(query):
@@ -231,15 +231,15 @@ def unparse(pairs):
             ret.append(encode(pair[0], u'/') + u'=' + encode(pair[1], '/='))
     return u'&'.join(ret)
 
-class Query(MultiMap):
+class Query(MutableMultiMap):
     
     def __init__(self, input=None):
         if isinstance(input, basestring):
             input = parse(input)
         if input is not None:
-            MultiMap.__init__(self, input)
+            MutableMultiMap.__init__(self, input)
         else:
-            MultiMap.__init__(self)
+            MutableMultiMap.__init__(self)
     
     def __str__(self):
         return unparse(self._pairs)
