@@ -14,24 +14,24 @@ from . import local
 from .request import Request
 from . import error
 
-class app_localizer(object):
+class thread_localizer(object):
     """WSGI middlewear that stores information about the request on the
     framework thread-local object
     
-    Currently stores the environment on environ, and a zero-based thread
-    counter on thread_index.
+    Currently stores the environment on environ, and a one-based request
+    counter on request_index.
     
     """
     
     def __init__(self, app):
         self.app = app
-        self.thread_count = 0
+        self.request_count = 0
         self.lock = threading.Lock()
 
     def __call__(self, environ, start):
         self.lock.acquire()
-        self.thread_count += 1
-        local.thread_index = self.thread_count
+        self.request_count += 1
+        local.request_index = self.request_count
         self.lock.release()
         local.environ = environ
         return self.app(environ, start)
@@ -48,7 +48,7 @@ def run_via_cgi(app):
     handler.error_status = error.DEFAULT_ERROR_HTTP_STATUS
     handler.error_headers = error.DEFAULT_ERROR_HTTP_HEADERS
     handler.error_body = error.DEFAULT_ERROR_BODY
-    handler.run(app_localizer(app))
+    handler.run(thread_localizer(app))
 
 def run_via_fcgi(app, multithreaded=True):
     """Run a web application via a FastCGI interface of a web server.
@@ -61,7 +61,7 @@ def run_via_fcgi(app, multithreaded=True):
     """
     
     from fcgi import WSGIServer
-    WSGIServer(app_localizer(app), multithreaded=multithreaded).run()
+    WSGIServer(thread_localizer(app), multithreaded=multithreaded).run()
 
 def run_via_socket(app, host='', port=8000, once=False):
     """Run a web aplication directly via a socket.
@@ -74,7 +74,7 @@ def run_via_socket(app, host='', port=8000, once=False):
     """
     
     from wsgiref.simple_server import make_server
-    httpd = make_server(host, port, app_localizer(app))
+    httpd = make_server(host, port, thread_localizer(app))
     if once:
         httpd.handle_request()
     else:

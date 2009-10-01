@@ -17,12 +17,12 @@ import time
 
 from . import local
 
-base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(thread_index)d ip:%(ip)s -- %(name)s: %(message)s"
+base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(request_index)d ip:%(ip)s -- %(name)s: %(message)s"
 class Formatter(logging.Formatter):
     def format(self, record):
         data = {
             'ip': None,
-            'thread_index': 0,
+            'request_index': 0,
             'process': 0,
             'asctime': 'DATETIME',
             'levelname': 'LEVELNAME',
@@ -31,7 +31,7 @@ class Formatter(logging.Formatter):
         data.update(record.__dict__)        
         try:
             data['ip'] = local.environ.get('REMOTE_ADDR')
-            data['thread_index'] = local.thread_index
+            data['request_index'] = local.request_index
         except AttributeError:
             pass
         
