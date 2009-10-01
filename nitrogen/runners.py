@@ -12,6 +12,7 @@ import threading
    
 from . import local
 from .request import Request
+from . import error
 
 class app_localizer(object):
     """WSGI middlewear that stores information about the request on the
@@ -43,7 +44,11 @@ def run_via_cgi(app):
     """
     
     import wsgiref.handlers
-    wsgiref.handlers.CGIHandler().run(app_localizer(app))
+    handler = wsgiref.handlers.CGIHandler()
+    handler.error_status = error.DEFAULT_ERROR_HTTP_STATUS
+    handler.error_headers = error.DEFAULT_ERROR_HTTP_HEADERS
+    handler.error_body = error.DEFAULT_ERROR_BODY
+    handler.run(app_localizer(app))
 
 def run_via_fcgi(app, multithreaded=True):
     """Run a web application via a FastCGI interface of a web server.

@@ -21,13 +21,12 @@ from .. import config, server
 
 # Old middlewear that needs moving out of this package.
 from .input import cookie_request_wrapper, cookie_response_wrapper, request_param_wrapper, full_parser
-from .error import debugger, server_error_catcher, absolute_error_catcher
 
 # Newly placed middlewear.
 from ..compressor import compressor
 from ..encoding import utf8_encoder
 from ..status import status_resolver
-
+from ..error import error_logger, error_notifier
 
 def not_found_catcher(app):
     """Displays the _404.tpl template along with a "404 Not Found" status if a
