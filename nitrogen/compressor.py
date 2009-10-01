@@ -15,41 +15,61 @@ Oh well!
 """
 
 import zlib
+from wsgiref.headers import Headers
 
 __all__ = ['compressor']
 
 def compressor(app):
     def inner(environ, start):
-        if 'deflate' not in environ.get('HTTP_ACCEPT_ENCODING', '').lower():
-            for x in app(environ, start):
-                yield x
-            return
+        inner.do_deflate = 'deflate' in environ.get('HTTP_ACCEPT_ENCODING', '').lower()
         def inner_start(status, headers):
-            headers.append(('Content-Encoding', 'deflate'))
-            start(status, headers)
-        compressor = zlib.compressobj()
+            headers = Headers(headers)
+            inner.do_deflate = inner.do_deflate and ('content-encoding' not in
+                headers)
+            if inner.do_deflate:
+                headers['Content-Encoding'] = 'deflate'
+            start(status, headers.items())
+        compressor = None
         for x in app(environ, inner_start):
-            x = compressor.compress(x) if x else ''
+            if inner.do_deflate and compressor is None:
+                compressor = zlib.compressobj()
+            x = compressor.compress(x) if compressor else x
             yield x
-        yield compressor.flush()
+        if compressor is not None:
+            yield compressor.flush()
     return inner
 
 
 def test_compress_plain():
     """Nose test, checking that plaintext is returned."""
-    
+
     from webtest import TestApp
-    
+
     def app(environ, start):
         start('200 OK', [('Content-Type', 'text-plain')])
         yield 'Hello, world!'
     app = TestApp(app)
-    
+
     res = app.get('/')
     assert 'Content-Encoding' not in res.headers, "Content encoding is set."
     assert res.body == 'Hello, world!', "Output is wrong."
 
+def test_compress_chunked():
+    """Nose test, checking that plaintext is returned."""
 
+    from webtest import TestApp
+
+    def app(environ, start):
+        start('200 OK', [('Content-Type', 'text-plain'),
+            ('Content-Encoding', 'chunked')])
+        yield 'Hello, world!'
+    app = TestApp(app)
+
+    res = app.get('/')
+    assert 'Content-Encoding' in res.headers, "Content encoding is not set."
+    assert res.headers['Content-Encoding'] == 'chunked', "Content encoding has been changed."
+    assert res.body == 'Hello, world!', "Output is wrong."
+    
 def test_compress_deflate():
     """Nose test, checking that compressed data is returned."""
     
