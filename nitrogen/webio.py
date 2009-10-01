@@ -38,20 +38,23 @@ Notes from cgi.FieldStorage:
 
 """
 
+# Setup path for local evaluation.
+# When copying to another file, just change the __package__ to be accurate.
+if __name__ == '__main__':
+    import sys
+    __package__ = 'nitrogen'
+    sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
+    __import__(__package__)
+
 import cgi
 import collections
 import sys
 import tempfile
 import logging
 
-if __name__ == '__main__':
-    sys.path.append('../..')
-    import nitrogen.middlewear as junk
-    __package__ = 'nitrogen.middlewear'
-
-from ..uri import URI
-from ..uri.query import Query
-from .. import cookie
+from .uri import URI
+from .uri.query import Query
+from . import cookie
 
 class DelayedMultiMap(collections.Mapping):
     """A class which lazily supports dict-like access to an ordered, multi-key
