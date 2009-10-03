@@ -20,7 +20,7 @@ too hard for me to do. Sorry.
 Parsing a URI:
     >>> uri = URI('http://example.com/path/to/stuff#fragment')
     >>> uri
-    URI(scheme=u'http', userinfo=<uri.Userinfo:[]>, host=u'example.com', port=None, path=<uri.Path:absolute:[u'path', u'to', u'stuff']>, query=<uri.Query:[]>, fragment=u'fragment')
+    URI(scheme=u'http', userinfo=<uri.Userinfo:[]>, host=u'example.com', port=None, path=<uri.Path:absolute:[u'path', u'to', u'stuff']>, query=Query([]), fragment=u'fragment')
     >>> uri.scheme
     u'http'
     >>> uri.fragment
@@ -158,7 +158,7 @@ Abnormal examples (from RFC 5.4.2):
 Making sure there arent reference issues after resolving.
     >>> base = URI('http://user:pass@example.com:80/path/to/stuff?query#fragment')
     >>> base
-    URI(scheme=u'http', userinfo=<uri.Userinfo:[u'user', u'pass']>, host=u'example.com', port=u'80', path=<uri.Path:absolute:[u'path', u'to', u'stuff']>, query=<uri.Query:[(u'query', None)]>, fragment=u'fragment')
+    URI(scheme=u'http', userinfo=<uri.Userinfo:[u'user', u'pass']>, host=u'example.com', port=u'80', path=<uri.Path:absolute:[u'path', u'to', u'stuff']>, query=Query([(u'query', None)]), fragment=u'fragment')
     >>> ref = URI('../a')
     >>> res = base.resolve(ref)
     >>> str(res)
@@ -169,7 +169,7 @@ Making sure there arent reference issues after resolving.
     >>> str(res)
     'http://user:pass:more@example.com:80/path/a/more?key=value'
     >>> base
-    URI(scheme=u'http', userinfo=<uri.Userinfo:[u'user', u'pass']>, host=u'example.com', port=u'80', path=<uri.Path:absolute:[u'path', u'to', u'stuff']>, query=<uri.Query:[(u'query', None)]>, fragment=u'fragment')
+    URI(scheme=u'http', userinfo=<uri.Userinfo:[u'user', u'pass']>, host=u'example.com', port=u'80', path=<uri.Path:absolute:[u'path', u'to', u'stuff']>, query=Query([(u'query', None)]), fragment=u'fragment')
 
 Unicode (unfortunately I can't test what ">>> uri" would give, as there are
 two levels of encoding in the doctests):
