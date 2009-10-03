@@ -47,8 +47,9 @@ def build_error_report(environ, output=None):
         ...     raise ValueError('Testing')
         ... except:
         ...     print format_error_report({'HTTP_HOST': 'example.com'}, ['one', 'two'])
+        ... # doctest: +ELLIPSIS
         Traceback (most recent call last):
-          File "<doctest __main__.build_error_report[0]>", line 2, in <module>
+          File "<doctest ....build_error_report[0]>", line 2, in <module>
             raise ValueError('Testing')
         ValueError: Testing
         Environment:
