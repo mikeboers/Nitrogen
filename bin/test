@@ -82,7 +82,7 @@ for dirpath, dirnames, filenames in os.walk(root):
                 try:
                     doc_suite = doctest.DocTestSuite(m)
                 except ValueError as e:
-                    if e.args[1] != 'has no tests':
+                    if len(e.args) <= 1 or e.args[1] != 'has no tests':
                         raise
                 
             nose_count = len(list(nose_suite._get_tests())) if nose_suite else 0
