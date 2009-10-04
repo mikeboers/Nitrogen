@@ -38,8 +38,6 @@ Notes from cgi.FieldStorage:
 
 """
 
-# Setup path for local evaluation.
-# When copying to another file, just change the __package__ to be accurate.
 if __name__ == '__main__':
     import sys
     __package__ = 'nitrogen'
@@ -52,85 +50,10 @@ import sys
 import tempfile
 import logging
 
+from . import cookie
 from .uri import URI
 from .uri.query import Query
-from . import cookie
-
-class DelayedMultiMap(collections.Mapping):
-    """A class which lazily supports dict-like access to an ordered, multi-key
-    mapping.
-    
-    The given supplier (an iterable of key-value pairs) is only called when
-    the mapping is accessed for the first time.
-    
-    Generaly supports the same interface as nitrogen.uri.query.
-    
-    """
-  
-    def __init__(self, supplier=None):
-        self.supplier = supplier
-        self._is_setup = False
-
-    def _setup(self):    
-        self._is_setup = True
-        self.__pairs = []
-        self.__keys = []
-        self.__first_key_i = {}
-        for key, value in self.supplier():
-            if key not in self.__first_key_i:
-                self.__keys.append(key)
-                self.__first_key_i[key] = len(self.__pairs)
-            self.__pairs.append((key, value))
-        self.supplier = None
-    
-    @property
-    def _pairs(self):
-        if not self._is_setup:
-            self._setup()
-        return self.__pairs
-        
-    @property
-    def _keys(self):
-        if not self._is_setup:
-            self._setup()
-        return self.__keys
-        
-    @property
-    def _key_i(self):
-        if not self._is_setup:
-            self._setup()
-        return self.__first_key_i
-    
-    def __repr__(self):
-        return repr(self._pairs)
-
-    def __getitem__(self, key):
-        return self._pairs[self._key_i[key]][1]
-
-    def __iter__(self):
-        return iter(self._keys)
-
-    def __len__(self):
-        return len(self._key_i)
-
-    def iter(self, key):
-        for k, v in self._pairs:
-            if k == key:
-                  yield v
-
-    def list(self, key):
-        return list(self.iter(key))
-
-    def iterallitems(self):
-        return iter(self._pairs)
-
-    def allitems(self):
-        return self._pairs[:]
-
-
-
-
-
+from .multimap import DelayedMultiMap
 
 class DefaultFile(object):
     """Class for file uploads in default state."""
