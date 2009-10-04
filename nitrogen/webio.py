@@ -53,7 +53,7 @@ import logging
 from . import cookie
 from .uri import URI
 from .uri.query import Query
-from .multimap import DelayedMultiMap
+from .multimap import MultiMap, DelayedMultiMap
 
 class DefaultFile(object):
     """Class for file uploads in default state."""
@@ -73,10 +73,10 @@ class DefaultFile(object):
         return self.fh.write(stuff)
 
 
-def build_raw_field_storage(environ, accept, make_file, max_size):
+def build_raw_field_storage(environ, accept_files, make_file, max_file_size):
     class FieldStorage(cgi.FieldStorage):    
         def make_file(self, binary=None):
-            if not accept:
+            if not accept_files:
                 raise ValueError("Not accepting posted files.")
             if make_file:
                 return make_file(
@@ -84,9 +84,9 @@ def build_raw_field_storage(environ, accept, make_file, max_size):
                     filename=self.filename,
                     length=(self.length if self.length > 0 else 0)
                 )
-            if self.length > max_size:
+            if self.length > max_file_size:
                 raise ValueError("Reported file size is too big.")
-            return DefaultFile(max_size=max_size)
+            return DefaultFile(max_size=max_file_size)
     environ = environ.copy()
     environ['QUERY_STRING'] = ''
     fs = FieldStorage(
@@ -104,14 +104,44 @@ def build_raw_field_storage(environ, accept, make_file, max_size):
             chunk.file.seek(0)
     return fs
 
-def request_param_wrapper(app=None, accept=False, make_file=None, max_size=None, environ=None):
-    outer_environ = environ
+def get_parser(app, **kwargs):
+    """WSGI middlewear which parses the query string.
+    
+    A read-only MultiMap is stored on the environment at 'nitrogen.get'.
+    
+    """
+    
     def inner(environ, start):
-        
-        # Build the get object
         query = environ.get('QUERY_STRING', '')
         query = Query(query)
-        environ['nitrogen.get'] = DelayedMultiMap(query.iterallitems)
+        environ['nitrogen.get'] = MultiMap(query.allitems())
+        return app(environ, start)
+    return inner    
+    
+def post_parser(app, accept_files=False, make_file=None, max_file_size=None, environ=None, **kwargs):
+    """WSGI middlewear which parses posted data.
+    
+    Lazy-evaluation gives you enough time to specify the accept_files, make_file,
+    and max_file_size as attributes of the files object.
+    
+    Adds 'nitrogen.post' and 'nitrogen.files' to the environ.
+    
+    Params:
+        app - The WSGI app to wrap.
+        accept_files - Boolean if files should be accepted or not.
+        make_file - Callback that returns a file-like object to recieve data.
+        max_file_size - Maximum acepted file size for default file reciever.
+    
+    make_file:
+        If None, a default file object will be used (object of DefaultFile)
+        which uses the tempfile module to make a temporary file.
+        
+        If not None, it must be a callable object which takes key, filename,
+        and length as keyword arguments, and returns an object with
+    
+    """
+    
+    def inner(environ, start):
         
         # Post and files.
         post  = environ['nitrogen.post']  = DelayedMultiMap()
@@ -123,9 +153,9 @@ def request_param_wrapper(app=None, accept=False, make_file=None, max_size=None,
                 if not fs:
                     fs = map_supplier_builder.fs = build_raw_field_storage(
                         environ=environ,
-                        accept=files.accept,
+                        accept_files=files.accept_files,
                         make_file=files.make_file,
-                        max_size=files.max_size
+                        max_file_size=files.max_file_size
                     )
                 for chunk in fs.list:
                     # sys.stderr.write(str(chunk.filename) + '\n')
@@ -138,23 +168,19 @@ def request_param_wrapper(app=None, accept=False, make_file=None, max_size=None,
             return inner
         map_supplier_builder.fs = None
         
-        files.accept = accept
+        files.accept_files = accept_files
         files.make_file = make_file
-        files.max_size = max_size
+        files.max_file_size = max_file_size
         
-        post.supplier = map_supplier_builder(False)
-        files.supplier = map_supplier_builder(True)
+        post.supplier = map_supplier_builder(is_files=False)
+        files.supplier = map_supplier_builder(is_files=True)
         
-        if not outer_environ:
-            return app(environ, start)
+        return app(environ, start)
     
-    if outer_environ:
-        inner(outer_environ, None)
-    else:
-        return inner
+    return inner
         
 
-def cookie_request_wrapper(app, hmac_key=None):
+def cookie_parser(app, hmac_key=None, **kwargs):
     """WSGI middlewear which parses incoming cookies and places them into a
     standard cookie container keyed under 'nitrogen.cookies'.
     
@@ -170,12 +196,13 @@ def cookie_request_wrapper(app, hmac_key=None):
         return app(environ, start)    
     return inner
 
-def cookie_response_wrapper(app):
+
+def cookie_builder(app, **kwargs):
     """WSGI middlewear which sends Set-Cookie headers as nessesary so that the
     client's cookies will resemble the cookie container stored in the environ
     at 'nitrogen.cookies'.
     
-    This tends to be used along with the cookie_request_wrapper.
+    This tends to be used along with the cookie_parser.
     """
     def inner(environ, start):
         def inner_start(status, headers):
@@ -185,18 +212,32 @@ def cookie_response_wrapper(app):
         return app(environ, start)
     return inner
     
-def requested_uri_builder(app):
+def uri_parser(app, **kwargs):
+    """WSGI middlewear which adds a URI object into the environment.
+    
+    This thing is mutable... Watch out!
+    
+    """
+    
     def inner(environ, start):
-        environ['nitrogen.uri'] = URI('http://' + environ['SERVER_NAME'] + environ['REQUEST_URI'])
+        environ['nitrogen.uri'] = URI('http://' + environ['SERVER_NAME'] + environ.get('REQUEST_URI', ''))
         return app(environ, start)
     return inner
 
 
-def full_parser(app, hmac_key=None):
-    return requested_uri_builder(cookie_response_wrapper(
-        request_param_wrapper(cookie_request_wrapper(app, hmac_key=hmac_key))
-    ))
-
+def request_params(app, parse_uri=True, parse_get=True, parse_post=True,
+        parse_cookie=True, build_cookie=True, **kwargs):
+    if parse_uri:
+        app = uri_parser(app, **kwargs)
+    if parse_get:
+        app = get_parser(app, **kwargs)
+    if parse_post:
+        app = post_parser(app, **kwargs)
+    if parse_cookie:
+        app = cookie_parser(app, **kwargs)
+    if build_cookie:
+        app = cookie_builder(app, **kwargs)
+    return app
 
 
 def test_DelayedMultiMap_1():
@@ -215,7 +256,7 @@ def test_get():
         for k, v in environ.get('nitrogen.get').allitems():
             yield ('%s=%s|' % (k, v)).encode('utf8')
         yield "END"
-    app = request_param_wrapper(app)
+    app = request_params(app)
     app = webtest.TestApp(app)
     
     res = app.get('/')
@@ -232,7 +273,7 @@ def test_post():
         for k, v in environ.get('nitrogen.post').allitems():
             yield ('%s=%s|' % (k, v)).encode('utf8')
         yield "END"
-    app = request_param_wrapper(app)
+    app = request_params(app)
     app = webtest.TestApp(app)
     
     res = app.post('/')

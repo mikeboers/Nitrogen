@@ -24,7 +24,7 @@ from .compressor import compressor
 from .encoding import utf8_encoder
 from .status import status_resolver
 from .error import error_logger, error_notifier
-from .webio import cookie_request_wrapper, cookie_response_wrapper, request_param_wrapper, full_parser
+from .webio import cookie_parser, cookie_builder, request_params, get_parser, post_parser
 
 def not_found_catcher(app):
     """Displays the _404.tpl template along with a "404 Not Found" status if a
