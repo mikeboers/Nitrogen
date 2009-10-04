@@ -12,7 +12,7 @@ from StringIO import StringIO
 
 from status import resolve_status
 
-from middlewear.input import request_param_wrapper
+from webio import request_param_wrapper
 from cookie import Container as CookieContainer
 
 class HeaderList(list):
