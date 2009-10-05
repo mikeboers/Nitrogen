@@ -569,7 +569,7 @@ def make_signed_container(hmac_key, maxage=None):
         >>> signed.create('key', 'this expires', maxage=10)
         >>> encoded = signed.build_headers()[0][1]
         >>> encoded # doctest:+ELLIPSIS
-        'key="v=this%20expires&x=...&n=...&s=..."; Max-Age=10; Path=/'
+        'key="v=this+expires&x=...&n=...&s=..."; Max-Age=10; Path=/'
         
         >>> verified = SignedClass(encoded)
         >>> verified['key'].value
