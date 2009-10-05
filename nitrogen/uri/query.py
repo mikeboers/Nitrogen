@@ -23,6 +23,12 @@ Instantiate with a dict:
     >>> sorted(query.allitems())
     [(u'a', u'1'), (u'b', u'2')]
 
+Instantiate with keyword arguments:
+
+	>>> query = Query(a=1, b=2, c=3)
+	>>> sorted(query.allitems())
+	[(u'a', u'1'), (u'b', u'2'), (u'c', u'3')]
+
 Instantiate with a list of pairs:
 
     >>> query = Query([('one', u'1'), ('two', u'2')])
@@ -193,12 +199,15 @@ Easy signatures!
 """
 
 # Setup path for local evaluation.
-# When copying to another file, just change the __package__ to be accurate.
+# When copying to another file, just change the parameter to be accurate.
 if __name__ == '__main__':
-    import sys
-    __package__ = 'nitrogen.uri'
-    sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
-    __import__(__package__)
+    def __local_eval_fix(package):
+        global __package__
+        import sys
+        __package__ = package
+        sys.path.insert(0, '/'.join(['..'] * (1 + package.count('.'))))
+        __import__(__package__)
+    __local_eval_fix('nitrogen.uri')
 
 import collections
 import time
@@ -233,13 +242,19 @@ def unparse(pairs):
 
 class Query(MutableMultiMap):
     
-    def __init__(self, input=None):
+    def __init__(self, *args, **kwargs):
+    	if len(args) > 1:
+    		raise ValueError('too many arguments')
+    	input = args[0] if args else None
         if isinstance(input, basestring):
             input = parse(input)
         if input is not None:
             MutableMultiMap.__init__(self, input)
         else:
             MutableMultiMap.__init__(self)
+        
+        for k, v in kwargs.iteritems():
+        	self[k] = v
     
     def __str__(self):
         return unparse(self._pairs)
