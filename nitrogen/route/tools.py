@@ -1,9 +1,13 @@
 """Package for easy routing of requests into request handlers (or WSGI apps.)"""
 
+
 # Setup path for local evaluation.
+# When copying to another file, just change the __package__ to be accurate.
 if __name__ == '__main__':
     import sys
-    sys.path.insert(0, __file__[:__file__.rfind('/nitrogen')])
+    __package__ = 'nitrogen.route'
+    sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
+    __import__(__package__)
 
 from ..uri import URI
 from ..uri.path import Path
@@ -46,4 +50,4 @@ class Chain(list):
                 pass
         raise NotFoundError
 
-        
+

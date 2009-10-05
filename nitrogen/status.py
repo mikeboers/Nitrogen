@@ -58,7 +58,7 @@ def resolve_status(status):
     return status
 
 def status_resolver(app):
-    """WSGI middlewear which attempts to resolve whatever is sent as the
+    """WSGI middleware which attempts to resolve whatever is sent as the
     status object into a proper HTTP status.
     
     """

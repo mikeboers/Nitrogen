@@ -1,6 +1,6 @@
 """Web input parsing functions.
 
-The functions and middlewear in this module are designed to parse query string
+The functions and middleware in this module are designed to parse query string
 (GET) and posted data/files. They do so in a lazy manner, only parsing the
 input when they must. This gives a little bit of time to setup some
 configuration on how the files are parsed.
@@ -106,7 +106,7 @@ def build_raw_field_storage(environ, accept_files, make_file, max_file_size):
     return fs
 
 def get_parser(app, **kwargs):
-    """WSGI middlewear which parses the query string.
+    """WSGI middleware which parses the query string.
     
     A read-only MultiMap is stored on the environment at 'nitrogen.get'.
     
@@ -121,7 +121,7 @@ def get_parser(app, **kwargs):
     return inner    
     
 def post_parser(app, accept_files=False, make_file=None, max_file_size=None, environ=None, **kwargs):
-    """WSGI middlewear which parses posted data.
+    """WSGI middleware which parses posted data.
     
     Lazy-evaluation gives you enough time to specify the accept_files, make_file,
     and max_file_size as attributes of the files object.
@@ -183,7 +183,7 @@ def post_parser(app, accept_files=False, make_file=None, max_file_size=None, env
         
 
 def cookie_parser(app, hmac_key=None, **kwargs):
-    """WSGI middlewear which parses incoming cookies and places them into a
+    """WSGI middleware which parses incoming cookies and places them into a
     standard cookie container keyed under 'nitrogen.cookies'.
     
     Params:
@@ -200,7 +200,7 @@ def cookie_parser(app, hmac_key=None, **kwargs):
 
 
 def cookie_builder(app, **kwargs):
-    """WSGI middlewear which sends Set-Cookie headers as nessesary so that the
+    """WSGI middleware which sends Set-Cookie headers as nessesary so that the
     client's cookies will resemble the cookie container stored in the environ
     at 'nitrogen.cookies'.
     
@@ -215,7 +215,7 @@ def cookie_builder(app, **kwargs):
     return inner
     
 def uri_parser(app, **kwargs):
-    """WSGI middlewear which adds a URI object into the environment.
+    """WSGI middleware which adds a URI object into the environment.
     
     This thing is mutable... Watch out!
     

@@ -14,7 +14,7 @@ from . import local
 from . import error
 
 class thread_localizer(object):
-    """WSGI middlewear that stores information about the request on the
+    """WSGI middleware that stores information about the request on the
     framework thread-local object
     
     Currently stores the environment on environ, and a one-based request

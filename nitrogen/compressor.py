@@ -1,4 +1,4 @@
-"""Module for WSGI compression middlewear.
+"""Module for WSGI compression middleware.
 
 I am well aware that this sort of thing is supposed to be left to the wsgi
 server (http://www.python.org/dev/peps/pep-0333/#other-http-features) but in

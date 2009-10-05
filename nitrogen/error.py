@@ -111,7 +111,7 @@ def get_cleaned_traceback():
 
 
 def error_logger(app, level=logging.ERROR):
-    """WSGI middlewear which logs errors, environments, and caught output.
+    """WSGI middleware which logs errors, environments, and caught output.
 
     Reraises the exception after logging it.
 
@@ -131,13 +131,13 @@ def error_logger(app, level=logging.ERROR):
 
 
 def error_notifier(app, buffer=True, template='_500.tpl'):
-    """WSGI middlewear to display a template to the client in case of error.
+    """WSGI middleware to display a template to the client in case of error.
 
     If on a development server (server.is_dev is True), the template will also
     be passed the environment, the error, traceback, and caught output.    
     
     Note that this must buffer then entire response to work effectively.
-    Note that this middlewear does NOT rethrow the caught error.
+    Note that this middleware does NOT rethrow the caught error.
     
     """
     

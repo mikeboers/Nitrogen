@@ -1,15 +1,15 @@
 
-inject the server and config to boers.server and boers.config in some middlewear.
+inject the server and config to boers.server and boers.config in some middleware.
 the error handler can read off of that to see wtf is up.
 maybe always pass the full environment to jinja as env
 	{% if env.boers.server.is_dev %}
 		Drop the dump here.
 	{% endif %}
 
-cache middlewear
+cache middleware
 	if the env has been modified to have a boers.cache_duration or whatnot, cache it
 
-session middlewear
+session middleware
 	runs off of a cookie
 
 cookie signer

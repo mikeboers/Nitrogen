@@ -1,6 +1,6 @@
 # content-encoding: utf-8
 
-"""Module for UTF-8 encoding WSGI middlewear.
+"""Module for UTF-8 encoding WSGI middleware.
 
 It is currently not very tolerant about other encodings being used behind it's
 back, but if I ever need them I will deal with them at that time.
@@ -8,7 +8,7 @@ back, but if I ever need them I will deal with them at that time.
 """
 
 def utf8_encoder(app):
-    """WSGI middlewear that encodes everything to a UTF-8 string.
+    """WSGI middleware that encodes everything to a UTF-8 string.
     
     Forces text/* content types to have a UTF-8 charset.
     If there is no Content-Type, it adds a utf8 plain text one.
