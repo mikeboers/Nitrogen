@@ -167,11 +167,11 @@ Unicode does work properly.
     # k%C3%A9y=%C2%A1%E2%84%A2%C2%A3%C2%A2%E2%88%9E%C2%A7%C2%B6%E2%80%A2%C2%AA%C2%BA
 
 Spaces as pluses:
-    >>> query = Query('key+with+spaces=value+with+spaces')
+    >>> query = Query('key+with+spaces=value%20with%20spaces')
     >>> query
     Query([(u'key with spaces', u'value with spaces')])
     >>> str(query)
-    'key%20with%20spaces=value%20with%20spaces'
+    'key+with+spaces=value+with+spaces'
     
 Easy signatures!
 
@@ -216,14 +216,20 @@ import hashlib
 import hmac
 
 from ..multimap import MutableMultiMap
-from .transcode import *
+from .transcode import unicoder, decode as _decode, encode as _encode
+
+def decode(x):
+	return _decode(x.replace('+', ' '))
+
+def encode(x, safe=''):
+	return _encode(x, safe + ' ').replace(' ', '+')
 
 def parse(query):
     ret = []
     if not query:
         return ret
     for pair in query.split(u'&'):
-        pair = [decode(x.replace('+', ' ')) for x in pair.split(u'=', 1)]
+        pair = [decode(x) for x in pair.split(u'=', 1)]
         if isinstance(pair[0], str):
             pair = [unicoder(x) for x in pair]
         if len(pair) == 1:
@@ -237,7 +243,7 @@ def unparse(pairs):
         if pair[1] is None:
             ret.append(encode(pair[0], u'/'))
         else:
-            ret.append(encode(pair[0], u'/') + u'=' + encode(pair[1], '/='))
+            ret.append(encode(pair[0], u'/') + u'=' + encode(pair[1], '/= '))
     return u'&'.join(ret)
 
 class Query(MutableMultiMap):
