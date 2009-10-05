@@ -25,9 +25,9 @@ Instantiate with a dict:
 
 Instantiate with keyword arguments:
 
-	>>> query = Query(a=1, b=2, c=3)
-	>>> sorted(query.allitems())
-	[(u'a', u'1'), (u'b', u'2'), (u'c', u'3')]
+    >>> query = Query(a=1, b=2, c=3)
+    >>> sorted(query.allitems())
+    [(u'a', u'1'), (u'b', u'2'), (u'c', u'3')]
 
 Instantiate with a list of pairs:
 
@@ -176,10 +176,10 @@ Spaces as pluses:
 Easy signatures!
 
     >>> query = Query('v=value')
-    >>> query[u'n'] = '12345'
+    >>> query[u'nonce'] = '12345'
     >>> query.sign('this is the key', add_nonce=False, add_time=False)
     >>> str(query)
-    'v=value&n=12345&s=22feaf6a6700d2c3ccf22731eaebf5c3'
+    'v=value&nonce=12345&_s=vDNuaJjAEWVg7Q3atnC_nA'
     
     >>> query.verify('this is the key')
     True
@@ -189,14 +189,28 @@ Easy signatures!
     >>> query = Query('v=somevalue')
     >>> query.sign('another_key')
     >>> str(query) # doctest:+ELLIPSIS
-    'v=somevalue&t=...&n=...&s=...'
+    'v=somevalue&_t=...&_n=...&_s=...'
     >>> query.verify('another_key')
     True
     >>> query.verify('bad key')
     False
+    >>> query.verify('another_key', maxage=-1)
+    False
+    
+    >>> query = Query(v='value')
+    >>> query['_n'] = '123abc'
+    >>> query.sign('key', maxage=60, add_nonce=False)
+    >>> str(query) # doctest: +ELLIPSIS
+    'v=value&_n=123abc&_x=...&_s=...'
+    >>> query.verify('key')
+    True
+    >>> query.verify('not the key')
+    False
 
 
 """
+
+from __future__ import division
 
 # Setup path for local evaluation.
 # When copying to another file, just change the parameter to be accurate.
@@ -214,15 +228,17 @@ import time
 import os
 import hashlib
 import hmac
+import base64
+import math
 
 from ..multimap import MutableMultiMap
 from .transcode import unicoder, decode as _decode, encode as _encode
 
 def decode(x):
-	return _decode(x.replace('+', ' '))
+    return _decode(x.replace('+', ' '))
 
 def encode(x, safe=''):
-	return _encode(x, safe + ' ').replace(' ', '+')
+    return _encode(x, safe + ' ').replace(' ', '+')
 
 def parse(query):
     ret = []
@@ -249,9 +265,9 @@ def unparse(pairs):
 class Query(MutableMultiMap):
     
     def __init__(self, *args, **kwargs):
-    	if len(args) > 1:
-    		raise ValueError('too many arguments')
-    	input = args[0] if args else None
+        if len(args) > 1:
+            raise ValueError('too many arguments')
+        input = args[0] if args else None
         if isinstance(input, basestring):
             input = parse(input)
         if input is not None:
@@ -260,7 +276,7 @@ class Query(MutableMultiMap):
             MutableMultiMap.__init__(self)
         
         for k, v in kwargs.iteritems():
-        	self[k] = v
+            self[k] = v
     
     def __str__(self):
         return unparse(self._pairs)
@@ -275,20 +291,30 @@ class Query(MutableMultiMap):
             return None
         return unicoder(value)
     
-    def sign(self, key, hasher=None, maxage=None, add_time=None, add_nonce=True, time_key = 't', sig_key='s', nonce_key='n', expiry_key='x'):
+    def _signature(self, key, hasher):
+        return base64.b64encode(hmac.new(key, str(self), hasher or hashlib.md5).digest(), '-_').rstrip('=')
+    
+    def sign(self, key, hasher=None, maxage=None, add_time=None, add_nonce=True,
+        nonce_bits=128, time_key = '_t', sig_key='_s', nonce_key='_n',
+        expiry_key='_x'):
+        
         if add_time or (add_time is None and maxage is None):
-            self[time_key] = str(int(time.time()))
+            self[time_key] = '%.2f' % time.time()
         if maxage is not None:
-            self[expiry_key] = str(int(time.time() + maxage))
+            self[expiry_key] = '%.2f' % (time.time() + maxage)
         if add_nonce:
-            self[nonce_key] = hashlib.md5(os.urandom(1024)).hexdigest()[:8]
+            self[nonce_key] = base64.b64encode(
+                hashlib.sha256(os.urandom(1024)).digest(), '-_')[
+                    :int(math.ceil(nonce_bits / 6))]
         copy = self.copy()
         del copy[sig_key]
         copy.sort()
         #print repr(str(copy))
-        self[sig_key] = hmac.new(key, str(copy), hasher or hashlib.md5).hexdigest()
+        self[sig_key] = copy._signature(key, hasher)
     
-    def verify(self, key, hasher=None, maxage=None, time_key = 't', sig_key='s', nonce_key='n', expiry_key='x'):
+    def verify(self, key, hasher=None, maxage=None, time_key = '_t',
+        sig_key='_s', nonce_key='_n', expiry_key='_x'):
+        
         # Make sure there is a sig.
         if sig_key not in self:
             return False
@@ -298,28 +324,28 @@ class Query(MutableMultiMap):
         del copy[sig_key]
         copy.sort()
         #print repr(str(copy))
-        if self[sig_key] != hmac.new(key, str(copy), hasher or hashlib.md5).hexdigest():
+        if self[sig_key] != copy._signature(key, hasher):
             #print 'bad sig'
             return False
         
         # Make sure the built in expiry time is okay.
         if expiry_key in self:
             try:
-                if int(self[expiry_key]) < time.time():
-                    #print 'bad expiry'
+                if float(self[expiry_key]) < time.time():
+                    # print 'bad expiry 1'
                     return False
             except:
-                #print 'bad expiry'
+                # print 'bad expiry 2'
                 return False
         
         # Make sure it isnt too old.
         if maxage is not None and time_key in self:
             try:
-                if int(self[time_key]) + maxage < time.time():
-                    #print 'bad age'
+                if float(self[time_key]) + maxage < time.time():
+                    # print 'bad age'
                     return False
             except:
-                #print 'bad age'
+                # print 'bad age'
                 return False
         return True
         
