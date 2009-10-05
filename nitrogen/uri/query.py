@@ -206,8 +206,6 @@ Easy signatures!
     True
     >>> query.verify('not the key')
     False
-    
-    >>> str(query)
 
 
 """

@@ -93,7 +93,7 @@ class Path(list):
         >>> path.str(authority=False)
         Traceback (most recent call last):
         ...
-        PathError: can not have empty segments with no authority
+        PathError: cannot have initial empty segments without authority
         >>> path.str(authority=False, strict=False)
         '/empty/first/section'
         
@@ -103,7 +103,7 @@ class Path(list):
         >>> path.str(scheme=False, authority=False)
         Traceback (most recent call last):
         ...
-        PathError: can not have empty segments with no authority
+        PathError: cannot have initial empty segments without authority
         >>> path.str(scheme=False, authority=False, strict=False)
         '/colon:resides/in/first_non_empty_section'
         
@@ -216,12 +216,12 @@ class Path(list):
         if authority is not None and not authority:
             while encoded and not encoded[0]:
                 if strict:
-                    raise PathError('can not have empty segments with no authority')
+                    raise PathError('cannot have initial empty segments without authority')
                 encoded.pop(0)
         # Encode a colon in the first chunk if we have been told there is no
         # scheme, and this is relative.
         if self.relative and encoded and scheme is not None and not scheme and not authority:
-            if strict:
+            if strict and ':' in encoded[0]:
                 raise PathError('cannot have colons in first part of relative path with no scheme')
             encoded[0] = encoded[0].replace(':', encode(':'))
         # If we have an authority, we must either be empty, or start with '/'

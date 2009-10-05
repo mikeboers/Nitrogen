@@ -62,6 +62,11 @@ Building up a URI:
     
     >>> uri.path = ['a', 'b', 'c']
     >>> str(uri)
+    Traceback (most recent call last):
+    ...
+    PathError: must be empty or absolute with authority
+    >>> uri.path.absolute = True
+    >>> str(uri)
     'https://example.com/a/b/c'
     
     >>> uri.path = '/d/e/f'
@@ -362,7 +367,7 @@ class URI(object):
     
     def __repr__(self):
         return 'URI(scheme=%(scheme)r, userinfo=%(_userinfo)r, host=%(host)r, port=%(port)r, path=%(_path)r, query=%(_query)r, fragment=%(fragment)r)' % self.__dict__
-    def str(self):
+    def str(self, strict=True):
         uri = ''
         
         # Append the scheme.
@@ -382,7 +387,8 @@ class URI(object):
         # Append the path
         uri += self._path.str(
             scheme=self.scheme is not None,
-            authority=has_authority
+            authority=has_authority,
+            strict=strict
         )
         
         # Append the query.
@@ -402,9 +408,9 @@ class URI(object):
         # and such being carried from one to another.
         
         # This is coming mainly from RFC section 5.2.2
-        R = URI(str(reference))
+        R = URI(reference.str(strict=False) if isinstance(reference, URI) else str(reference))
         T = URI()
-        Base = URI(str(self))
+        Base = URI(self.str(strict=False))
         
         # A non-strict parser may ignore a scheme in the reference if it is
         # identical to the base URI's scheme.
