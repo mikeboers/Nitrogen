@@ -16,11 +16,13 @@ if __name__ == '__main__':
 
 from StringIO import StringIO
 
-from status import resolve_status
+from webtest import TestApp
 
+from status import resolve_status
 from webio import request_params
 from cookie import Container as CookieContainer
 from headers import DelayedHeaders, MutableHeaders
+from webio import request_params
 
 class _Common(object):
     pass
@@ -259,6 +261,4 @@ def test_request_post_and_etag():
     
 if __name__ == '__main__':
     from . import test
-    from webtest import TestApp
-    from webio import request_params
     test.run()
