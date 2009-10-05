@@ -61,6 +61,8 @@ class Request(_Common):
     cookies = _environ_getter('nitrogen.cookies')
     headers = _environ_getter('nitrogen.headers')
     
+    etag = _environ_getter('HTTP_IF_NONE_MATCH')
+    
     method = _environ_getter('REQUEST_METHOD', str.upper)
     user = _environ_getter('app.user')
     
@@ -78,7 +80,26 @@ def _content_type_property(spec):
             raise ValueError('cannot be set to non-true value')
         self.content_type = spec
     return prop
-        
+
+def _header_setter(key, get=None, set=None):
+    if get is None:
+        @property
+        def prop(self):
+            return self.headers.get(key)
+    else:
+        @property
+        def prop(self):
+            return get(self.headers.get(key))
+    if set is None:
+        @prop.setter
+        def prop(self, value):
+            self.headers[key] = value
+    else:
+        @prop.setter
+        def prop(self, value):
+            self.headers[key] = set(value)
+    return prop
+
 class Response(_Common):
     
     def __init__(self, start):
@@ -88,13 +109,49 @@ class Response(_Common):
         self._status = None
         self.status = '200 OK'
         
-        self.content_type = 'text/html'
-        self.charset = 'utf-8'
+        self._content_type = 'text/html'
+        self._charset = 'utf-8'
+        self._build_content_type_header()
+        
+        self._filename = None
     
     headers = _attr_getter('_headers')
     
     as_html = _content_type_property('text/html')
     as_text = _content_type_property('text/plain')
+    
+    etag = _header_setter('etag')
+    location = _header_setter('location')
+    
+    @property
+    def filename(self):
+        return self._filename
+    
+    @filename.setter
+    def filename(self, value):
+        self._filename = None if value is None else str(value)
+        if self._filename is not None:
+            self.headers.content_disposition = 'attachment; filename="%s"' % self.filename.replace('"', '\\"')
+        else:
+            del self.headers['content-disposition']
+        
+    @property
+    def content_type(self):
+        return self._content_type
+    
+    @content_type.setter
+    def content_type(self, value):
+        self._content_type = value
+        self._build_content_type_header()
+    
+    @property
+    def charset(self):
+        return self._charset
+    
+    @charset.setter
+    def charset(self, value):
+        self._charset = value
+        self._build_content_type_header()
     
     @property
     def status(self):
@@ -103,6 +160,13 @@ class Response(_Common):
     @status.setter
     def status(self, value):
         self._status = resolve_status(value)
+    
+    def _build_content_type_header(self):
+        if self.charset:
+            self.headers['content-type'] = '%s; charset=%s' % (
+                self.content_type, self.charset)
+        else:
+            self.headers['content-type'] = self.content_type
     
     def start(self, status=None, headers=None, plain=None, html=None):
         """Start the wsgi return sequence.
@@ -123,12 +187,10 @@ class Response(_Common):
                 self.content_type = 'text/html'
             else:
                 self.content_type = 'text/plain'
-        if plain or html or 'content-type' not in self.headers:
-            if self.charset:
-                self.headers['content-type'] = '%s; charset=%s' % (
-                    self.content_type, self.charset)
-            else:
-                self.headers['content-type'] = self.content_type
+        
+        # Deal with etag.
+        if self.etag is not None:
+            self.headers['etag'] = str(self.etag)
         
         headers = self.headers.allitems() + (list(headers) if headers else [])
         
@@ -143,17 +205,57 @@ def test_request_get():
         assert req.is_get
         assert not req.is_post
         assert req.get['key'] == 'value'
-        
+
         res = req.response
+        assert res.headers.content_type == 'text/html; charset=utf-8'
         res.as_text = True
-        print res.content_type
+        assert res.headers.content_type == 'text/plain; charset=utf-8'
         res.start()
-        
+
         yield 'Hello, World!'
-    
+
     app = TestApp(request_params(app))
     res = app.get('/?key=value')
     assert res.headers['content-type'] == 'text/plain; charset=utf-8'
+
+def test_request_get_file():
+    def app(environ, start):
+        req = Request(environ, start)
+        res = req.response
+        res.filename = 'hello.txt'
+        assert res.headers.content_disposition == 'attachment; filename="hello.txt"'
+        res.filename = 'hello"world.quoted'
+        assert res.headers.content_disposition == 'attachment; filename="hello\\"world.quoted"'
+        
+        res.start()
+
+        yield 'Hello, World!'
+
+    app = TestApp(request_params(app))
+    res = app.get('/')
+
+def test_request_post_and_etag():
+    def app(environ, start):
+        req = Request(environ, start)
+        assert req.method == 'POST'
+        assert req.is_post
+        assert not req.is_get
+        assert len(req.get) == 0
+        assert req.post['key'] == 'value'
+        assert req.etag == 'etag_goes_here'
+
+        res = req.response
+        res.as_html = True
+        assert res.headers.content_type == 'text/html; charset=utf-8'
+        res.etag = 'new_etag'
+        res.start()
+
+        yield 'Hello, World!'
+
+    app = TestApp(request_params(app))
+    res = app.post('/', {'key': 'value'}, headers=[('if_none_match', 'etag_goes_here')])
+    assert res.headers['content-type'] == 'text/html; charset=utf-8'
+    assert res.headers['etag'] == 'new_etag'
     
 if __name__ == '__main__':
     from . import test
