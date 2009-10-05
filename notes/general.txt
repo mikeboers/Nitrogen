@@ -1,0 +1,21 @@
+URI:
+	- take a look here: http://bugs.python.org/issue1462525
+	- add a ur(i|l)join function that just joins strings
+	- make notes about actions being defined only for well formed uris
+	- document everywhere that I am and am not complaint with RFC3986
+	- make sure it all works with unicode
+	- make sure it handles IRIs
+	- urlparse library should be RFC3986 conformant (according to the bug page)
+
+safer localization script:
+	# Setup path for local evaluation.
+	# When copying to another file, just change the parameter to be accurate.
+	if __name__ == '__main__':
+	    def __local_eval_fix(package):
+	        global __package__
+	        import os, sys
+	        path = os.path.abspath(__file__)
+	        __package__ = package
+	        sys.path.insert(0, path[:path.rfind(os.path.sep + __package__.split('.')[0])])
+	        __import__(__package__)
+	    __local_eval_fix('nitrogen')
