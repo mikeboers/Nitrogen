@@ -75,8 +75,8 @@ Setting a list:
 You can provide a sequence that is not a tuple or list by using the setlist method. This will remove all existing pairs by key, and append the new ones on the end of the query.
 
     >>> def g():
-    ... 	for x in [1, 2, 3]:
-    ... 		yield x
+    ...     for x in [1, 2, 3]:
+    ...         yield x
     >>> query.setlist('key', g())
     >>> query.getall('key')
     [u'1', u'2', u'3']
@@ -133,21 +133,21 @@ Empty queries are empty:
     <BLANKLINE>
 
 Parse and unparses properly
-    
+
     >>> parse('key=value')
     [(u'key', u'value')]
     >>> parse('key=')
     [(u'key', u'')]
     >>> parse('key')
     [(u'key', None)]
-    
+
     >>> query = Query('key')
     >>> query['a'] = None
     >>> query
     Query([(u'key', None), (u'a', None)])
     >>> str(query)
     'key&a'
-    
+
     >>> query = Query('key=value/with/slashes.and.dots=and=equals')
     >>> query
     Query([(u'key', u'value/with/slashes.and.dots=and=equals')])
@@ -160,7 +160,7 @@ Unicode does work properly.
     # kéy
     # >>> print query[u'kéy']
     # ¡™£¢∞§¶•ªº
-    # 
+    #
     # >>> query = Query()
     # >>> query[u'kéy'] = u'¡™£¢∞§¶•ªº'
     # >>> print query
@@ -172,7 +172,7 @@ Spaces as pluses:
     Query([(u'key with spaces', u'value with spaces')])
     >>> str(query)
     'key+with+spaces=value+with+spaces'
-    
+
 Easy signatures!
 
     >>> query = Query('v=value')
@@ -180,12 +180,12 @@ Easy signatures!
     >>> query.sign('this is the key', add_nonce=False, add_time=False)
     >>> str(query)
     'v=value&nonce=12345&_s=vDNuaJjAEWVg7Q3atnC_nA'
-    
+
     >>> query.verify('this is the key')
     True
     >>> query.verify('this is not the key')
     False
-    
+
     >>> query = Query('v=somevalue')
     >>> query.sign('another_key')
     >>> str(query) # doctest:+ELLIPSIS
@@ -196,17 +196,24 @@ Easy signatures!
     False
     >>> query.verify('another_key', maxage=-1)
     False
+    >>> query.verify('another_key', maxage=-1, strict=True)
+    Traceback (most recent call last):
+    ...
+    ValueError: signature is too old
     
     >>> query = Query(v='value')
     >>> query['_n'] = '123abc'
-    >>> query.sign('key', maxage=60, add_nonce=False)
+    >>> query.sign('key', maxage=60, add_time=True, add_nonce=False)
     >>> str(query) # doctest: +ELLIPSIS
-    'v=value&_n=123abc&_x=...&_s=...'
+    'v=value&_n=123abc&_t=...&_x=...&_s=...'
     >>> query.verify('key')
     True
     >>> query.verify('not the key')
     False
-
+    >>> query.verify('not the key', strict=True)
+    Traceback (most recent call last):
+    ...
+    ValueError: bad key or signature
 
 """
 
@@ -264,7 +271,7 @@ def unparse(pairs):
     return u'&'.join(ret)
 
 class Query(MutableMultiMap):
-    
+
     def __init__(self, *args, **kwargs):
         if len(args) > 1:
             raise ValueError('too many arguments')
@@ -275,60 +282,108 @@ class Query(MutableMultiMap):
             MutableMultiMap.__init__(self, input)
         else:
             MutableMultiMap.__init__(self)
-        
+
         for k, v in kwargs.iteritems():
             self[k] = v
-    
+
     def __str__(self):
         return unparse(self._pairs)
-    
+
     def _conform_key(self, key):
         if key is None:
             return None
         return unicoder(key)
-    
+
     def _conform_value(self, value):
         if value is None:
             return None
         return unicoder(value)
-    
+
     def _signature(self, key, hasher):
         return base64.b64encode(hmac.new(key, str(self), hasher or hashlib.md5).digest(), '-_').rstrip('=')
-    
+
     @staticmethod
     def _encode_float(value):
         """
         >>> Query._encode_float(0)
-        'AAAAAA'
+        'AAAAAAAAAAA'
         >>> Query._encode_float(1)
-        'AACAPw'
+        'AAAAAAAA8D8'
         >>> Query._encode_float(3.14159)
-        '0A9JQA'
+        'boYb8PkhCUA'
+        >>> Query._encode_float(1254784638.37394)
+        'ou6Xn5-y0kE'
+
         """
-        return base64.b64encode(struct.pack('f', value), '-_').rstrip('=')
-    
+        return base64.b64encode(struct.pack('d', value), '-_').rstrip('=')
+
     @staticmethod
     def _decode_float(value):
         """
-        
-        >>> Query._decode_float('AAAAAA')
+
+        >>> Query._decode_float('AAAAAAAAAAA')
         0.0
-        >>> Query._decode_float('AACAPw')
+        >>> Query._decode_float('AAAAAAAA8D8')
         1.0
-        >>> Query._decode_float(u'0A9JQA') # doctest: +ELLIPSIS
-        3.14159...
+        >>> Query._decode_float(u'boYb8PkhCUA') # doctest: +ELLIPSIS
+        3.1415...
+        >>> Query._decode_float('ou6Xn5-y0kE') # doctest: +ELLIPSIS
+        1254784638.37...
+
+        >>> t = time.time()
+        >>> enc = Query._encode_float(t)
+        >>> dec = Query._decode_float(enc)
+        >>> dec - t < 0.0001
+        True
+
+        """
+        return struct.unpack('d', base64.b64decode(str(value) + '=', '-_'))[0]
+
+    @staticmethod
+    def _encode_int(value):
+        """
+        >>> Query._encode_int(0)
+        'AAAAAA'
+        >>> Query._encode_int(1)
+        'AQAAAA'
+        >>> Query._encode_int(314159)
+        'L8sEAA'
+        """
+        return base64.b64encode(struct.pack('I', int(value)), '-_').rstrip('=')
+    
+    @staticmethod
+    def _decode_int(value):
+        """
+        >>> Query._decode_int('AAAAAA')
+        0
+        >>> Query._decode_int('AQAAAA')
+        1
+        >>> Query._decode_int('L8sEAA')
+        314159
+        
+        >>> t = int(time.time())
+        >>> enc = Query._encode_int(t)
+        >>> dec = Query._decode_int(enc)
+        >>> t == dec
+        True
         
         """
-        return struct.unpack('f', base64.b64decode(str(value) + '==', '-_'))[0]
-        
+        assert len(value) == 6, 'Encoded int is too short.'
+        return struct.unpack('I', base64.b64decode(str(value) + '==', '-_'))[0]
+    
     def sign(self, key, hasher=None, maxage=None, add_time=None, add_nonce=True,
         nonce_bits=128, time_key = '_t', sig_key='_s', nonce_key='_n',
         expiry_key='_x'):
         
+        # encode_time = lambda x: str(int(x))
+        encode_time = lambda x: '%.2f' % x
+        # encode_time = self._encode_float
+        # encode_time = self._encode_int
+        
         if add_time or (add_time is None and maxage is None):
-            self[time_key] = self._encode_float(time.time())
+            self[time_key] = encode_time(time.time())
         if maxage is not None:
-            self[expiry_key] = self._encode_float(time.time() + maxage)
+            self[expiry_key] = encode_time(time.time() + maxage)
         if add_nonce:
             self[nonce_key] = base64.b64encode(
                 hashlib.sha256(os.urandom(1024)).digest(), '-_')[
@@ -338,44 +393,56 @@ class Query(MutableMultiMap):
         copy.sort()
         #print repr(str(copy))
         self[sig_key] = copy._signature(key, hasher)
-    
+
     def verify(self, key, hasher=None, maxage=None, time_key = '_t',
-        sig_key='_s', nonce_key='_n', expiry_key='_x'):
-        
+        sig_key='_s', nonce_key='_n', expiry_key='_x', strict=False):
+
         # Make sure there is a sig.
         if sig_key not in self:
             return False
+        
+        # decode_time = int
+        decode_time = float
+        # decode_time = self._decode_float
+        # decode_time = self._decode_int
         
         # Make sure it is good.
         copy = self.copy()
         del copy[sig_key]
         copy.sort()
-        #print repr(str(copy))
+        # print repr(str(copy))
         if self[sig_key] != copy._signature(key, hasher):
-            #print 'bad sig'
+            if strict:
+                raise ValueError('bad key or signature')
             return False
-        
+
         # Make sure the built in expiry time is okay.
         if expiry_key in self:
             try:
-                if self._decode_float(self[expiry_key]) < time.time():
-                    # print 'bad expiry 1'
-                    return False
-            except Exception as e:
-                # print 'bad expiry 2', e, self[expiry_key]
+                creation_time = decode_time(self[expiry_key])
+            except Exception:
+                if strict:
+                    raise
                 return False
-        
+            if creation_time < time.time():
+                if strict:
+                    raise ValueError('signature has expired')
+                return False
+
         # Make sure it isnt too old.
         if maxage is not None and time_key in self:
             try:
-                if self._decode_float(self[time_key]) + maxage < time.time():
-                    # print 'bad age'
-                    return False
-            except:
-                # print 'bad age'
+                creation_time = decode_time(self[time_key]) 
+            except Exception:
+                if strict:
+                    raise
+                return False
+            if creation_time + maxage < time.time():
+                if strict:
+                    raise ValueError('signature is too old')
                 return False
         return True
-        
+
 
 if __name__ == '__main__':
     from .. import test
