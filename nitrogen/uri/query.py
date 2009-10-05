@@ -206,6 +206,8 @@ Easy signatures!
     True
     >>> query.verify('not the key')
     False
+    
+    >>> str(query)
 
 
 """
@@ -230,6 +232,7 @@ import hashlib
 import hmac
 import base64
 import math
+import struct
 
 from ..multimap import MutableMultiMap
 from .transcode import unicoder, decode as _decode, encode as _encode
@@ -294,14 +297,40 @@ class Query(MutableMultiMap):
     def _signature(self, key, hasher):
         return base64.b64encode(hmac.new(key, str(self), hasher or hashlib.md5).digest(), '-_').rstrip('=')
     
+    @staticmethod
+    def _encode_float(value):
+        """
+        >>> Query._encode_float(0)
+        'AAAAAA'
+        >>> Query._encode_float(1)
+        'AACAPw'
+        >>> Query._encode_float(3.14159)
+        '0A9JQA'
+        """
+        return base64.b64encode(struct.pack('f', value), '-_').rstrip('=')
+    
+    @staticmethod
+    def _decode_float(value):
+        """
+        
+        >>> Query._decode_float('AAAAAA')
+        0.0
+        >>> Query._decode_float('AACAPw')
+        1.0
+        >>> Query._decode_float(u'0A9JQA') # doctest: +ELLIPSIS
+        3.14159...
+        
+        """
+        return struct.unpack('f', base64.b64decode(str(value) + '==', '-_'))[0]
+        
     def sign(self, key, hasher=None, maxage=None, add_time=None, add_nonce=True,
         nonce_bits=128, time_key = '_t', sig_key='_s', nonce_key='_n',
         expiry_key='_x'):
         
         if add_time or (add_time is None and maxage is None):
-            self[time_key] = '%.2f' % time.time()
+            self[time_key] = self._encode_float(time.time())
         if maxage is not None:
-            self[expiry_key] = '%.2f' % (time.time() + maxage)
+            self[expiry_key] = self._encode_float(time.time() + maxage)
         if add_nonce:
             self[nonce_key] = base64.b64encode(
                 hashlib.sha256(os.urandom(1024)).digest(), '-_')[
@@ -331,17 +360,17 @@ class Query(MutableMultiMap):
         # Make sure the built in expiry time is okay.
         if expiry_key in self:
             try:
-                if float(self[expiry_key]) < time.time():
+                if self._decode_float(self[expiry_key]) < time.time():
                     # print 'bad expiry 1'
                     return False
-            except:
-                # print 'bad expiry 2'
+            except Exception as e:
+                # print 'bad expiry 2', e, self[expiry_key]
                 return False
         
         # Make sure it isnt too old.
         if maxage is not None and time_key in self:
             try:
-                if float(self[time_key]) + maxage < time.time():
+                if self._decode_float(self[time_key]) + maxage < time.time():
                     # print 'bad age'
                     return False
             except:
