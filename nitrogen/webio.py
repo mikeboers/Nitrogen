@@ -54,6 +54,7 @@ from . import cookie
 from .uri import URI
 from .uri.query import Query
 from .multimap import MultiMap, DelayedMultiMap
+from .headers import DelayedHeaders
 
 class DefaultFile(object):
     """Class for file uploads in default state."""
@@ -112,9 +113,10 @@ def get_parser(app, **kwargs):
     """
     
     def inner(environ, start):
-        query = environ.get('QUERY_STRING', '')
-        query = Query(query)
-        environ['nitrogen.get'] = MultiMap(query.allitems())
+        def gen():
+            query = environ.get('QUERY_STRING', '')
+            return Query(query).allitems()
+        environ['nitrogen.get'] = DelayedMultiMap(gen)
         return app(environ, start)
     return inner    
     
@@ -224,9 +226,20 @@ def uri_parser(app, **kwargs):
         return app(environ, start)
     return inner
 
-
+def header_parser(app, **kwargs):
+    def inner(environ, start):
+        def gen():
+            for k, v in environ.items():
+                if k.startswith('HTTP_'):
+                    yield k[5:], v
+        environ['nitrogen.headers'] = DelayedHeaders(gen)
+        return app(environ, start)
+    return inner
+        
 def request_params(app, parse_uri=True, parse_get=True, parse_post=True,
-        parse_cookie=True, build_cookie=True, **kwargs):
+        parse_cookie=True, build_cookie=True, parse_headers=True, **kwargs):
+    if parse_headers:
+        app = header_parser(app, **kwargs)
     if parse_uri:
         app = uri_parser(app, **kwargs)
     if parse_get:

@@ -11,7 +11,6 @@ if __name__ == '__main__':
 import threading
    
 from . import local
-from .request import Request
 from . import error
 
 class thread_localizer(object):
@@ -84,7 +83,10 @@ if __name__ == '__main__':
     
     def app(env, start):
         start('200 OK', [('Content-Type', 'text/plain')])
-        yield 'Hello, world!\n'
+        yield 'Environment dump:\n\n'
+        for k, v in sorted(env.items()):
+            yield '%s: %r\n' % (k, v)
+        yield '\nDONE.\n'
     
     import random
     

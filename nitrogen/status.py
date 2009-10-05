@@ -21,6 +21,8 @@ def resolve_status(status):
         '200 OK'
         >>> resolve_status("OK")
         '200 OK'
+        >>> resolve_status('200 OK')
+        '200 OK'
         
         >>> resolve_status(404)
         '404 Not Found'
