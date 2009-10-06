@@ -14,11 +14,13 @@ from .route import NotFoundError
 
 from .views import render, TYPE_HEADER_HTML
 
+from .request import as_request
 from .compressor import compressor
 from .encoding import utf8_encoder
 from .status import status_resolver
 from .error import error_logger, error_notifier
 from .webio import cookie_parser, cookie_builder, request_params, get_parser, post_parser
+
 
 def output_buffer(app):
     """WSGI middleware which buffers all output before sending it on.

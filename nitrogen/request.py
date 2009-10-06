@@ -199,6 +199,13 @@ class Response(_Common):
         self._start(status, headers)
 
 
+def as_request(app):
+    """WSGI middleware to adapt WSGI style requests to a single Request object."""
+    def inner(environ, start, *args, **kwargs):
+        req = Request(environ, start)
+        return app(req, *args, **kwargs)
+    return inner
+
 
 def test_request_get():
     def app(environ, start):
