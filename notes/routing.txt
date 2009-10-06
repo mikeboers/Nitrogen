@@ -1,37 +1,90 @@
-maybe use decorators to determine routing
+===== general =====
 
-@route(r'^match')
-def app1(env, start)
-	env['boers.autostart']()
-	yield 'This one starts with match!\n'
+I am trying too hard to make this do everything I could ever want. I can impose
+some restrictions that will make things easier. The routers could not have
+direct control over what remains unrouted, only how much gets popped off the
+stack.
 
+Also, we must allow routers to make the assumption that given the current state
+of all data persistance, the routing stack upto the given router will route
+exactly the same given the same input. Ie. there isnt a router below that is
+routing randomly.
+    - What about routing differently if logged in?
+    - What about encoding the unrouted segment?
+    - What about time-of-day differences?
 
-there is a class, which is a wsgi app, which takes the first of the path segments, and tries to call a method by that name on itself. these could be nested
+normalizing unrouted:
+    - assert we start with a slash
+    - assert that there are no dot segments - does not match r'/\.\.?(/|$)'
+    - throw a RouterInterfaceError if this happens
+    - do NOT remove empty segments.
 
-class Router(object):
-	# make it go here
-	pass
+===== SelfRouter =====
 
-
-class index(Router):
+class index(SelfRouter):
 	
 	def index(env, start):
-		env['boers.router.start'].start()
+		start(...)
 		yield 'This is the index.'
 	
 	class inner(Router):
 		
 		def index(env, start):
-			env['boers.router.start'].start()
+			start(...)
 			yield 'This is on the inside.'
 		
 		def _404(env, start):
+			start(...)
 			# this is for ones that aren't found.
 		
-		def _505(env, start):
+		def _500(env, start):
+			start(...)
 			# this is for ones that error while going
 
 /inner/index will go to the inner one
 
-DirectoryDispatcher:
-	needs to write what it is doing out to the log
+
+===== history =====
+
+Everytime a router modifies the unrouted path we should store:
+    before  - what the unrouted path was before routing
+    after   - what the unrouted path is being set to
+    router  - the router which did the routing (for unrouting and logging)
+    unroute - optional - called to unroute this section
+    args    - optional - passed to unrouter
+    kwargs  - optional - passed to unrouter
+
+How to build the same path from the routers:
+    - if an unroute callback is supplied then it will be called with a new after
+      segment, and supplied args/kwargs.
+    - they would return what is to be unrouted before they run. this string
+      should, when routed again by the same router, result in the same app
+      running with the same history settings
+    - the default will be to add the difference of before - after.
+      ie. if a router got /a/b/c and put back /b/c originally, if they are
+      handed /new to build on they return /a/new
+
+To build a new path from a given router:
+    - unroute_from(environ, router, unrouted) will rebuild from history at the
+      first occourance of router assuming unrouted was unrouted at that point.
+    - ReRouter can have a .build(environ, name_or_app, **kwargs) which builds
+      whatever it needs to route to name_or_app, or using the new kwargs figures
+      out which route to use. Then it calls on unroute_from(environ, self, unrouted)
+      to finish the job
+
+
+===== @accepts =====
+
+- simple decorator to assert the request mode is one of the given.
+- @accepts('get', 'post')
+- don't need to deal with all or none
+
+===== ReRouter =====
+
+- Routes-like pattern matching.
+- Can only match to segment boundaries
+
+===== RawReRouter ===
+
+- routes using full regexes
+- still stuck to segment boundaries by the protocol

@@ -1,4 +1,28 @@
-"""Package for easy routing of requests into request handlers (or WSGI apps.)"""
+"""Module containing tools to assist in building of WSGI routers.
+
+Routing generally works with two values stored in the request environ: a string
+representing what remains to be routed, and a list representing the routing
+history of the request.
+
+It is up to the routers to behave nicely with these values, and for the apps to
+not touch them. I am in no way putting code in place that asserts that these are
+used properly. There are three functions (get_unrouted, set_unrouted, and
+get_history) to assist in manupulating these critical values.
+
+The unrouted path is simply a string. When initialized it is normlized somewhat
+to remove dot segments ('.' and '..'). It is NEVER asserted that the unrouted
+path will remain in this state. The path also tends to (although I haven't
+proven this) start out absolute (with a prefixed slash). Simpler routes will
+tend to maintain this state, but some (the ReRouter) do not do this nessesarily.
+Be careful!
+
+The history is a list of named tuples with properties 'unrouted' (what the value
+of the unrouted path was when the router returned), 'router' (the router which
+submitted this entry), and 'data' (keyword-arguments handed to set_unrouted by
+the router).
+
+
+"""
 
 
 # Setup path for local evaluation.
@@ -15,6 +39,7 @@ if __name__ == '__main__':
 
 
 import re
+import collections
 
 from webtest import TestApp
 
@@ -23,6 +48,8 @@ from ..uri.path import Path, encode, decode
 
 _ENVIRON_UNROUTED_KEY = 'nitrogen.route.unrouted'
 _ENVIRON_HISTORY_KEY = 'nitrogen.route.history'
+
+HistoryChunk = collections.namedtuple('History', 'unrouted router data'.split())
 
 def get_unrouted(environ):
     """Returns the unrouted portion of the requested URI."""
@@ -44,7 +71,7 @@ def get_history(environ):
 
 def set_unrouted(environ, unrouted, router=None, **kwargs):
     history = get_history(environ)
-    history.append((unrouted, router, kwargs))
+    history.append(HistoryChunk(unrouted, router, kwargs))
     environ[_ENVIRON_UNROUTED_KEY] = unrouted
 
 

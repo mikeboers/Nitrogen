@@ -104,10 +104,10 @@ def test_routing_path_setup():
     
     router = ReRouter()
     
-    @router.register(r'^/(one|two|three)(?=/|$)')
-    def one(environ, start, number):
+    @router.register(r'^/([a-z]+)(?=/|$)')
+    def one(environ, start, word):
         start('200 OK', [('Content-Type', 'text-plain')])
-        yield number
+        yield word
     
     @router.register(r'^/x-{var}(?=/|$)')
     def two(environ, start, *args, **kwargs):
@@ -136,7 +136,7 @@ def test_routing_path_setup():
     ]
     
     try:
-        app.get('/does/not/exist')
+        app.get('/-does/not/exist')
         assert False
     except HttpNotFound:
         pass

@@ -61,6 +61,10 @@ def run():
         print "Found %d nose/unittest test%s." % (nose_count, 's' if nose_count > 1 else '')
         suite.addTest(nose_suite)    
     
+    # Nessesary for Windows.
+    sys.stderr.flush()
+    sys.stdout.flush()
+    
     # GO!
     test_count = suite.countTestCases()
     if test_count:
