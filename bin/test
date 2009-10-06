@@ -51,17 +51,18 @@ for dirpath, dirnames, filenames in os.walk(root):
             doc_suite = None
             nose_suite = None
             
-            path = dirpath + '/' + name
+            path = os.path.join(dirpath, name)
             
-            # Skip the library or "binaries".
-            if '/lib/' in path or '/bin/' in path:
-                continue
             
             # Turn it into a module
-            name = path[len(root_dir) + 1:-3].replace('/', '.')
+            name = path[len(root_dir) + 1:-3].replace(os.path.sep, '.')
             
+            # Skip the library or "binaries".
+            if '.lib.' in name or '.bin.' in name:
+                continue
+                
             # Make sure we can even get to it.
-            if not os.path.exists(os.path.dirname(path) + '/__init__.py'):
+            if not os.path.exists(os.path.join(os.path.dirname(path), '__init__.py')):
                 print '\t%s is unreachable' % name
                 continue
             
@@ -104,6 +105,10 @@ for dirpath, dirnames, filenames in os.walk(root):
             path = dirpath + '/' + name
             suite = doctest.DocFileSuite(path, module_relative=False, encoding='UTF-8')
             suites.append(suite)
+
+# Nesseary to flush output before running tests on Windows.
+sys.stderr.flush()
+sys.stdout.flush()
 
 runner = unittest.TextTestRunner()
 suite = unittest.TestSuite()
