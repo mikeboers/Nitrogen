@@ -10,17 +10,16 @@ if __name__ == '__main__':
 
 import logging
 
-from .route import NotFoundError
-
 from .views import render, TYPE_HEADER_HTML
 
 from .request import as_request
 from .compressor import compressor
 from .encoding import utf8_encoder
-from .status import status_resolver
+from .status import status_resolver, HttpNotFound
 from .error import error_logger, error_notifier
 from .webio import cookie_parser, cookie_builder, request_params, get_parser, post_parser
 
+log = logging.getLogger(__name__)
 
 def output_buffer(app):
     """WSGI middleware which buffers all output before sending it on.
@@ -52,15 +51,15 @@ def output_buffer(app):
 
 def not_found_catcher(app):
     """Displays the _404.tpl template along with a "404 Not Found" status if a
-    NotFoundError is thrown within the app that it wraps. This error is
+    HttpNotFound is thrown within the app that it wraps. This error is
     normally thrown by routers.
     """
     def inner(environ, start):
         try:
             for x in app(environ, start):
                 yield x
-        except NotFoundError as e:
-            logging.getLogger(__name__).warning(repr(e))
+        except HttpNotFound as e:
+            log.exception('caught 404 Not Found')
             start('404 Not Found', [TYPE_HEADER_HTML])
             yield render('_404.tpl')
     return inner        
