@@ -63,18 +63,16 @@ def compile_named_groups(raw, default_pattern='.*?'):
             if default_pattern is None:
                 return match.group(0)
             pattern = default_pattern
-        key = '__' + name.encode('hex') + '__'
-        return '(?P<%s>%s)' % (key, pattern)
+        return '(?P<%s>%s)' % (name, pattern)
     return re.sub(r'{([a-zA-Z_]\w*)(?::(.+?))?}', callback, raw)
 
 def extract_named_groups(match):
     kwargs = m.groupdict()
     named_spans = set(m.span(k) for k in kwargs)
     args = [x for i, x in enumerate(m.groups()) if m.span(i + 1) not in named_spans]
-    kwargs = dict((k.strip('_').decode('hex'), v) for k, v in kwargs.items())
     return args, kwargs
     
-pattern = '/{controller}/{action}/{id:\d+}'
+pattern = '/{controller}/(.+?)/{id:\d+}'
 uri = '/gallery/photo/12'
 
 compiled = compile_named_groups(pattern)

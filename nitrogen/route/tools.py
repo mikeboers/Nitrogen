@@ -20,6 +20,7 @@ def get_unrouted(environ):
     if UNROUTED_ENVIRON_KEY not in environ:
         path = URI(environ.get('REQUEST_URI', '').strip('/')).path
         path.remove_dot_segments()
+        path.absolute = True
         environ[UNROUTED_ENVIRON_KEY] = path
     return environ[UNROUTED_ENVIRON_KEY]
 
