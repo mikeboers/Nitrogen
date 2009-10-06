@@ -89,7 +89,7 @@ class ReRouter(object):
                 
                 unrouted = path[m.end():]
                 args, kwargs = extract_named_groups(m)
-                tools.set_unrouted(environ, unrouted, self, matched=m.group(0), app=app, args=args, kwargs=kwargs)
+                tools.set_unrouted(environ, unrouted, self, kwargs=dict(args=args, kwargs=kwargs))
                 
                 return app(environ, start, *args, **kwargs)
         if self.default:

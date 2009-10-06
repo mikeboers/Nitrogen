@@ -11,10 +11,10 @@ if __name__ == '__main__':
     __local_eval_fix('nitrogen.route')
 
 
-from tools import *
-from filerouter import FileRouter
-from rerouter import ReRouter
-from selfrouter import SelfRouter
+from . import tools
+from .filerouter import FileRouter
+from .rerouter import ReRouter
+from .selfrouter import SelfRouter
 
 
 
