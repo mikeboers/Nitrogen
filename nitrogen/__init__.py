@@ -13,6 +13,7 @@ if __name__ == '__main__':
     __package__ = 'nitrogen'
     sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
     __import__(__package__)
+    exit() # JUST FOR MAIN __init__!
 
 def rawlog(*args):
     """Just in case I REALLY need to debug."""
@@ -30,6 +31,8 @@ sys.path.insert(0, os.path.dirname(__file__) + '/lib')
 # NOTE: I am assuming that this will work for the run_as_socket runner as well.
 local = threading.local()
 
+# Setup some dummy objects for testing.
+local.environ = {}
 
 class LocalProxy(object):
     """An object that proxies attribute and dict-like access to an object
@@ -43,6 +46,9 @@ class LocalProxy(object):
     
     def __init__(self, key):
         object.__setattr__(self, '_local_key', key)
+    
+    def __repr__(self):
+        return '<local.%s:%r>' % (self._local_key, local.__dict__.get(self._local_key))
     
     def __getattr__(self, key):
         return getattr(local.__dict__[self._local_key], key)
@@ -61,6 +67,9 @@ class LocalProxy(object):
         
     def __delitem__(self, key):
         del local.__dict__[self._local_key][key]
+    
+    def __contains__(self, key):
+        return key in local.__dict__[self._local_key]
 
 
 environ = LocalProxy('environ')
