@@ -30,10 +30,14 @@ if __name__ == '__main__':
 import re
 import logging
 
-from tools import *
+from webtest import TestApp
+
+from . import tools
 from ..uri import Path
+from ..status import HttpNotFound
 
 log = logging.getLogger(__name__)
+
 
 def compile_named_groups(raw, default_pattern='[^/]+?'):
     def callback(match):
@@ -77,22 +81,68 @@ class ReRouter(object):
         return decorator
     
     def __call__(self, environ, start):
-        path = str(get_unrouted(environ))
-        log.debug('Looking for match on %r.' % path)
+        path = tools.get_unrouted(environ)
+        log.debug('matching on %r' % path)
         for pattern, app in self._apps:
             m = pattern.search(path)
             if m is not None:
                 
-                # Update the routing information.
-                # NOTE that 
-                environ['nitrogen.path.unrouted'] = Path(path[m.end():])
-                get_routed(environ).append(m.group())
-                
+                unrouted = path[m.end():]
                 args, kwargs = extract_named_groups(m)
+                tools.set_unrouted(environ, unrouted, self, matched=m.group(0), app=app, args=args, kwargs=kwargs)
+                
                 return app(environ, start, *args, **kwargs)
         if self.default:
             return self.default(environ, start)
-        raise_not_found_error(environ, 'Could not find match.')
+        
+        raise HttpNotFound()
+
+
+
+
+def test_routing_path_setup():
+    
+    router = ReRouter()
+    
+    @router.register(r'^/(one|two|three)(?=/|$)')
+    def one(environ, start, number):
+        start('200 OK', [('Content-Type', 'text-plain')])
+        yield number
+    
+    @router.register(r'^/x-{var}(?=/|$)')
+    def two(environ, start, *args, **kwargs):
+        output = list(router(environ, start))
+        yield kwargs['var'] + '\n'
+        for x in output:
+            yield x
+    
+    app = TestApp(router)
+
+    res = app.get('/one/two')
+    assert res.body == 'one'
+    assert tools.get_history(res.environ) == [
+        ('/one/two', None, {}),
+        ('/two', router, {'kwargs': {}, 'app': one, 'args': ['one'], 'matched': '/one'})
+    ]
+    
+    res = app.get('/x-four/x-three/x-two/one')
+    assert res.body == 'four\nthree\ntwo\none'
+    assert tools.get_history(res.environ) == [
+        ('/x-four/x-three/x-two/one', None, {}),
+        ('/x-three/x-two/one', router, {'kwargs': {'var': 'four'}, 'app': two, 'args': [], 'matched': '/x-four'}),
+        ('/x-two/one', router, {'kwargs': {'var': 'three'}, 'app': two, 'args': [], 'matched': '/x-three'}),
+        ('/one', router, {'kwargs': {'var': 'two'}, 'app': two, 'args': [], 'matched': '/x-two'}),
+        ('', router, {'kwargs': {}, 'app': one, 'args': ['one'], 'matched': '/one'})
+    ]
+    
+    try:
+        app.get('/does/not/exist')
+        assert False
+    except HttpNotFound:
+        pass
+
+
+
 
 if __name__ == '__main__':
     from .. import test
