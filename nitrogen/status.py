@@ -1,6 +1,17 @@
 """Module for WSGI status helping functions."""
 
-import httplib
+from httplib import responses as _code_to_message
+
+_message_to_code = dict((v.lower(), k) for k, v in _code_to_message.items())
+
+def code_to_message(code):
+    return _code_to_message[code]
+
+def message_to_code(msg):
+    return _message_to_code[' '.join(msg.strip().split()).lower()]
+
+def normalize_message(msg):
+    return code_to_message(message_to_code(msg))
 
 def resolve_status(status):
     """Resolve a given object into the status that it should represent.
@@ -46,16 +57,20 @@ def resolve_status(status):
         return '200 OK'
     
     # See if status is a status code.
-    if status in httplib.responses:
-        return '%d %s' % (status, httplib.responses[status])
+    try:
+        return '%d %s' % (status, code_to_message(status))
+    except:
+        pass
     
     # See if the constant is set
-    status_no = getattr(httplib, str(status).replace(' ', '_').upper(), None)
-    if status_no is not None:
-        return '%d %s' % (status_no, httplib.responses[status_no])
+    try:
+        return '%d %s' % (message_to_code(status), normalize_message(status))
+    except:
+        pass
     
     # Can't find it... just hand it back.
     return status
+
 
 def status_resolver(app):
     """WSGI middleware which attempts to resolve whatever is sent as the
@@ -68,6 +83,47 @@ def status_resolver(app):
             start(resolve_status(status), headers)
         return app(environ, inner_start)
     return inner
+
+
+class BaseHttpStatus(Exception):
+    _code = 200
+    def __init__(self, *args):
+        Exception.__init__(self, 'HTTP status code %d: %s' % (self._code, code_to_message(self._code)), *args)
+
+def make_http_status_exception(code):
+    message = code_to_message(code)
+    name = 'Http' + ''.join(message.split())
+    return type(name, (BaseHttpStatus, ), {'_code': code})
+
+
+HttpOK = make_http_status_exception(200)
+
+# All of the 300 class needs a Location header.
+HttpMovedPermanently = make_http_status_exception(301)
+HttpFound = make_http_status_exception(302)
+HttpSeeOther = make_http_status_exception(303)
+HttpNotModified = make_http_status_exception(304)
+HttpTemporaryRedirect = make_http_status_exception(307)
+
+HttpUnauthorized = make_http_status_exception(401) # This once needs a WWW-Authenticate header along with it.
+HttpForbidden = make_http_status_exception(403)
+HttpNotFound = make_http_status_exception(404)
+HttpGone = make_http_status_exception(410)
+
+
+
+
+def test_status_names():
+    """Make sure that I didn't make a type when setting all of the generated
+    HTTP status exception classes."""
+    for name, obj in globals().items():
+        try:
+            check = issubclass(obj, BaseHttpStatus)
+        except:
+            pass
+        else:
+            if check:
+                assert name == obj.__name__
 
 def test_status_resolver():
     """Nose test, checking that plaintext is returned."""
