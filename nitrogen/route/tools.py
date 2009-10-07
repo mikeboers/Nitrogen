@@ -1,26 +1,16 @@
 """Module containing tools to assist in building of WSGI routers.
 
-Routing generally works with two values stored in the request environ: a string
-representing what remains to be routed, and a list representing the routing
-history of the request.
+The routing history is a list of named tuples (HistoryChunk) with parts:
+    before -- What the unrouted path was before this routing step.
+    after -- What the unrouted path was after this routing step.
+    router -- Whatever was responsible for this routing step.
+    builder -- A callable (or none) for rebuilding the unrouted path. See
+        below for more info.
+    args -- Positional args for the builder.
+    kwargs -- Keyword args for the builder.
 
-It is up to the routers to behave nicely with these values, and for the apps to
-not touch them. I am in no way putting code in place that asserts that these are
-used properly. There are three functions (get_unrouted, set_unrouted, and
-get_history) to assist in manupulating these critical values.
-
-The unrouted path is simply a string. When initialized it is normlized somewhat
-to remove dot segments ('.' and '..'). It is NEVER asserted that the unrouted
-path will remain in this state. The path also tends to (although I haven't
-proven this) start out absolute (with a prefixed slash). Simpler routes will
-tend to maintain this state, but some (the ReRouter) do not do this nessesarily.
-Be careful!
-
-The history is a list of named tuples with properties 'unrouted' (what the value
-of the unrouted path was when the router returned), 'router' (the router which
-submitted this entry), and 'data' (keyword-arguments handed to set_unrouted by
-the router).
-
+About builders:
+    TODO
 
 """
 
@@ -40,6 +30,7 @@ if __name__ == '__main__':
 
 import re
 import collections
+from pprint import pprint
 
 from webtest import TestApp
 
@@ -49,62 +40,155 @@ from ..uri.path import Path, encode, decode
 _ENVIRON_UNROUTED_KEY = 'nitrogen.route.unrouted'
 _ENVIRON_HISTORY_KEY = 'nitrogen.route.history'
 
-HistoryChunk = collections.namedtuple('HistoryChunk', 'before after router unroute args kwargs'.split())
+_HistoryChunk = collections.namedtuple('HistoryChunk', 'path unrouted router builder args kwargs'.split())
+class HistoryChunk(_HistoryChunk):
+    def __new__(cls, path, unrouted, router, builder=None, args=None, kwargs=None):
+        return _HistoryChunk.__new__(cls, path, unrouted, router, builder, args or tuple(), kwargs or {})
 
     
-def get_requested(environ):
-    raise NotImplemented
-
-def validate_unrouted(path):
-    """Assert that a given path is a valid unrouted path.
+def get_request_path(environ):
+    """Get the URI as requested from the environment.
     
-    Throws a ValueError if the path is not a valid unrouted path given the
-    routing specifications. Ie: the path must be absolute, and not have any
-    dot segments.
+    Pulls from REQUEST_URI if it exists, or the concatenation of SCRIPT_NAME
+    and PATH_INFO. Running under apache REQUEST_URI should exist and be set
+    to whatever the client sent along.
+    
+    """
+    
+    if 'REQUEST_URI' in environ:
+        path = str(URI(environ['REQUEST_URI']).path)
+    else:
+        path = environ.get('SCRIPT_NAME', '') + environ.get('PATH_INFO', '')
+    return path
+
+
+def validate_path(path):
+    """Assert that a given path is a valid path for routing.
+    
+    Throws a ValueError if the path is not a valid routing path, ie., the path
+    must be absolute, and not have any dot segments.
     
     Examples:
     
-        >>> validate_unrouted('/one/two')
+        >>> validate_path('/one/two')
+        >>> validate_path('')
         
-        >>> validate_unrouted('relative')
+        >>> validate_path('relative')
         Traceback (most recent call last):
         ...
         ValueError: request path is not absolute: 'relative'
         
-        >>> validate_unrouted('/.')
+        >>> validate_path('/.')
         Traceback (most recent call last):
         ...
         ValueError: request path not normalized: '/.'
     
     """
+    if not path:
+        return
     if not path.startswith('/'):
         raise ValueError('request path is not absolute: %r' % path)
     copy = Path(path)
     copy.remove_dot_segments()
     if path != str(copy):
         raise ValueError('request path not normalized: %r' % path)
-    
+   
+   
 def get_unrouted(environ):
-    """Returns the unrouted portion of the requested URI."""
+    """Returns the unrouted portion of the requested URI from the environ."""
     if _ENVIRON_UNROUTED_KEY not in environ:
-        path = environ.get('SCRIPT_NAME', '') + environ.get('PATH_INFO', '')
-        validate_unrouted(path)
+        path = get_request_path(environ)
+        validate_path(path)
         environ[_ENVIRON_UNROUTED_KEY] = path
     return environ[_ENVIRON_UNROUTED_KEY]
 
+
 def get_history(environ):
+    """Gets the list of routing history from the environ."""
     if _ENVIRON_HISTORY_KEY not in environ:
         environ[_ENVIRON_HISTORY_KEY] = []
     return environ[_ENVIRON_HISTORY_KEY]
 
-def set_unrouted(environ, unrouted, router, unroute=None, args=tuple(), kwargs={}):
-    validate_unrouted(unrouted)
+
+def set_unrouted(environ, unrouted, router, builder=None, args=tuple(), kwargs={}):
+    """Sets the unrouted path and adds to routing history.
+    
+    This function is to be used by routers which are about to redirect
+    control to another WSGI app after consuing some of the unrouted requested
+    path. It also established a routing history at the same time which is
+    used for debugging (visually in the logs) and for constructing slightly
+    modified URLs.
+    
+    The unrouted path must pass validation by validate_path(unrouted)
+    
+    Params:
+        environ -- The request environ that is being routed.
+        unrouted -- The new unrouted path.
+        router -- Whatever is responsible for this change.
+        builder -- A callable for rebuilding the route in reverse. See the
+            module docstring for more info.
+        args -- Positional args for the builder.
+        kwargs -- Keyword args for the builder.    
+    
+    """
+    
+    validate_path(unrouted)
     history = get_history(environ)
-    history.append(HistoryChunk(get_unrouted(environ), unrouted, router, unroute, args, kwargs))
+    history.append(HistoryChunk(get_unrouted(environ), unrouted, router, builder, args, kwargs))
     environ[_ENVIRON_UNROUTED_KEY] = unrouted
 
 
+def default_builder(route, previous_path, previous_unrouted):
+    """Default builder function.
+    
+    Requires the output of the router to be a suffix of the input.
+    
+    Examples:
+        >>> default_builder('/new', '/one/two', '/two')
+        '/one/new'
+        >>> default_builder('/d', '/a/b/c', '/c')
+        '/a/b/d'
+        >>> default_builder('/unrouted', '/base', '')
+        '/base/unrouted'
+    
+    """
+    if not previous_path.endswith(previous_unrouted):
+        raise ValueError('previous result is not suffix of operand: path=%r unrouted=%r' % (previous_path, previous_unrouted))
+    diff = previous_path[:-len(previous_unrouted)] if previous_unrouted else previous_path
+    return diff + route
 
+def build_from(environ, router, route=''):
+    history = get_history(environ)
+    for i, chunk in enumerate(history):
+        if chunk.router == router:
+            break
+    else:
+        raise ValueError('could not find router in history')
+    for chunk in reversed(history[:i+1]):
+        if chunk.builder:
+            route = chunk.builder(route, *chunk.args, **chunk.kwargs)
+        else:
+            route = default_builder(route, chunk.path, chunk.unrouted)
+    return route
+    
+
+def test_build_from():
+    
+    environ = dict(REQUEST_URI='/a/b/c/d')
+    history = get_history(environ)
+    set_unrouted(environ, '/b/c/d', 1)
+    set_unrouted(environ, '/c/d', 2)
+    set_unrouted(environ, '/d', 3)
+    set_unrouted(environ, '', 4)
+    
+    pprint(history)
+    assert build_from(environ, 4) == '/a/b/c/d'
+    assert build_from(environ, 3) == '/a/b/c'
+    assert build_from(environ, 2) == '/a/b'
+    assert build_from(environ, 1) == '/a'
+    
+    
+    
 def test_routing_path_setup():
 
     def app(_environ, start):
@@ -145,10 +229,10 @@ def test_routing_path_setup():
     # print get_history(res.environ)
     assert get_history(res.environ) == [
         HistoryChunk(
-            before='/one/two',
-            after='/two',
+            path='/one/two',
+            unrouted='/two',
             router=_app,
-            unroute=None,
+            builder=None,
             args=(),
             kwargs={})
         ], 'history is wrong'

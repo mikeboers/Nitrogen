@@ -29,6 +29,7 @@ if __name__ == '__main__':
 
 import re
 import logging
+from pprint import pprint
 
 from webtest import TestApp
 
@@ -86,12 +87,15 @@ class ReRouter(object):
         for pattern, app in self._apps:
             m = pattern.search(path)
             if m is not None:
-                
                 unrouted = path[m.end():]
                 args, kwargs = extract_named_groups(m)
-                tools.set_unrouted(environ, unrouted, self, kwargs=dict(args=args, kwargs=kwargs))
+                tools.set_unrouted(environ,
+                    unrouted=unrouted,
+                    router=self
+                )
                 
                 return app(environ, start, *args, **kwargs)
+            
         if self.default:
             return self.default(environ, start)
         
@@ -120,19 +124,22 @@ def test_routing_path_setup():
 
     res = app.get('/one/two')
     assert res.body == 'one'
+    # pprint(tools.get_history(res.environ))
     assert tools.get_history(res.environ) == [
-        ('/one/two', None, {}),
-        ('/two', router, {'kwargs': {}, 'app': one, 'args': ['one'], 'matched': '/one'})
+        tools.HistoryChunk(
+            path='/one/two',
+            unrouted='/two',
+            router=router)
     ]
     
     res = app.get('/x-four/x-three/x-two/one')
     assert res.body == 'four\nthree\ntwo\none'
+    # pprint(tools.get_history(res.environ))
     assert tools.get_history(res.environ) == [
-        ('/x-four/x-three/x-two/one', None, {}),
-        ('/x-three/x-two/one', router, {'kwargs': {'var': 'four'}, 'app': two, 'args': [], 'matched': '/x-four'}),
-        ('/x-two/one', router, {'kwargs': {'var': 'three'}, 'app': two, 'args': [], 'matched': '/x-three'}),
-        ('/one', router, {'kwargs': {'var': 'two'}, 'app': two, 'args': [], 'matched': '/x-two'}),
-        ('', router, {'kwargs': {}, 'app': one, 'args': ['one'], 'matched': '/one'})
+        tools.HistoryChunk(path='/x-four/x-three/x-two/one', unrouted='/x-three/x-two/one', router=router),
+        tools.HistoryChunk(path='/x-three/x-two/one', unrouted='/x-two/one', router=router),
+        tools.HistoryChunk(path='/x-two/one', unrouted='/one', router=router),
+        tools.HistoryChunk(path='/one', unrouted='', router=router)
     ]
     
     try:
