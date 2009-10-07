@@ -23,7 +23,7 @@ from .webio import request_params
 from .cookie import Container as CookieContainer
 from .headers import DelayedHeaders, MutableHeaders
 from .webio import request_params
-from .route.tools import _ENVIRON_DATA_KEY as ROUTE_DATA_KEY
+from .route.tools import get_route_data
 
 class _Common(object):
     pass
@@ -48,6 +48,8 @@ class Request(_Common):
         self._environ = environ
         if start:
             self._response = Response(start)
+        
+        self.route = get_route_data(environ)
     
     environ = _attr_getter('_environ')
     response = _attr_getter('_response')
@@ -63,7 +65,6 @@ class Request(_Common):
     files = _environ_getter('nitrogen.files')
     cookies = _environ_getter('nitrogen.cookies')
     headers = _environ_getter('nitrogen.headers')
-    route = _environ_getter(ROUTE_DATA_KEY, lambda x: x[-1] if x else None)
     
     etag = _environ_getter('HTTP_IF_NONE_MATCH')
     
@@ -203,9 +204,14 @@ class Response(_Common):
 
 def as_request(app):
     """WSGI middleware to adapt WSGI style requests to a single Request object."""
-    def inner(environ, start, *args, **kwargs):
-        req = Request(environ, start)
-        return app(req, *args, **kwargs)
+    
+    def inner(self, environ, start=None):
+        if start is None:
+            self, environ, start = start, self, environ
+        request = Request(environ, start)
+        if self:
+            return app(self, request)
+        return app(request)
     return inner
 
 

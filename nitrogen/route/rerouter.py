@@ -15,6 +15,7 @@ import logging
 import hashlib
 import base64
 from pprint import pprint
+import collections
 
 from webtest import TestApp
 
@@ -147,20 +148,27 @@ class Route(object):
                 kwargs[key] = callback(kwargs[key])
         return self.format % kwargs
             
-class ReMatch(object):
+class ReMatch(collections.Mapping):
 
     def __init__(self, route, data, unmatched):
         self.route = route
-        self._data = data
+        self.data = data
         self.unmatched = unmatched
 
     def __getitem__(self, key):
-        if isinstance(key, basestring):
-            return self._data[key]
-        raise TypeError('key must be int or str')
+        return self.data[key]
 
     def __getattr__(self, key):
-        return self[key]
+        return self.data[key]
+    
+    def __iter__(self):
+        return iter(self.data)
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __items__(self):
+        return colle
 
        
 class ReRouter(object):
@@ -210,10 +218,10 @@ class ReRouter(object):
                 tools.set_unrouted(environ,
                     unrouted=unmatched,
                     router=self,
+                    data=match,
                     builder=self._builder,
                     kwargs={'data': match}
                 )
-                tools.append_route_data(environ, match)
 
                 return app(environ, start)
 
@@ -228,20 +236,7 @@ class ReRouter(object):
 
 
 
-def _assert_next_history_step(res, **kwargs):
-    environ_key = 'test.history.i'
-    environ = res.environ
-    i = environ[environ_key] = environ.get(environ_key, -1) + 1
-    chunk = tools.get_history(environ)[i]
-    
-    data = kwargs.pop('_data', None)
-    
-    for k, v in kwargs.items():
-        v2 = getattr(chunk, k, None)
-        assert v == v2, '%r != %r' % (v, v2)
-    
-    if data is not None:
-        assert chunk.kwargs['data']._data == data, '%r != %r' % (chunk.kwargs['data']._data, data)
+
     
 def test_routing_path_setup():
 
@@ -271,7 +266,7 @@ def test_routing_path_setup():
     res = app.get('/one/two')
     assert res.body == 'one'
     # pprint(tools.get_history(res.environ))
-    _assert_next_history_step(res,
+    tools._assert_next_history_step(res,
             path='/one/two',
             unrouted='/two',
             router=router,
@@ -282,13 +277,13 @@ def test_routing_path_setup():
     # print res.body
     assert res.body == '04\n03\n02\none'
     # pprint(tools.get_history(res.environ))
-    _assert_next_history_step(res,
+    tools._assert_next_history_step(res,
         path='/x-4/x-3/x-2/one', unrouted='/x-3/x-2/one', router=router, builder=router._builder, _data={'num': 4})
-    _assert_next_history_step(res,
+    tools._assert_next_history_step(res,
         path='/x-3/x-2/one', unrouted='/x-2/one', router=router, builder=router._builder, _data={'num': 3})
-    _assert_next_history_step(res,
+    tools._assert_next_history_step(res,
         path='/x-2/one', unrouted='/one', router=router, builder=router._builder, _data={'num': 2})
-    _assert_next_history_step(res,
+    tools._assert_next_history_step(res,
         path='/one', unrouted='', router=router, builder=router._builder, _data={'word': 'one'})
 
     try:

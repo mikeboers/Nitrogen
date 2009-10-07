@@ -41,10 +41,10 @@ _ENVIRON_UNROUTED_KEY = 'route.unrouted'
 _ENVIRON_HISTORY_KEY = 'route.history'
 _ENVIRON_DATA_KEY = 'route.data'
 
-_HistoryChunk = collections.namedtuple('HistoryChunk', 'path unrouted router builder args kwargs'.split())
+_HistoryChunk = collections.namedtuple('HistoryChunk', 'path unrouted router data builder args kwargs'.split())
 class HistoryChunk(_HistoryChunk):
-    def __new__(cls, path, unrouted, router, builder=None, args=None, kwargs=None):
-        return _HistoryChunk.__new__(cls, path, unrouted, router, builder, args or tuple(), kwargs or {})
+    def __new__(cls, path, unrouted, router, data=None, builder=None, args=None, kwargs=None):
+        return _HistoryChunk.__new__(cls, path, unrouted, router, data, builder, args or tuple(), kwargs or {})
 
     
 def get_request_path(environ):
@@ -114,23 +114,13 @@ def get_history(environ):
     return environ[_ENVIRON_HISTORY_KEY]
 
 
-def get_all_route_data(environ):
-    if _ENVIRON_DATA_KEY not in environ:
-        environ[_ENVIRON_DATA_KEY] = []
-    return environ[_ENVIRON_DATA_KEY]
-
-
 def get_route_data(environ):
-    data = get_all_route_data(environ)
-    if data:
-        return data[-1]
+    history = get_history(environ)
+    if history:
+        return history[-1].data
 
 
-def append_route_data(environ, data):
-    get_all_route_data(environ).append(data)
-
-
-def set_unrouted(environ, unrouted, router, builder=None, args=tuple(), kwargs={}):
+def set_unrouted(environ, unrouted, router, data=None, builder=None, args=tuple(), kwargs={}):
     """Sets the unrouted path and adds to routing history.
     
     This function is to be used by routers which are about to redirect
@@ -154,7 +144,7 @@ def set_unrouted(environ, unrouted, router, builder=None, args=tuple(), kwargs={
     
     validate_path(unrouted)
     history = get_history(environ)
-    history.append(HistoryChunk(get_unrouted(environ), unrouted, router, builder, args, kwargs))
+    history.append(HistoryChunk(get_unrouted(environ), unrouted, router, data, builder, args, kwargs))
     environ[_ENVIRON_UNROUTED_KEY] = unrouted
 
 
@@ -229,6 +219,22 @@ def test_routing_path_setup():
     res = app.get('/./one/../start')
     assert res.body == '/start'
 
+
+def _assert_next_history_step(res, **kwargs):
+    environ_key = 'test.history.i'
+    environ = res.environ
+    i = environ[environ_key] = environ.get(environ_key, -1) + 1
+    chunk = get_history(environ)[i]
+
+    data = kwargs.pop('_data', None)
+
+    for k, v in kwargs.items():
+        v2 = getattr(chunk, k, None)
+        assert v == v2, '%r != %r' % (v, v2)
+
+    if data is not None:
+        assert dict(chunk.data) == data, '%r != %r' % (dict(chunk.data), data)
+    
     
 def test_routing_path_setup():
 
@@ -247,15 +253,10 @@ def test_routing_path_setup():
 
     res = app.get('/one/two')
     # print get_history(res.environ)
-    assert get_history(res.environ) == [
-        HistoryChunk(
+    _assert_next_history_step(res, 
             path='/one/two',
             unrouted='/two',
-            router=_app,
-            builder=None,
-            args=(),
-            kwargs={})
-        ], 'history is wrong'
+            router=_app), 'history is wrong'
 
 if __name__ == '__main__':
     from .. import test

@@ -36,6 +36,7 @@ if __name__ == '__main__':
 import re
 import logging
 from pprint import pprint
+import collections
 
 from webtest import TestApp
 
@@ -73,17 +74,17 @@ def extract_named_groups(match):
     return args, kwargs
 
 
-class RawReMatch(object):
+class RawReMatch(collections.Mapping):
 
     def __init__(self, m):
         self.m = m
-        self._args, self._kwargs = extract_named_groups(m)
+        self.args, self.kwargs = extract_named_groups(m)
     
     def __getitem__(self, key):
         if isinstance(key, int):
-            return self._args[key]
+            return self.args[key]
         if isinstance(key, basestring):
-            return self._kwargs[key]
+            return self.kwargs[key]
         raise TypeError('key must be int or str')
         
     def __getattr__(self, key):
@@ -91,6 +92,12 @@ class RawReMatch(object):
     
     def group(self, group):
         return self.m.group(group)
+    
+    def __iter__(self):
+        return iter(self.kwargs)
+    
+    def __len__(self):
+        return len(self.kwargs)
     
     
 class RawReRouter(object):
@@ -139,9 +146,9 @@ class RawReRouter(object):
                 unrouted = path[m.end():]
                 tools.set_unrouted(environ,
                     unrouted=unrouted,
-                    router=self
+                    router=self,
+                    data=RawReMatch(m)
                 )
-                tools.append_route_data(environ, RawReMatch(m))
                 return app(environ, start)
             
         if self.default:
@@ -178,25 +185,25 @@ def test_routing_path_setup():
     app = TestApp(router)
 
     res = app.get('/one/two')
-    assert res.body == 'one'
     # pprint(tools.get_history(res.environ))
-    assert tools.get_history(res.environ) == [
-        tools.HistoryChunk(
-            path='/one/two',
-            unrouted='/two',
-            router=router)
-    ]
+    tools._assert_next_history_step(res,
+        path='/one/two',
+        unrouted='/two',
+        router=router)
     
     res = app.get('/x-four/x-three/x-two/one')
     # print res.body
     assert res.body == 'four\nthree\ntwo\none'
     # pprint(tools.get_history(res.environ))
-    assert tools.get_history(res.environ) == [
-        tools.HistoryChunk(path='/x-four/x-three/x-two/one', unrouted='/x-three/x-two/one', router=router),
-        tools.HistoryChunk(path='/x-three/x-two/one', unrouted='/x-two/one', router=router),
-        tools.HistoryChunk(path='/x-two/one', unrouted='/one', router=router),
-        tools.HistoryChunk(path='/one', unrouted='', router=router)
-    ]
+    tools._assert_next_history_step(res,
+        path='/x-four/x-three/x-two/one', unrouted='/x-three/x-two/one', router=router, _data={'var': 'four'})
+    tools._assert_next_history_step(res,
+        path='/x-three/x-two/one', unrouted='/x-two/one', router=router)
+    tools._assert_next_history_step(res,
+        path='/x-two/one', unrouted='/one', router=router)
+    tools._assert_next_history_step(res,
+        path='/one', unrouted='', router=router)
+    
         
     try:
         app.get('/-does/not/exist')
