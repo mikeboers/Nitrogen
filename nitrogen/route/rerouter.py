@@ -147,7 +147,22 @@ class Route(object):
                 kwargs[key] = callback(kwargs[key])
         return self.format % kwargs
             
-        
+class ReMatch(object):
+
+    def __init__(self, route, data, unmatched):
+        self.route = route
+        self._data = data
+        self.unmatched = unmatched
+
+    def __getitem__(self, key):
+        if isinstance(key, basestring):
+            return self._data[key]
+        raise TypeError('key must be int or str')
+
+    def __getattr__(self, key):
+        return self[key]
+
+       
 class ReRouter(object):
 
     def __init__(self, default=None):
@@ -191,14 +206,16 @@ class ReRouter(object):
             m = route.match(path)
             if m:
                 kwargs, unmatched = m
+                match = ReMatch(route, kwargs, unmatched)
                 tools.set_unrouted(environ,
                     unrouted=unmatched,
                     router=self,
                     builder=self._builder,
-                    args=[kwargs]
+                    kwargs={'data': match}
                 )
+                tools.append_route_data(environ, match)
 
-                return app(environ, start, **kwargs)
+                return app(environ, start)
 
         if self.default:
             return self.default(environ, start)
@@ -211,17 +228,33 @@ class ReRouter(object):
 
 
 
+def _assert_next_history_step(res, **kwargs):
+    environ_key = 'test.history.i'
+    environ = res.environ
+    i = environ[environ_key] = environ.get(environ_key, -1) + 1
+    chunk = tools.get_history(environ)[i]
+    
+    data = kwargs.pop('_data', None)
+    
+    for k, v in kwargs.items():
+        v2 = getattr(chunk, k, None)
+        assert v == v2, '%r != %r' % (v, v2)
+    
+    if data is not None:
+        assert chunk.kwargs['data']._data == data, '%r != %r' % (chunk.kwargs['data']._data, data)
+    
 def test_routing_path_setup():
 
     router = ReRouter()
 
     @router.register(r'/{word:one|two|three}')
-    def one(environ, start, word):
+    def one(environ, start):
         start('200 OK', [('Content-Type', 'text-plain')])
-        yield word
+        yield tools.get_route_data(environ).word
 
     @router.register(r'/x-{num:\d+}', _parsers=dict(num=int))
-    def two(environ, start, **kwargs):
+    def two(environ, start):
+        kwargs = tools.get_route_data(environ)
         output = list(router(environ, start))
         yield '%02d\n' % kwargs['num']
         for x in output:
@@ -230,6 +263,7 @@ def test_routing_path_setup():
     @router.register(r'/{key:pre\}post}')
     def three(environ, start, *args, **kwargs):
         start('200 OK', [('Content-Type', 'text-plain')])
+        kwargs = tools.get_route_data(environ)
         yield kwargs['key']
 
     app = TestApp(router)
@@ -237,25 +271,25 @@ def test_routing_path_setup():
     res = app.get('/one/two')
     assert res.body == 'one'
     # pprint(tools.get_history(res.environ))
-    assert tools.get_history(res.environ) == [
-        tools.HistoryChunk(
+    _assert_next_history_step(res,
             path='/one/two',
             unrouted='/two',
             router=router,
-            builder=router._builder,
-            args=[{'word': 'one'}])
-    ]
+            builder=router._builder
+    )
 
     res = app.get('/x-4/x-3/x-2/one')
     # print res.body
     assert res.body == '04\n03\n02\none'
     # pprint(tools.get_history(res.environ))
-    assert tools.get_history(res.environ) == [
-        tools.HistoryChunk(path='/x-4/x-3/x-2/one', unrouted='/x-3/x-2/one', router=router, builder=router._builder, args=[{'num': 4}]),
-        tools.HistoryChunk(path='/x-3/x-2/one', unrouted='/x-2/one', router=router, builder=router._builder, args=[{'num': 3}]),
-        tools.HistoryChunk(path='/x-2/one', unrouted='/one', router=router, builder=router._builder, args=[{'num': 2}]),
-        tools.HistoryChunk(path='/one', unrouted='', router=router, builder=router._builder, args=[{'word': 'one'}])
-    ]
+    _assert_next_history_step(res,
+        path='/x-4/x-3/x-2/one', unrouted='/x-3/x-2/one', router=router, builder=router._builder, _data={'num': 4})
+    _assert_next_history_step(res,
+        path='/x-3/x-2/one', unrouted='/x-2/one', router=router, builder=router._builder, _data={'num': 3})
+    _assert_next_history_step(res,
+        path='/x-2/one', unrouted='/one', router=router, builder=router._builder, _data={'num': 2})
+    _assert_next_history_step(res,
+        path='/one', unrouted='', router=router, builder=router._builder, _data={'word': 'one'})
 
     try:
         app.get('/-does/not/exist')

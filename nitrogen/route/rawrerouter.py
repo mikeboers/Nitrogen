@@ -76,7 +76,7 @@ def extract_named_groups(match):
 class RawReMatch(object):
 
     def __init__(self, m):
-        self._m = m
+        self.m = m
         self._args, self._kwargs = extract_named_groups(m)
     
     def __getitem__(self, key):
@@ -90,7 +90,7 @@ class RawReMatch(object):
         return self[key]
     
     def group(self, group):
-        return self._m.group(group)
+        return self.m.group(group)
     
     
 class RawReRouter(object):
@@ -158,13 +158,13 @@ def test_routing_path_setup():
     
     @router.register(r'/(one|two|three)')
     def one(environ, start):
-        word = tools.get_last_route_data(environ)[0]
+        word = tools.get_route_data(environ)[0]
         start('200 OK', [('Content-Type', 'text-plain')])
         yield word
     
     @router.register(r'/x-{var}')
     def two(environ, start):
-        kwargs = tools.get_last_route_data(environ)
+        kwargs = tools.get_route_data(environ)
         output = list(router(environ, start))
         yield kwargs['var'] + '\n'
         for x in output:
@@ -173,7 +173,7 @@ def test_routing_path_setup():
     @router.register(r'/{key:pre\}post}')
     def three(environ, start):
         start('200 OK', [('Content-Type', 'text-plain')])
-        yield tools.get_last_route_data(environ).key
+        yield tools.get_route_data(environ).key
     
     app = TestApp(router)
 

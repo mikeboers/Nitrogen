@@ -114,20 +114,20 @@ def get_history(environ):
     return environ[_ENVIRON_HISTORY_KEY]
 
 
-def get_route_data(environ):
+def get_all_route_data(environ):
     if _ENVIRON_DATA_KEY not in environ:
         environ[_ENVIRON_DATA_KEY] = []
     return environ[_ENVIRON_DATA_KEY]
 
 
-def get_last_route_data(environ):
-    data = get_route_data(environ)
+def get_route_data(environ):
+    data = get_all_route_data(environ)
     if data:
         return data[-1]
 
 
 def append_route_data(environ, data):
-    get_route_data(environ).append(data)
+    get_all_route_data(environ).append(data)
 
 
 def set_unrouted(environ, unrouted, router, builder=None, args=tuple(), kwargs={}):
