@@ -19,3 +19,6 @@ safer localization script:
 	        sys.path.insert(0, path[:path.rfind(os.path.sep + __package__.split('.')[0])])
 	        __import__(__package__)
 	    __local_eval_fix('nitrogen')
+
+TODO:
+    - remove all traces of the nitrogen.local, nitrogen.environ, etc.

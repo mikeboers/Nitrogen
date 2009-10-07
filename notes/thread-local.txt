@@ -1,0 +1,6 @@
+
+In general, modules should manage their own thread-local information to be as
+decoupled as possible.
+
+This also means that the request/thread-local info should not be stored
+globally, ie., on the nitrogen.local object.
