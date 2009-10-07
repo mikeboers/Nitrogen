@@ -71,6 +71,7 @@ def validate_path(path):
     Examples:
     
         >>> validate_path('/one/two')
+        >>> validate_path('/one two')
         >>> validate_path('')
         
         >>> validate_path('relative')
@@ -88,9 +89,11 @@ def validate_path(path):
         return
     if not path.startswith('/'):
         raise ValueError('request path is not absolute: %r' % path)
-    copy = Path(path)
-    copy.remove_dot_segments()
-    if path != str(copy):
+    
+    encoded = Path(path)
+    normalized = Path(path)
+    normalized.remove_dot_segments()
+    if str(encoded) != str(normalized):
         raise ValueError('request path not normalized: %r' % path)
    
    
