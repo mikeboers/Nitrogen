@@ -37,8 +37,9 @@ from webtest import TestApp
 from ..uri import URI
 from ..uri.path import Path, encode, decode
 
-_ENVIRON_UNROUTED_KEY = 'nitrogen.route.unrouted'
-_ENVIRON_HISTORY_KEY = 'nitrogen.route.history'
+_ENVIRON_UNROUTED_KEY = 'route.unrouted'
+_ENVIRON_HISTORY_KEY = 'route.history'
+_ENVIRON_DATA_KEY = 'route.data'
 
 _HistoryChunk = collections.namedtuple('HistoryChunk', 'path unrouted router builder args kwargs'.split())
 class HistoryChunk(_HistoryChunk):
@@ -111,6 +112,22 @@ def get_history(environ):
     if _ENVIRON_HISTORY_KEY not in environ:
         environ[_ENVIRON_HISTORY_KEY] = []
     return environ[_ENVIRON_HISTORY_KEY]
+
+
+def get_route_data(environ):
+    if _ENVIRON_DATA_KEY not in environ:
+        environ[_ENVIRON_DATA_KEY] = []
+    return environ[_ENVIRON_DATA_KEY]
+
+
+def get_last_route_data(environ):
+    data = get_route_data(environ)
+    if data:
+        return data[-1]
+
+
+def append_route_data(environ, data):
+    get_route_data(environ).append(data)
 
 
 def set_unrouted(environ, unrouted, router, builder=None, args=tuple(), kwargs={}):
