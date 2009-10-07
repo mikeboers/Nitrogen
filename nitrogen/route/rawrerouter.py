@@ -182,17 +182,6 @@ def test_routing_path_setup():
         assert False
     except HttpNotFound:
         pass
-    
-    res = app.get('/x-four/x-three/x-two/one')
-    # print res.body
-    assert res.body == 'four\nthree\ntwo\none'
-    # pprint(tools.get_history(res.environ))
-    assert tools.get_history(res.environ) == [
-        tools.HistoryChunk(path='/x-four/x-three/x-two/one', unrouted='/x-three/x-two/one', router=router),
-        tools.HistoryChunk(path='/x-three/x-two/one', unrouted='/x-two/one', router=router),
-        tools.HistoryChunk(path='/x-two/one', unrouted='/one', router=router),
-        tools.HistoryChunk(path='/one', unrouted='', router=router)
-    ]
 
     res = app.get('/pre}post')
     assert res.body == 'pre}post'
