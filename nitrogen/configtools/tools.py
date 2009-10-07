@@ -42,7 +42,7 @@ def register_server(**kwargs):
     return server
 
 
-register_server(name='default')
+default_server = register_server(name='default')
 
 
 def get_server_by(**kwargs):
