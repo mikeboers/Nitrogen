@@ -262,6 +262,12 @@ def test_routing_path_setup():
         assert False
     except HttpNotFound:
         pass
+    
+    try:
+        app.get('/one_extra/does-not-exist')
+        assert False
+    except HttpNotFound:
+        pass
 
     res = app.get('/pre}post')
     assert res.body == 'pre}post'
