@@ -73,6 +73,26 @@ def extract_named_groups(match):
     return args, kwargs
 
 
+class RawReMatch(object):
+
+    def __init__(self, m):
+        self._m = m
+        self._args, self._kwargs = extract_named_groups(m)
+    
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self._args[key]
+        if isinstance(key, basestring):
+            return self._kwargs[key]
+        raise TypeError('key must be int or str')
+        
+    def __getattr__(self, key):
+        return self[key]
+    
+    def group(self, group):
+        return self._m.group(group)
+    
+    
 class RawReRouter(object):
     
     def __init__(self, default=None):
@@ -117,13 +137,12 @@ class RawReRouter(object):
             m = pattern.search(path)
             if m is not None:
                 unrouted = path[m.end():]
-                args, kwargs = extract_named_groups(m)
                 tools.set_unrouted(environ,
                     unrouted=unrouted,
                     router=self
                 )
-                
-                return app(environ, start, *args, **kwargs)
+                tools.append_route_data(environ, RawReMatch(m))
+                return app(environ, start)
             
         if self.default:
             return self.default(environ, start)
@@ -138,21 +157,23 @@ def test_routing_path_setup():
     router = RawReRouter()
     
     @router.register(r'/(one|two|three)')
-    def one(environ, start, word):
+    def one(environ, start):
+        word = tools.get_last_route_data(environ)[0]
         start('200 OK', [('Content-Type', 'text-plain')])
         yield word
     
     @router.register(r'/x-{var}')
-    def two(environ, start, *args, **kwargs):
+    def two(environ, start):
+        kwargs = tools.get_last_route_data(environ)
         output = list(router(environ, start))
         yield kwargs['var'] + '\n'
         for x in output:
             yield x
     
     @router.register(r'/{key:pre\}post}')
-    def three(environ, start, *args, **kwargs):
+    def three(environ, start):
         start('200 OK', [('Content-Type', 'text-plain')])
-        yield kwargs['key']
+        yield tools.get_last_route_data(environ).key
     
     app = TestApp(router)
 
