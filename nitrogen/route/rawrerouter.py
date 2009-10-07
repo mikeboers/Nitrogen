@@ -59,7 +59,7 @@ def extract_named_groups(match):
     return args, kwargs
 
 
-class ReRouter(object):
+class RawReRouter(object):
     
     def __init__(self, default=None):
         self._apps = []
@@ -106,7 +106,7 @@ class ReRouter(object):
 
 def test_routing_path_setup():
     
-    router = ReRouter()
+    router = RawReRouter()
     
     @router.register(r'^/([a-z]+)(?=/|$)')
     def one(environ, start, word):

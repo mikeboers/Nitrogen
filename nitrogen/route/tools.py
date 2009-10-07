@@ -181,7 +181,7 @@ def test_build_from():
     set_unrouted(environ, '/d', 3)
     set_unrouted(environ, '', 4)
     
-    pprint(history)
+    # pprint(history)
     assert build_from(environ, 4) == '/a/b/c/d'
     assert build_from(environ, 3) == '/a/b/c'
     assert build_from(environ, 2) == '/a/b'
