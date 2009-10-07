@@ -18,11 +18,12 @@ from StringIO import StringIO
 
 from webtest import TestApp
 
-from status import resolve_status
-from webio import request_params
-from cookie import Container as CookieContainer
-from headers import DelayedHeaders, MutableHeaders
-from webio import request_params
+from .status import resolve_status
+from .webio import request_params
+from .cookie import Container as CookieContainer
+from .headers import DelayedHeaders, MutableHeaders
+from .webio import request_params
+from .route.tools import _ENVIRON_DATA_KEY as ROUTE_DATA_KEY
 
 class _Common(object):
     pass
@@ -62,6 +63,7 @@ class Request(_Common):
     files = _environ_getter('nitrogen.files')
     cookies = _environ_getter('nitrogen.cookies')
     headers = _environ_getter('nitrogen.headers')
+    route = _environ_getter(ROUTE_DATA_KEY, lambda x: x[-1] if x else None)
     
     etag = _environ_getter('HTTP_IF_NONE_MATCH')
     
