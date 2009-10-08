@@ -78,7 +78,7 @@ class Flickr(object):
         if self.token is not None:
             data['auth_token'] = self.token
         
-        # Sign everyyhing!
+        # Sign everything!
         self._sign_data(data)
         
         url = REST_URL + '?' + urllib.urlencode(data)

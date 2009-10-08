@@ -33,7 +33,10 @@ def timed_hash(input, to_check=None, min_time=0.033, _inner=False):
     time has elapsed.
     
     The result is of the form (68 bytes):
-        [ 32 bytes of salt ][ 32 bytes of hash ][ 4 bytes of num of cycles ]
+        1 byte - version
+        32 bytes - salt
+        32 bytes - hash
+        4 bytes - num of cycles
     
     Input and output should be in raw binary.
     

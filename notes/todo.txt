@@ -1,0 +1,43 @@
+
+- Look into some of the middleware here: http://wsgi.org/wsgi/Middleware_and_Utilities
+- Look into using paste.auth (or adapting it) middleware
+- Look into using paste.gzipper middleware.
+
+- Consider having route functions keep the SCRIPT_NAME and PATH_INFO updated as
+  well as their own internal stuff. This would allow for middleware that is not
+  aware of my route handing but does respect the normal SCRIPT_NAME and
+  PATH_INFO to work properly.
+    - Take the initial routing stack from these two variables as well.
+    - Need some small middlewear for the dispatcher.fcgi to set these two
+      variables to their proper value far before any routing initialization
+      takes place.
+    - The routing tools should see if the two variables are the same as the
+      last chunk of routing history, and if not add a new chunk of routing
+      history with a None router.
+    - a routing_unaware(app) decorator could wrap another app in a routing
+      consitency which (as described above) but allow it to set the app in the
+      new history chunks
+
+
+- route.Chain should catch status exceptions and start_response(status, ...) as
+  well.
+    - status should have a function to throw a given status code. Do this by
+      having the function that defines all of the status exceptions store them
+      into a module-global dict. The thrower can then just look it up and throw
+      it.
+    - if the status given to start_response is one that the Chain is supposed to
+      catch (this should be configurable, but default to 404) then throw the
+      corresponding exception which is caught by the normal machinery
+    - all the caught statuses should be logged by the chain
+    - MAYBE we want to have the ability to save the state of the routing history
+      so that the chain can restore it before trying another app
+        - save_history() could return the state of the history (maybe just the
+          length of the list), and restore_history(state) will put it back the
+          same as it was at the time of the save call.
+
+- copy what paste.fileapp is doing (or just use it =P)
+
+- Compare the lib/markdown with lib/webhelpers/markdown
+    - I think the webhelpers one has references and line breaks, while the other
+      does not.
+    - The webhelpers one also looks a bit easier to extend.

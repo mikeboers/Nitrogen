@@ -1,0 +1,17 @@
+
+Status of libraries:
+    - beaker
+    - formalchemy
+    - mako
+    - nose
+    - paste
+    - routes
+    - simplejson
+    - sqlalchemy
+    - webhelpers
+    - webob
+    - webtest
+    - BeautifulSoup
+    - fcgi
+    - markdown
+    - minimock

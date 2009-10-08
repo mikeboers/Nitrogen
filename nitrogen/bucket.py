@@ -30,7 +30,7 @@ class BsddbWrapper(collections.MutableMapping):
     def __getitem__(self, key):
         v = self.db.get(key, self._default)
         if v is self._default:
-            raise KeyError(v)
+            raise KeyError(key)
         return v
 
     def __setitem__(self, key, value):
