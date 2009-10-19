@@ -1,65 +1,30 @@
-===== general =====
 
-I am trying too hard to make this do everything I could ever want. I can impose
-some restrictions that will make things easier. The routers could not have
-direct control over what remains unrouted, only how much gets popped off the
-stack.
-
-Also, we must allow routers to make the assumption that given the current state
-of all data persistance, the routing stack upto the given router will route
-exactly the same given the same input. Ie. there isnt a router below that is
-routing randomly.
-    - What about routing differently if logged in?
-    - What about encoding the unrouted segment?
-    - What about time-of-day differences?
-
-normalizing unrouted:
+How the unrouted should be formated:
     - assert we start with a slash
     - assert that there are no dot segments - does not match r'/\.\.?(/|$)'
     - throw a RouterInterfaceError if this happens
     - do NOT remove empty segments.
 
-===== SelfRouter =====
-
-class index(SelfRouter):
-	
-	def index(env, start):
-		start(...)
-		yield 'This is the index.'
-	
-	class inner(Router):
-		
-		def index(env, start):
-			start(...)
-			yield 'This is on the inside.'
-		
-		def _404(env, start):
-			start(...)
-			# this is for ones that aren't found.
-		
-		def _500(env, start):
-			start(...)
-			# this is for ones that error while going
-
-/inner/index will go to the inner one
 
 
-===== history =====
+===== History =====
 
 Everytime a router modifies the unrouted path we should store:
-    before  - what the unrouted path was before routing
-    after   - what the unrouted path is being set to
-    router  - the router which did the routing (for unrouting and logging)
-    unroute - optional - called to unroute this section
-    args    - optional - passed to unrouter
-    kwargs  - optional - passed to unrouter
+    before  - What the unrouted path was before routing
+    after   - What the unrouted path is being set to
+    router  - The router which did the routing (for unrouting and logging)
+    rebuild - Called to unroute this section. Optional.
+				This is called with the unrouted path to build upon. It should 
+				return the new unrouted path (usually the given unrouted with
+				a prefix added.)
 
 How to build the same path from the routers:
-    - if an unroute callback is supplied then it will be called with a new after
-      segment, and supplied args/kwargs.
-    - they would return what is to be unrouted before they run. this string
-      should, when routed again by the same router, result in the same app
-      running with the same history settings
+    - if a rebuild callback is supplied then it will be called with a new 
+	  path segment
+    - they would return what is to be unrouted before the router runs. this
+      string should, when routed again by the same router, result in the same 
+      app running with the same history settings (but this is not always going
+      to be the case).
     - the default will be to add the difference of before - after.
       ie. if a router got /a/b/c and put back /b/c originally, if they are
       handed /new to build on they return /a/new
@@ -78,13 +43,3 @@ To build a new path from a given router:
 - simple decorator to assert the request mode is one of the given.
 - @accepts('get', 'post')
 - don't need to deal with all or none
-
-===== ReRouter =====
-
-- Routes-like pattern matching.
-- Can only match to segment boundaries
-
-===== RawReRouter ===
-
-- routes using full regexes
-- still stuck to segment boundaries by the protocol

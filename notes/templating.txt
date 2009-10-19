@@ -1,0 +1,9 @@
+Consider adapting the CHRML project so that is has more HAML like syntax...
+Would actually run it through this file and THEN mako.
+
+Arbitrary python with a dash: - for x in item:
+
+Dollar delimeted variables ala Mako: %a{'href': item.link} ${item.title}
+
+Another option entirely is to write this as a small wrapper around Mako
+myself. It really wouldn't be all that bad.

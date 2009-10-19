@@ -1,0 +1,10 @@
+Consider using a Makefile for the main setup file
+
+Consider using virtualenv to manage packages and libraries and such. Can use
+distutils or what have you to make sure that all the dependencies are in
+place. This was we can move the app out of httpdocs and nitrogen out of the
+app.
+
+Consider putting the server under version control, with most of the server
+stuff added to gitignore. Need to be smart about how the databases are handled
+to make sure there are never any merge conflicts with them.

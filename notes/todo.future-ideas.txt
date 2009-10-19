@@ -1,0 +1,32 @@
+- The FieldStorage which drives the post parser may have clues as to it's
+  content type. Should, perhaps, decode from that instead of utf8.
+  
+- It might be a idea to convert to ascii with xml references at the end,
+  instead of actual unicode. Need to look into this.
+  
+- route.Mapper could be areally simple dict-based router going off of the
+  first segment.
+
+- URIs:
+  	- take a look here: http://bugs.python.org/issue1462525
+  	- add a ur(i|l)join function that just joins strings
+  	- make notes about actions being defined only for well formed uris
+  	- document everywhere that I am and am not complaint with RFC3986
+  	- make sure it all works with unicode
+  	- make sure it handles IRIs
+  	- urlparse library should be RFC3986 conformant (according to the bug page)
+
+- Look into some of the middleware here: http://wsgi.org/wsgi/Middleware_and_Utilities
+- Look into using paste.auth (or adapting it) middleware
+- Look into using paste.gzipper middleware.
+- copy what paste.fileapp is doing (or just use it =P)
+
+
+- route adapter for normal wsgi apps (so that their changes to PATH_INFO get
+  recorded in history)
+
+
+- Add the prowl log handler.
+
+- Basic eTaging middlewear which simply hashes everything it is about to send
+  down, and compares it to the eTag. Just saves transmission costs.

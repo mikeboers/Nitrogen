@@ -1,0 +1,38 @@
+
+/general
+    - build help widgets
+	- "today" will be put to 12:00:00 am, which next time will go to 12:00:00 pm. Fix this.
+    - editables need to catch api errors and remove the UI block
+	- Make flash messages able to persist a number of requests.
+		This will require user state.
+	- Not found error should have the routing info
+	- Add to _500.tpl
+	- login email should be case insenitive match
+	- some way to log everything that a user does, and have this be accessible to higher tiered admins.
+	- not found errors should also log the referer... if it comes from us then that is bad
+	- minification
+	- etags on everything public side
+	- gzip/deflate on js and css files
+	- cache and expires headers on all the js and css
+	- use google jQuery
+	- move javascript to the bottom of the page, except for jQuery
+	- http://stackoverflow.com/questions/222581/python-script-for-minifying-css
+	- fix the lanaguage of the editable cancel button confirmation
+
+/future
+	- Clean up the names of all the formalchemy stuff to *_form from *_fieldset.
+	- User login/logout methods should be centralized. They are used by:
+		Admin gateway middleware.
+		Login controller.
+		Logout controller.
+	- login throttling
+	- password reset email throttling
+	- rewrite ALL of the permissions.
+	- logout link should account for uris that will not exist on the other side
+
+/editables
+	- Better handling of failure on not able to grab a template or other server errors.
+
+/gallery
+    - Flickr login/out/callbacks
+
