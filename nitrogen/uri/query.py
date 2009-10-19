@@ -44,7 +44,9 @@ It can deal with multiple values per key (although by all the normal dict method
     >>> query = Query('key=value1&key=value2')
     >>> query['key']
     u'value1'
-
+    >>> len(query)
+    1
+    
     >>> query.getall('key')
     [u'value1', u'value2']
 
