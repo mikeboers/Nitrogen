@@ -4,8 +4,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
 import logging
+from threading import Thread
 
-def sendmail(text=None, html=None, **kwargs):
+def sendmail(text=None, html=None, async=False, **kwargs):
     
     if isinstance(text, unicode):
         text = text.encode('utf8')
@@ -31,31 +32,42 @@ def sendmail(text=None, html=None, **kwargs):
     if html is not None:
         mail.attach(MIMEText(html, 'html', 'UTF-8'))
     
-    smtp = smtplib.SMTP()
-    smtp.connect(kwargs['host'], kwargs.get('port'))
+    def target():
+        smtp = smtplib.SMTP()
+        smtp.connect(kwargs['host'], kwargs.get('port'))
     
-    if 'username' in kwargs:
-        smtp.login(kwargs['username'], kwargs.get('password'))
+        if 'username' in kwargs:
+            smtp.login(kwargs['username'], kwargs.get('password'))
     
-    smtp.sendmail(
-        kwargs.get('from') or kwargs.get('_from'),
-        kwargs['to'],
-        mail.as_string()
-    )
+        smtp.sendmail(
+            mail['From'],
+            mail['To'],
+            mail.as_string()
+        )
     
-    smtp.close()
+        smtp.close()
+     
+    if async:
+        Thread(target=target).start()
+        
+    else:
+        target()
+    
     
     
 if __name__ == '__main__':
     
-    msg = "Testing!"
-    print sendmail(msg,
-        html=u'<b>THis is the html message! ¡™£¢∞§¶•ªº</b>',
+    # Run the following in the console to see the output:
+    #   python -m smtpd -n -c DebuggingServer localhost:1025
+    
+    print sendmail(
+        text='This is the text message.',
+        html=u'<b>This is the html message. ¡™£¢∞§¶•ªº</b>',
         host='localhost',
-        port=587,
+        port=1025,
         from_='a@example.com',
         to='b@example.com',
         subject='TESTING!',
-        username='johndoe',
-        password='12345'
+        async=True
     )
+    print 'back'
