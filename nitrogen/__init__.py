@@ -110,4 +110,4 @@ if config.log_auto_setup:
     logs.setup()
 
 
-logger.debug('Imported nitrogen as %r.' % __name__)
+logger.debug('imported nitrogen as %r' % __name__)
