@@ -68,7 +68,7 @@ class Route(object):
     
     """
     
-    default_pattern = '[^/]*'
+    default_pattern = '[^/]+'
     token_re = re.compile(r'''
         {                           # start of keyword match
         ([a-zA-Z_]\w*)              # group 1: name
