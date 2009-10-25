@@ -20,6 +20,9 @@ import logging
 
 from tools import *
 
+from ..status import HttpNotFound
+from ..uri.path import Path
+
 class FileRouter(object):
     
     def __init__(self, path, app_key='app', default='index', reload_modifications=True):
@@ -35,16 +38,16 @@ class FileRouter(object):
     
     def load_app(self, environ, path):
         if not os.path.exists(path):
-            raise_not_found_error(environ, 'Could not find file.')
+            raise HttpNotFound('could not find file %r' % path)
         scope = {}
         execfile(path, scope)
         if self.app_key not in scope:
-            raise_not_found_error(environ, 'Could not find app in module.')
+            raise HttpNotFound('could not find app %r in file %r' % (self.app_key, path))
         self.apps[path] = (os.path.getmtime(path), scope[self.app_key])
     
     def __call__(self, environ, start):
-        unrouted = get_unrouted(environ)
-        name = unrouted[0] if unrouted else self.default
+        unrouted = Path(get_unrouted(environ))
+        name = unrouted.pop(0) if unrouted else self.default
         path = self.build_path(name)
         
         if path not in self.apps:
@@ -55,7 +58,7 @@ class FileRouter(object):
             self.load_app(environ, path)
         
         # Move the segment from unrouted to routed.
-        get_routed(environ).append(unrouted.pop(0) if unrouted else None)
+        set_unrouted(environ, str(unrouted), self)
         
         logging.info('Routing %r...' % name)
         return self.apps[path][1](environ, start)
