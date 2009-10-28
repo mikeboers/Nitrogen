@@ -105,8 +105,11 @@ class LogHandler(logging.Handler, Prowl):
 if __name__ == '__main__':
     import time, threading, atexit
     KEY = '8e1bd6fef4e1d49aa1a8e6ad9d47abdbdecb1ff7'
-
+    
     if True:
+        send(KEY, 'This is a message')
+    
+    if False:
         thread = threading.Thread(target=send, args=(KEY, 'This is a message'))
         thread.start()
         print 'resuming'
