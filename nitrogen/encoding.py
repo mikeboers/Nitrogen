@@ -14,6 +14,10 @@ def utf8_encoder(app):
     If there is no Content-Type, it adds a utf8 plain text one.
     """
     def inner(environ, start):
+        if 'utf-8' not in environ.get('HTTP_ACCEPT_CHARSET', '').lower():
+            for x in app(environ, start):
+                yield x.encode('ascii', 'replace')
+            return
         def inner_start(status, headers):
             has_type = False
             for i, h in enumerate(headers):
