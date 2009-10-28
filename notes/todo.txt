@@ -36,3 +36,8 @@
 
 - Compress all of the javascript and css files together with minify (or write
 my own minifier, which sounds like a bad idea).
+	- css doesn't need compression if it is coming from sass
+	- Shane said to look at sprockets (it is in ruby)
+
+- compressor should try to use gzip, and then zlib (for deflate)
+	- also need to get the zlib working with IE.
