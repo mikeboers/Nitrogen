@@ -15,7 +15,7 @@ import logging
 from mako.exceptions import RichTraceback as MakoTraceback
 
 from .views import render
-from . import server
+# from . import server
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +178,7 @@ def error_notifier(app, buffer=True, template='_500.tpl'):
                     'error': e,
                     'traceback': get_cleaned_traceback(),
                     'output': self.output
-                    } if server.is_dev else {})).encode('utf8')
+                    } if False and server.is_dev else {})).encode('utf8')
     return inner
 
 if __name__ == '__main__':

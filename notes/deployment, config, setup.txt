@@ -25,3 +25,18 @@ Runners should potentially be called wsgi. It is the very low level WSGI stuff
 Every module should be as seperate from each other as possible.
 
 The bootstrapper could potentially chdir into the directory above all the modules and httpdocs and logs and data
+
+
+
+What would need to be restructured?
+	- error pulls on config.is_dev, but this is easy to get around
+	- models is nutty:
+		- How do I defer the creation on an engine/session very late?
+		- The nitrogen models will depend on the app engine/session
+	- views:
+		- How do I defer setting up the template environment until very late?
+		- The nitrogen models will depend on the app environment
+	
+	MultiMap -> MultiDict
+	Config -> AttrDict (or ditch it entirely)
+		modules have a __dict__, so dont need an extract locals anymore

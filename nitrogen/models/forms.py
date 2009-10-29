@@ -10,13 +10,16 @@ import datetime
 import formalchemy
 import logging
 
+
 class TextFieldRenderer(formalchemy.fields.TextFieldRenderer):
     def render(self, **kwargs):
         return formalchemy.helpers.text_field(self.name, class_='text', value=self._value, maxlength=self.length, **kwargs)
 
+
 class FloatFieldRenderer(formalchemy.fields.FloatFieldRenderer):
     def render(self, **kwargs):
         return formalchemy.helpers.text_field(self.name, class_='text', value=self._value, **kwargs)
+
 
 class DateTimeRenderer(formalchemy.fields.FieldRenderer):
     """Date input that relies on the editable plugin to manage the input with
@@ -41,6 +44,7 @@ class MarkdownRenderer(formalchemy.fields.FieldRenderer):
     """
     def render(self, **kwargs):
         return formalchemy.helpers.text_area(self.name, content=self._value, class_="markdown", **kwargs)
+
 
 class FieldSet(formalchemy.FieldSet):
     

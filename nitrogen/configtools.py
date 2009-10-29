@@ -98,3 +98,25 @@ class Config(dict):
             del self[key]
         except:
             pass
+
+def autoload():
+    """Some of the old config auto-loader. Prolly does not work."""
+    # Load the configuration.
+    config = Config(extract_attributes(base))
+    config_module = None
+    try:
+        import nitrogenconfig as config_module
+    except ImportError:
+        pass
+    if not config_module and __package__:
+        try:
+            # Try to get the nitrogenconfig module from the same level as nitrogen itself.
+            # This really is just a nasty hack...
+            config_name = __package__ + 'config'
+            config_module = __import__(config_name, fromlist=[''])
+        except ImportError:
+            pass
+    if config_module:
+        config.update(configtools.extract_attributes(config_module))
+    else:
+        logger.warning('Could not find nitrogenconfig module.')

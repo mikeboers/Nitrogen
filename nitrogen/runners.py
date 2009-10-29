@@ -10,30 +10,8 @@ if __name__ == '__main__':
 
 import threading
    
-from . import local
+from .logs import setup_logging
 from . import error
-
-class thread_localizer(object):
-    """WSGI middleware that stores information about the request on the
-    framework thread-local object
-    
-    Currently stores the environment on environ, and a one-based request
-    counter on request_index.
-    
-    """
-    
-    def __init__(self, app):
-        self.app = app
-        self.request_count = 0
-        self.lock = threading.Lock()
-
-    def __call__(self, environ, start):
-        self.lock.acquire()
-        self.request_count += 1
-        local.request_index = self.request_count
-        self.lock.release()
-        local.environ = environ
-        return self.app(environ, start)
 
 def run_via_cgi(app):
     """Run a web application via the CGI interface of a web server.
@@ -47,7 +25,7 @@ def run_via_cgi(app):
     handler.error_status = error.DEFAULT_ERROR_HTTP_STATUS
     handler.error_headers = error.DEFAULT_ERROR_HTTP_HEADERS
     handler.error_body = error.DEFAULT_ERROR_BODY
-    handler.run(thread_localizer(app))
+    handler.run(setup_logging(app))
 
 def run_via_fcgi(app, multithreaded=True):
     """Run a web application via a FastCGI interface of a web server.
@@ -60,7 +38,7 @@ def run_via_fcgi(app, multithreaded=True):
     """
     
     from fcgi import WSGIServer
-    WSGIServer(thread_localizer(app), multithreaded=multithreaded).run()
+    WSGIServer(setup_logging(app), multithreaded=multithreaded).run()
 
 def run_via_socket(app, host='', port=8000, once=False):
     """Run a web aplication directly via a socket.
@@ -73,7 +51,7 @@ def run_via_socket(app, host='', port=8000, once=False):
     """
     
     from wsgiref.simple_server import make_server
-    httpd = make_server(host, port, thread_localizer(app))
+    httpd = make_server(host, port, setup_logging(app))
     if once:
         httpd.handle_request()
     else:

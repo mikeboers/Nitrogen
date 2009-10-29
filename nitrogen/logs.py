@@ -15,25 +15,44 @@ import logging.handlers
 import threading
 import time
 
-from . import local
+thread_local = threading.local()
 
-base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(request_index)d ip:%(ip)s -- %(name)s: %(message)s"
+
+class setup_logging(object):
+    """WSGI middleware that stores information about the request so that logs
+    will contain the request id, and remote address.
+    
+    Currently stores the environment on environ, and a one-based request
+    counter on request_index.
+    
+    """
+    
+    def __init__(self, app):
+        self.app = app
+        self.request_count = 0
+        self.lock = threading.Lock()
+
+    def __call__(self, environ, start):
+        with self.lock:
+            self.request_count += 1
+            thread_local.request_index = self.request_count
+            thread_local.remote_addr = environ['REMOTE_ADDR']
+        return self.app(environ, start)
+
+
+base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(request_index)d ip:%(remote_addr)s -- %(name)s: %(message)s"
 class Formatter(logging.Formatter):
     def format(self, record):
         data = {
-            'ip': None,
+            'remote_addr': None,
             'request_index': 0,
             'process': 0,
             'asctime': 'DATETIME',
             'levelname': 'LEVELNAME',
             'message': 'MESSAGE'
         }
-        data.update(record.__dict__)        
-        try:
-            data['ip'] = local.environ.get('REMOTE_ADDR')
-            data['request_index'] = local.request_index
-        except AttributeError:
-            pass
+        data.update(thread_local.__dict__)
+        data.update(record.__dict__)
         
         if '%(asctime)' in base_format:
             data['asctime'] = self.formatTime(record)

@@ -25,8 +25,6 @@ import webhelpers.text
 import webhelpers.html
 HTML = webhelpers.html.HTML
 
-from . import environ, config, server
-
 from models.textblob import TextBlob, MarkdownBlob
 from models import session
 
@@ -88,7 +86,7 @@ defaults['truncate'] = webhelpers.text.truncate
 defaults['html'] = HTML
 defaults['urlify_name'] = urlify_name
 
-lookup = mako.lookup.TemplateLookup(directories=config.template_path, input_encoding='utf-8')
+lookup = None # mako.lookup.TemplateLookup(directories=config.template_path, input_encoding='utf-8')
 
 def _set_defaults(data):
     data.update(defaults)

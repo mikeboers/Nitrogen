@@ -21,8 +21,8 @@ class MarkdownBlob(Base):
     key = Column(Text, nullable=False)
     value = Column(Text, nullable=False)
 
-TextBlob.__table__.create(engine, checkfirst=True)
-MarkdownBlob.__table__.create(engine, checkfirst=True)
+# TextBlob.__table__.create(engine, checkfirst=True)
+# MarkdownBlob.__table__.create(engine, checkfirst=True)
 
 textblob_fieldset = FieldSet(TextBlob)
 textblob_fieldset.configure(include=[textblob_fieldset.value], options=[

@@ -8,7 +8,7 @@ if __name__ == '__main__':
 
 import logging
 
-from .. import config
+# from .. import config
 
 from sqlalchemy import *
 import sqlalchemy.orm as orm
@@ -18,8 +18,8 @@ from sqlalchemy.orm.attributes import instance_state
 
 Base = declarative_base()
 
-engine = create_engine(config.database_sqla_uri)
-Session = orm.sessionmaker(bind=engine)
+# engine = create_engine(config.database_sqla_uri)
+Session = orm.sessionmaker()
 session = orm.scoped_session(Session)
 
 logger = logging.getLogger('sqlalchemy')
