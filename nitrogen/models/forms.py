@@ -1,15 +1,8 @@
-# Setup path for local evaluation.
-# When copying to another file, just change the __package__ to be accurate.
-if __name__ == '__main__':
-    import sys
-    __package__ = 'nitrogen.models'
-    sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
-    __import__(__package__)
+"""Extending a couple formalchemy renderers."""
 
 import datetime
-import formalchemy
-import logging
 
+import formalchemy
 
 class TextFieldRenderer(formalchemy.fields.TextFieldRenderer):
     def render(self, **kwargs):
@@ -55,7 +48,6 @@ class FieldSet(formalchemy.FieldSet):
     
     def _render(self, fieldset, **kwargs):
         from ..views import render
-        logging.debug('FieldSet.render(**%r)' % kwargs)
         return render('_formalchemy.tpl', fieldset=fieldset, **kwargs)
 
 

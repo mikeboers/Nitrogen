@@ -13,9 +13,9 @@ to make sure there are never any merge conflicts with them.
 Absolutely NOTHING should ever happen when you import nitrogen, or any of the
 modules therein. NOTHING. The setup/config should be done by some bootstrapper
 that is explicitly setup by the application. Explicit is better than implicit.
-	- loggers can be setup by this bootstrapper, as driven by a installation
-	  specific config file.
-	- a config object can be injected into the environment
+    - loggers can be setup by this bootstrapper, as driven by a installation
+      specific config file.
+    - a config object can be injected into the environment
 
 There should be no need for a global threading.local() object. Everything can
 be done with the environment. There is one on the runners module as well.
@@ -26,17 +26,40 @@ Every module should be as seperate from each other as possible.
 
 The bootstrapper could potentially chdir into the directory above all the modules and httpdocs and logs and data
 
+==============================================================================
+BOOTSTRAPPING and SETUP
+==============================================================================
 
+models:
+    - the nitrogen models should (be able to) depend on the app engine/session
+    - the nitrogen.models.meta could be updated by the app.models.meta to
+      be the same. use the same setup of metadata modules with
+      initializers in both nitrogen and the app. the app can init the
+      framework ones as well.
+    - everything would then pull on meta.engine and meta.whatever
+    - everything should (by convention) always access stuff from the meta
+      module via attribute access, and not store anything locally. this
+      would allow for the metadata to change as is nessesary
+    - the individual model classes could either have their own metadata like
+      this, or be built by functions which take an engine or session (or
+      whatever they actually depend on)
 
-What would need to be restructured?
-	- error pulls on config.is_dev, but this is easy to get around
-	- models is nutty:
-		- How do I defer the creation on an engine/session very late?
-		- The nitrogen models will depend on the app engine/session
-	- views:
-		- How do I defer setting up the template environment until very late?
-		- The nitrogen models will depend on the app environment
-	
-	MultiMap -> MultiDict
-	Config -> AttrDict (or ditch it entirely)
-		modules have a __dict__, so dont need an extract locals anymore
+views:
+    - same basic setup as the models:
+        - meta.path (the list used by the loader), meta.load, meta.render,
+          meta.render_string, etc
+    - a list of callbacks that modify the template context before it is
+      rendered allow for the adding of request specific data. this could maybe
+      be global, or thread-local, or whatever.
+    
+the session/render/config could all be stored in a lib/config/meta/global module
+    - this module can could have a function that bootstraps itself
+    - it would contain a global engine, thread-local session, metadata,
+      template lookup/render, etc and application is more than free to make
+      more for it's own uses
+    - try to have functions availible to build similar functionality as the
+      global ones, and those are what are used to build the global ones
+    - paste stores this in the model.meta module. This seems apt
+    - could store view globals in a views.meta module (maybe)
+    - need a Session.remove() for the thread-local session after the request
+      is done processing

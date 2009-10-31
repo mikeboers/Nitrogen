@@ -1,13 +1,9 @@
-# Setup path for local evaluation.
-# When copying to another file, just change the __package__ to be accurate.
-if __name__ == '__main__':
-    import sys
-    __package__ = 'nitrogen.model'
-    sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
-    __import__(__package__)
-
 import datetime
-from . import *
+
+from sqlalchemy import *
+
+from base import Base
+from forms import FieldSet, MarkdownRenderer
 
 class TextBlob(Base):
     __tablename__ = 'textblobs'
