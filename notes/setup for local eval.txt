@@ -1,0 +1,25 @@
+# Setup path for local evaluation.
+# When copying to another file, just change the parameter to be accurate.
+if __name__ == '__main__':
+    def __local_eval_fix(root):
+        global __package__
+        import os, sys
+        file = os.path.abspath(__file__)
+        sys.path.insert(0, file[:file.find(root)].rstrip(os.path.sep))
+        name = file[file.find(root):]
+        name = name[:name.rfind('.py')]
+        name = name[:name.rfind(os.path.sep + '__init__')]
+        name = name.replace(os.path.sep, '.')
+        __package__ = name
+        __import__(name)
+    __local_eval_fix('nitrogen')
+
+
+# Setup path for local evaluation.
+if __name__ == '__main__':
+    def __local_eval_fix(r):
+        global __package__;import os,sys;f=os.path.abspath(__file__)
+        sys.path.insert(0,f[:f.find(r)].rstrip(os.path.sep));n=f[f.find(r):]
+        n=n[:n.rfind('.py')];n=n[:n.rfind(os.path.sep+'__init__')]
+        n=n.replace(os.path.sep,'.');__package__=n;__import__(n)
+    __local_eval_fix('nitrogen')

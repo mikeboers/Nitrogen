@@ -51,7 +51,10 @@ views:
     - a list of callbacks that modify the template context before it is
       rendered allow for the adding of request specific data. this could maybe
       be global, or thread-local, or whatever.
-    
+
+
+
+
 the session/render/config could all be stored in a lib/config/meta/global module
     - this module can could have a function that bootstraps itself
     - it would contain a global engine, thread-local session, metadata,

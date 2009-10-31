@@ -3,7 +3,7 @@ import datetime
 from sqlalchemy import *
 
 from base import Base
-from forms import FieldSet, MarkdownRenderer
+from fieldset import FieldSet, MarkdownRenderer
 
 class TextBlob(Base):
     __tablename__ = 'textblobs'

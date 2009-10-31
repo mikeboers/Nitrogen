@@ -4,7 +4,7 @@
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
-class ModelMeta(object):
+class ModelEnviron(object):
     
     def __init__(self, engine=None):
         self.engine = None
@@ -22,4 +22,4 @@ class ModelMeta(object):
         self.Session.configure(bind=engine)
 
 # Setup a global one.
-meta = ModelMeta()
+environ = ModelEnviron()

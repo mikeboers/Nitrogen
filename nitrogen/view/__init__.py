@@ -22,6 +22,8 @@ HTML = webhelpers.html.HTML
 from models.textblob import TextBlob, MarkdownBlob
 from models.meta import meta as modelmeta
 
+from meta import meta as view_meta
+
 TYPE_HEADER_HTML = ('Content-Type', 'text/html;charset=UTF-8')
 TYPE_HEADER_TEXT = ('Content-Type', 'text/plain;charset=UTF-8')
 
@@ -64,19 +66,7 @@ def urlify_name(name):
     """
     return re.sub(r'\W+', '-', name).strip('-')
                
-defaults = {}
-defaults['nl2br'] = lambda s: s.replace("\n", "<br />")
-defaults['json'] = json.dumps
-defaults['markdown'] = lambda x: clean_html(markdown(x.encode('utf8'))).decode('utf8')
-defaults['format_date'] = lambda d, f: (d.strftime(f) if d else '')
-defaults['randomize'] = lambda x: sorted(x, key=lambda y: random.random())
-defaults['sorted'] = sorted
-defaults['repr'] = repr
-defaults['textblob'] = textblob
-defaults['textblob_md'] = markdownblob
-defaults['truncate'] = webhelpers.text.truncate
-defaults['html'] = HTML
-defaults['urlify_name'] = urlify_name
+
 
 def _set_defaults(data):
     data.update(defaults)
@@ -85,16 +75,7 @@ def _set_defaults(data):
     data['environ'] = environ
     data['server'] = server
     data['user'] = environ.get('app.user')
-    
     data['flash_messages'] = get_flash_messages()
-    
-def render(template_name, **data):
-    '''Find a template file and render it with the given keyword arguments.'''
-    template = lookup.get_template(template_name)
-    _set_defaults(data)
-    return template.render_unicode(**data)
 
-def render_string(template, **data):
-    template = make.template.Template(template, lookup=lookup)
-    _set_defaults(data)
-    return template.render_unicode(**data)
+
+render = view_meta.render()

@@ -190,15 +190,13 @@ two levels of encoding in the doctests):
 """
 
 # Setup path for local evaluation.
-# When copying to another file, just change the parameter to be accurate.
 if __name__ == '__main__':
-    def __local_eval_fix(package):
-        global __package__
-        import sys
-        __package__ = package
-        sys.path.insert(0, '/'.join(['..'] * (1 + package.count('.'))))
-        __import__(__package__)
-    __local_eval_fix('nitrogen.uri')
+    def __local_eval_fix(r):
+        global __package__;import os,sys;f=os.path.abspath(__file__)
+        sys.path.insert(0,f[:f.find(r)].rstrip(os.path.sep));n=f[f.find(r):]
+        n=n[:n.rfind('.py')];n=n[:n.rfind(os.path.sep+'__init__')]
+        n=n.replace(os.path.sep,'.');__package__=n;__import__(n)
+    __local_eval_fix('nitrogen')
 
 import urllib
 import urlparse

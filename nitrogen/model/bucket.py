@@ -1,5 +1,6 @@
 bucket_sessions = {}
 bucket_classes = {}
+
 def Bucket(name, auto_commit=True):
     
     if name in bucket_classes:

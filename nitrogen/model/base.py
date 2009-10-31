@@ -3,9 +3,9 @@
 import sqlalchemy.orm as orm
 from sqlalchemy.ext.declarative import declarative_base
 
-import meta
+from environ import environ as model_environ
 
-Base = declarative_base(metadata=meta.metadata)
+Base = declarative_base(metadata=model_environ.metadata)
 
 @property
 def _Base_session(self):

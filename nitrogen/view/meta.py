@@ -6,9 +6,11 @@ import mako.lookup
 
 class ViewMeta(object):
     
-    def __init__(self):
+    def __init__(self, path=None):
+        path = path if path else []
+        path.append(os.path.abspath(__file__ + '/../../templates'))
         self.lookup = mako.lookup.TemplateLookup(
-            directories=[os.path.abspath(__file__ + '/../../templates')],
+            directories=path,
             input_encoding='utf-8'
         )
         self.path = self.lookup.directories
