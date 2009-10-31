@@ -4,6 +4,8 @@ import datetime
 
 import formalchemy
 
+from meta import meta
+
 class TextFieldRenderer(formalchemy.fields.TextFieldRenderer):
     def render(self, **kwargs):
         return formalchemy.helpers.text_field(self.name, class_='text', value=self._value, maxlength=self.length, **kwargs)
@@ -41,14 +43,8 @@ class MarkdownRenderer(formalchemy.fields.FieldRenderer):
 
 class FieldSet(formalchemy.FieldSet):
     
-    def __init__(self, *args, **kwargs):
-        formalchemy.FieldSet.__init__(self, *args, **kwargs)
-        # self._render = None
-        # self._render_readonly = None
-    
     def _render(self, fieldset, **kwargs):
-        from ..views import render
-        return render('_formalchemy.tpl', fieldset=fieldset, **kwargs)
+        return meta.render('_formalchemy.tpl', fieldset=fieldset, **kwargs)
 
 
 FieldSet.default_renderers[formalchemy.types.DateTime] = DateTimeRenderer

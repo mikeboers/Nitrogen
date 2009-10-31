@@ -20,7 +20,7 @@ import webhelpers.html
 HTML = webhelpers.html.HTML
 
 from models.textblob import TextBlob, MarkdownBlob
-from models import session
+from models.meta import meta as modelmeta
 
 TYPE_HEADER_HTML = ('Content-Type', 'text/html;charset=UTF-8')
 TYPE_HEADER_TEXT = ('Content-Type', 'text/plain;charset=UTF-8')
@@ -55,8 +55,6 @@ def markdownblob(key, permission=None):
         session.commit()
     return render('_textblob_md.tpl', blob=blob, permission=permission)
 
-def button(message, silk=None, href=None, id=None):
-    pass
 
 def urlify_name(name):
     """Converts a name or title into something we can put into a URI.
@@ -79,8 +77,6 @@ defaults['textblob_md'] = markdownblob
 defaults['truncate'] = webhelpers.text.truncate
 defaults['html'] = HTML
 defaults['urlify_name'] = urlify_name
-
-lookup = None # mako.lookup.TemplateLookup(directories=config.template_path, input_encoding='utf-8')
 
 def _set_defaults(data):
     data.update(defaults)
