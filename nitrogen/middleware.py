@@ -29,7 +29,9 @@ from .error import error_logger, error_notifier
 from .webio import cookie_parser, cookie_builder, request_params, get_parser, post_parser
 from .view import TYPE_HEADER_HTML
 
+
 log = logging.getLogger(__name__)
+
 
 def output_buffer(app):
     """WSGI middleware which buffers all output before sending it on.
@@ -71,11 +73,11 @@ def not_found_catcher(app, render):
             for x in app(environ, start):
                 yield x
         except HttpNotFound as e:
-            log.exception('caught 404 Not Found')
+            log.info('caught HttpNotFound', exc_info=e)
             start('404 Not Found', [TYPE_HEADER_HTML])
             yield render('_404.tpl')
     return inner        
 
 if __name__ == '__main__':
-    import nitrogen.test
-    nitrogen.test.run()
+    from . import test
+    test.run()

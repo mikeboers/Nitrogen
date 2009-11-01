@@ -46,3 +46,16 @@ my own minifier, which sounds like a bad idea).
     self at the front
 
 - decide if the cookie container should default to the path being '/'
+
+- write a Mailer class using the sendmail functions. write a MailLogger to go with it
+
+- rename the nitrogen.logs.FileLogger to something that indicates it is time based
+
+- setup scripts need to work again
+
+- deploy scripts need to work again
+
+- not_found_catcher -> status.status_notifier
+    - takes a dict mapping status to template to throw
+    - a traceback parameter determines if it should dump a traceback with env
+      and everything

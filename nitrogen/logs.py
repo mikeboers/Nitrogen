@@ -99,7 +99,7 @@ class FileHandler(logging.Handler):
                 self.fh.close()
             umask = os.umask(0)
             try:
-                self.fh = open(path, 'a', mode=0777)
+                self.fh = open(path, 'ab')
             finally:
                 os.umask(umask)
         self.last_path = path

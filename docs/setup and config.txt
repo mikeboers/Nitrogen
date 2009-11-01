@@ -1,12 +1,12 @@
 Nitrogen is designed to be a subpackage of the larger application package. Ie.
-you should be able to import app.nitrogen.
+you should be able to import nitrogen.
 
 Upon import it will initialize it's configuration to the contents of
 nitrogen.configtools.base . Then it will attempt to import a nitrogenconfig
 module. If that is not successful and nitrogen is imported as part of a
 package, it will look for a nitrogenconfig module at the same level as itself.
-For example, if you get to nitrogen via import app.nitrogen, nitrogen will
-attempt to import app.nitrogenconfig to use as a config.
+For example, if you get to nitrogen via import nitrogen, nitrogen will
+attempt to import nitrogenconfig to use as a config.
 
 If the nitrogenconfig module is found, it's contents (extracted via
 configtools.tools.extract_attributes) will be used to update the config.

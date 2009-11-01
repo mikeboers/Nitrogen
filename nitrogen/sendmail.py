@@ -56,7 +56,7 @@ def sendmail(text=None, html=None, **kwargs):
         mail.as_string()
     )
 
-    smtp.close()
+    smtp.quit()
     
     
 if __name__ == '__main__':

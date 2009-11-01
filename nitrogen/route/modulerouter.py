@@ -10,68 +10,86 @@ if __name__ == '__main__':
         __import__(__package__)
     __local_eval_fix('nitrogen.route')
 
+
 import os
 import re
 import logging
 
-from .tools import *
 from ..uri.path import Path
+from ..status import HttpNotFound
+from .tools import get_unrouted, set_unrouted
+
 
 log = logging.getLogger(__name__)
 
 
 class Module(object):
     
-    def __init__(self, router, module, app_key):
+    def __init__(self, router, module):
         self.router = router
         self.module = module
         self.app = None
-        self.mtime = None
+        self.last_mtime = self.getmtime()
+        
+        self.reload()
     
-    def __call__(self, environ, start):
-        if self.router.reload:
-            mtime = os.path.getmtime(self.module.__path__)
-            if self.mtime is None or self.mtime != mtime:
-                self.mtime = mtime
+    def getmtime(self):
+        return os.path.getmtime(self.module.__file__)
+    
+    def reload(self, force=False):
+        if force or self.router.reload:
+            mtime = self.getmtime()
+            if self.last_mtime != mtime:
+                self.last_mtime = mtime
                 self.app = None
-                log.debug('reloading module %r' % self.module.__name__)
+                log.debug('reloading controller module %r' % self.module.__name__)
                 reload(self.module)
         if self.app is None:
             self.app = getattr(self.module, self.router.app_key, None)
             if self.app is None:
-                msg = 'could not find app %r on module %r' % (
+                msg = 'could not find app %r on controller module %r' % (
                     self.app_key, self.module.__name__)
-                log.error(msg)
+                log.debug(msg)
                 raise HttpNotFound(msg)
+    
+    def __call__(self, environ, start):
+        self.reload()
         return self.app(environ, start)
 
 
 class ModuleRouter(object):
     
-    def __init__(self, app_key='app', default='index', reload=False):
-        """..."""
+    def __init__(self, app_key='app', package='', default='index',
+        reload=False):
+        
         self.app_key = app_key
+        self.package = package
         self.default = default
         self.reload = reload
-        
-        self.modules = {}
+        self._modules = {}
     
     def __call__(self, environ, start):
         
         unrouted = Path(get_unrouted(environ))
-        name = unrouted[0] if unrouted else self.default
-        path = self.build_path(name)
+        segment = unrouted[0] if unrouted else self.default
+        name = '.'.join(filter(None, self.package.split('.') + [segment]))
         
-        if path not in self.apps:
-            logging.debug("Loading app %r at %r." % (name, path))
-            self.load_app(environ, path)
-        if self.reload_modifications and os.path.getmtime(path) != self.apps[path][0]:
-            logging.debug("App %r modified. Reloading." % name)
-            self.load_app(environ, path)
+        if name not in self._modules:
+            try:
+                raw_module = __import__(name, fromlist=['nonempty'])
+            except ImportError:
+                raise HttpNotFound('could not import controller module %r' % name)
+            self._modules[name] = Module(router=self, module=raw_module)
         
-        # Move the segment from unrouted to routed.
-        get_routed(environ).append(unrouted.pop(0) if unrouted else None)
+        module = self._modules[name]
         
-        logging.info('Routing %r...' % name)
-        return self.apps[path][1](environ, start)
+        if unrouted:
+            unrouted.pop(0)
+            unrouted = str(unrouted)
+        else:
+            unrouted = ''
+        set_unrouted(environ, unrouted=unrouted, router=self)
         
+        return module(environ, start)
+
+

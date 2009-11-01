@@ -87,8 +87,6 @@ def status_resolver(app):
 
 class BaseHttpStatus(Exception):
     _code = 200
-    def __init__(self, *args):
-        Exception.__init__(self, 'HTTP status code %d: %s' % (self._code, code_to_message(self._code)), *args)
 
 def make_http_status_exception(code):
     message = code_to_message(code)

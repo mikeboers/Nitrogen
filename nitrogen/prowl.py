@@ -23,6 +23,7 @@ See: http://prowl.weks.net/
 import urllib
 import urllib2
 import logging
+import threading
 
 API_URL = 'https://prowl.weks.net/publicapi/%s'
 DEFAULT_PRIORITY = 0
@@ -94,13 +95,20 @@ class LogHandler(logging.Handler, Prowl):
     Constructor takes prowl parameters which will be used when sending logs.
     """
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, threaded=False, **kwargs):
         logging.Handler.__init__(self)
-        Prowl.__init__(self, *args, **kwargs)
+        Prowl.__init__(self, **kwargs)
+        self.threaded = threaded
 
     def emit(self, record):
+        app = (self.app % record.__dict__) if self.app else None
+        event = (self.event % record.__dict__) if self.event else None
         msg = self.format(record)
-        self.send(msg, self.priority, self.app, self.event)
+        if self.threaded:
+            threading.Thread(target=self.send, kwargs=dict(message=msg,
+                app=app, event=event)).start()
+        else:
+            self.send(message=msg, app=app, event=event)
 
 if __name__ == '__main__':
     import time, threading, atexit
