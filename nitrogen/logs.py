@@ -97,9 +97,11 @@ class FileHandler(logging.Handler):
         if path != self.last_path:
             if self.fh:
                 self.fh.close()
-            umask = os.umask(0113)
-            self.fh = open(path, 'a')
-            os.umask(umask)
+            umask = os.umask(0)
+            try:
+                self.fh = open(path, 'a', mode=0777)
+            finally:
+                os.umask(umask)
         self.last_path = path
         
         self.fh.write(self.format(record))
@@ -107,15 +109,3 @@ class FileHandler(logging.Handler):
         self.fh.flush()
 
 
-_is_setup = False
-def setup():
-    global _is_setup
-    if _is_setup:
-        return
-    from . import config
-    root = logging.getLogger()
-    root.setLevel(config.log_level)
-    for handler in config.log_handlers:
-        handler.setFormatter(formatter)
-        root.addHandler(handler)
-    _is_setup = True

@@ -44,3 +44,5 @@ my own minifier, which sounds like a bad idea).
 
 - as_request should be a class with __get__ so that it knows when to inject a
     self at the front
+
+- decide if the cookie container should default to the path being '/'

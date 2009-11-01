@@ -73,4 +73,8 @@ new plan:
     - the environments can have their own logger with the name __name__?env=<name of environment>
     - should I go with env, environ, or environment
     - the textblobs could be in their own module which has functions to hook it into a model_environ and template_environ
-    
+
+still todo:
+    - Servers should just be dicts
+    - remove ALL nessesity on the server object being availible globally, and useful for
+      cookie_domain and admin_domain. maybe figure those out from the environ

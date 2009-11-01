@@ -1,12 +1,8 @@
+
 import os
 import bsddb.db as bsddb
 import shelve
 import collections
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 
 class BsddbWrapper(collections.MutableMapping):
 

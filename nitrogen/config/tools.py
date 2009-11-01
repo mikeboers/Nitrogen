@@ -2,60 +2,63 @@ import collections
 import os
 import re
 
-servers = []
 
-
-class _Server(object):
-    """Read-only server specification."""
-
-    def __init__(self, **kwargs):
-        self._data = kwargs
-
+class Server(dict):
+    
+    def __init__(self, name, **kwargs):
+        self.__name = name
+        dict.__init__(self, **kwargs)
+    
+    def __hash__(self):
+        return hash(self.__name)
+    
+    @property
+    def name(self):
+        return self.__name
+    
     def __getattr__(self, key):
-        return self._data.get(key)
+        return self.get(key)
+    
+    def __setattr__(self, key, value):
+        self[key] = value
+    
+    def __delattr__(self, key):
+        del self[key]
 
-    def get(self, *args, **kwargs):
-        return self._data.get(*arg, **kwargs)
+class ServerList(object):
+    server_class = Server
+    
+    def __init__(self):
+        self.list = []
 
-    def __getitem__(self, key):
-        return self._data[key]
+    def register(self, **kwargs):
+        """Register a set of keyword arguments as a possible server that we are
+        on.
+        """
+        server = self.server_class(**kwargs)
+        self.list.append(server)
+        return server
 
-    @property
-    def admin_domain(self):
-        if 'admin_domain' in self._data:
-            return self._data['admin_domain']
-        return 'admin.' + self.domain
-
-    @property
-    def cookie_domain(self):
-        if 'cookie_domain' in self._data:
-            return self._data['cookie_domain']
-        return '.' + self.domain
-
-
-def register_server(**kwargs):
-    """Register a set of keyword arguments as a possible server that we are
-    on.
-    """
-    server = _Server(**kwargs)
-    servers.append(server)
-    return server
-
-
-default_server = register_server(name='default')
-
-
-def get_server_by(**kwargs):
-    """Find a server from those which are registered. Takes a single keyword
-    argument specifying the attribute to match on.
-    """
-
-    if len(kwargs) != 1:
-        raise ValueError('Can only search with one parameter.')
-
-    key, value = kwargs.items()[0]
-    possibleservers = [x for x in servers if getattr(x, key) == value]
-
-    return possibleservers[0] if possibleservers else None
+    def find_by(self, **kwargs):
+        """Find a server from those which are registered. Takes a single keyword
+        argument specifying the attribute to match on.
+        """
+        
+        matches = []
+        for server in self.list:
+            for k, v in kwargs.iteritems():
+                if k not in server or server[k] != v:
+                    break
+            else:
+                matches.append(server)
+        return matches
+            
+    def find_first_by(self, **kwargs):
+        """Find a server from those which are registered. Takes a single keyword
+        argument specifying the attribute to match on.
+        """
+        
+        matches = self.find_by(**kwargs)
+        return matches[0] if matches else None
 
 
