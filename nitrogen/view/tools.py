@@ -20,30 +20,18 @@ if __name__ == '__main__':
     __local_eval_setup('nitrogen', True)
 
 
-import logging
+from BeautifulSoup import BeautifulSoup
 
-from sqlalchemy import MetaData, create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
 
-from .base import build_base
+def clean_html(html):
+    """Asserts the "cleanliness" of html. Closes tags and such."""
+    return BeautifulSoup(html).prettify()
 
-class ModelEnviron(object):
+
+def urlify_name(name):
+    """Converts a name or title into something we can put into a URI.
     
-    def __init__(self, name=None, engine=None):
-        self.name = str(name or id(self))
-        self.log = logging.getLogger('%s?env=%s' % (__name__, self.name))
-        
-        self.engine = None
-        self.Session = sessionmaker()
-        sels.session = scoped_session(Session)
-        self.metadata = MetaData()
-        self.Base = build_base(metadata=self.metadata)
-        
-        if engine:
-            self.setup(engine)
-    
-    def setup(self, engine):
-        if isinstance(engine, basestring):
-            engine = create_engine(engine)
-        self.engine = engine
-        self.Session.configure(bind=engine)
+    This is designed to only be for one way usage (ie. we can't use the
+    urlified names to figure out what photo or photoset we are talking about).
+    """
+    return re.sub(r'\W+', '-', name).strip('-')

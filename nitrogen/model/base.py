@@ -3,24 +3,22 @@
 import sqlalchemy.orm as orm
 from sqlalchemy.ext.declarative import declarative_base
 
-from environ import environ as model_environ
-
-Base = declarative_base(metadata=model_environ.metadata)
-
 @property
 def _Base_session(self):
     return orm.object_session(self)
-Base.session = _Base_session
 
 def _Base_delete(self):
     self.session.delete(self)
-Base.delete = _Base_delete
 
 def _Base_mark_dirty(self):
     self.session.dirty.add(self)
     # instance_state(self).modified = True
-Base.mark_dirty = _Base_mark_dirty
 
-
+def build_base(metadata=None):
+    Base = declarative_base(metadata=metadata)
+    Base.session = _Base_session
+    Base.delete = _Base_delete
+    Base.mark_dirty = _Base_mark_dirty
+    return Base
 
 

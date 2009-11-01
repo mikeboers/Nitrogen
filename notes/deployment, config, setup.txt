@@ -66,3 +66,11 @@ the session/render/config could all be stored in a lib/config/meta/global module
     - could store view globals in a views.meta module (maybe)
     - need a Session.remove() for the thread-local session after the request
       is done processing
+
+new plan:
+    - there should be no global setup at all. classes should define the environment of everything
+    - an app or bootstrap module can hook everything together for an app so that the app doesnt have to know much
+    - the environments can have their own logger with the name __name__?env=<name of environment>
+    - should I go with env, environ, or environment
+    - the textblobs could be in their own module which has functions to hook it into a model_environ and template_environ
+    

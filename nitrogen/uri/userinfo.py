@@ -1,7 +1,7 @@
 # coding: UTF-8
 """Module for query.Userinfo object."""
 
-from transcode import *
+from .transcode import *
 
 class Userinfo(list):
     u"""A representation of the userinfo segment in a URI.

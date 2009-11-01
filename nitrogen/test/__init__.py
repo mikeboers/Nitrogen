@@ -69,8 +69,8 @@ def run():
     test_count = suite.countTestCases()
     if test_count:
         print '-' * 70
-        print 'RUNNING %s TESTS' % test_count
+        print 'Running %s tests...' % test_count
         print
         runner.run(suite)
     else:
-        print "COULD NOT FIND ANY TESTS!"
+        print "Could not find any tests."
