@@ -23,7 +23,7 @@ import logging
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
-from .base import build_base
+from .base import build_declarative_base
 
 class ModelEnviron(object):
     
@@ -35,12 +35,12 @@ class ModelEnviron(object):
         self.Session = sessionmaker()
         self.session = scoped_session(self.Session)
         self.metadata = MetaData()
-        self.Base = build_base(metadata=self.metadata)
+        self.Base = build_declarative_base(metadata=self.metadata)
         
         if engine:
-            self.setup(engine)
+            self.bind(engine)
     
-    def setup(self, engine):
+    def bind(self, engine):
         if isinstance(engine, basestring):
             engine = create_engine(engine)
         self.engine = engine
