@@ -45,3 +45,6 @@ class ModelEnviron(object):
             engine = create_engine(engine)
         self.engine = engine
         self.Session.configure(bind=engine)
+    
+    def create_tables(self):
+        self.metadata.create_all(self.engine)

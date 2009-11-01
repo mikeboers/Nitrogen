@@ -44,6 +44,7 @@ if __name__ == '__main__':
     sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
     __import__(__package__)
 
+
 import cgi
 import collections
 import sys
@@ -55,6 +56,10 @@ from .uri import URI
 from .uri.query import Query
 from .multimap import MultiMap, DelayedMultiMap
 from .headers import DelayedHeaders
+
+
+log = logging.getLogger(__name__)
+
 
 class DefaultFile(object):
     """Class for file uploads in default state."""
@@ -208,10 +213,11 @@ def cookie_builder(app, **kwargs):
     """
     def inner(environ, start):
         def inner_start(status, headers):
-            cookies = self.environ['nitrogen.cookies']
+            cookies = environ['nitrogen.cookies']
+            log.debug('setting cookies: %r' % cookies)
             headers.extend(cookies.build_headers())
             start(status, headers)
-        return app(environ, start)
+        return app(environ, inner_start)
     return inner
     
 def uri_parser(app, **kwargs):
@@ -236,8 +242,8 @@ def header_parser(app, **kwargs):
         return app(environ, start)
     return inner
         
-def request_params(app, parse_uri=True, parse_get=True, parse_post=True,
-        parse_cookie=True, build_cookie=True, parse_headers=True, **kwargs):
+def request_params(app, parse_headers=True, parse_uri=True, parse_get=True, parse_post=True,
+        parse_cookie=True, build_cookie=True, **kwargs):
     if parse_headers:
         app = header_parser(app, **kwargs)
     if parse_uri:

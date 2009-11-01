@@ -139,7 +139,7 @@ def error_logger(app, level=logging.ERROR):
     return inner
 
 
-def error_notifier(app, render, buffer=True, template='_500.tpl'):
+def error_notifier(app, render=None, traceback=False, template='_500.tpl'):
     """WSGI middleware to display a template to the client in case of error.
 
     If on a development server (server.is_dev is True), the template will also
@@ -165,29 +165,34 @@ def error_notifier(app, render, buffer=True, template='_500.tpl'):
         
         def __iter__(self):
             try:
-                if buffer:
-                    for x in app(self.environ, self.app_start):
-                        self.output.append(x)
-                        self.start(self.status, self.headers or [])
-                        for x in self.output:
-                            yield x
-                else:
-                    for x in app(self.environ, self.start):
-                        self.output.append(x)
-                        yield x
-            
+                for x in app(self.environ, self.app_start):
+                    self.output.append(x)
+                self.start(self.status, self.headers or [])
+                for x in self.output:
+                    yield x
             except Exception as e:
-                try:
-                    self.start('500 Internal Server Error', [('Content-Type',
-                        'text/html; charset=UTF-8')])
-                except:
-                    pass
-                yield render(template, **({
-                    'environ': self.environ,
-                    'error': e,
-                    'traceback': get_cleaned_traceback(),
-                    'output': self.output
-                    } if False and server.is_dev else {})).encode('utf8')
+                if render:
+                    tb = get_cleaned_traceback()
+                    try:
+                        self.start('500 Internal Server Error', [('Content-Type',
+                            'text/html; charset=UTF-8')])
+                    except:
+                        pass
+                    yield render(template, **({
+                        'environ': self.environ,
+                        'error': e,
+                        'traceback': tb,
+                        'output': self.output
+                        } if traceback else {})).encode('utf8')
+                else:
+                    report = format_error_report(self.environ)
+                    try:
+                        self.start('500 Internal Server Error', [('Content-Type',
+                            'text/plain; charset=UTF-8')])
+                    except:
+                        pass
+                    yield report
+                    
     return inner
 
 if __name__ == '__main__':
