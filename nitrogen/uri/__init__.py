@@ -198,9 +198,7 @@ if __name__ == '__main__':
         file = os.path.abspath(__file__)
         sys.path.insert(0, file[:file.find(root)].rstrip(os.path.sep))
         name = file[file.find(root):]
-        name = name[:name.rfind('.py')]
-        name = (name[:-8] if name.endswith('__init__') else name).rstrip(os.path.sep)
-        name = name.replace(os.path.sep, '.')
+        name = '.'.join(name[:-3].split(os.path.sep)[:-1])
         __package__ = name
         if debug:
             print ('Setting up local environ:\n'
@@ -477,7 +475,5 @@ class URI(object):
             
 
 if __name__ == '__main__':
-    import sys
-    sys.path.insert(0, '..')
-    from test import run
-    run()
+    from .. import test
+    test.run()

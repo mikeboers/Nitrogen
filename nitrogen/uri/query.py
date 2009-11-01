@@ -221,16 +221,23 @@ Easy signatures!
 
 from __future__ import division
 
-# Setup path for local evaluation.
-# When copying to another file, just change the parameter to be accurate.
+# Setup path for local evaluation. Do not modify anything except for the name
+# of the toplevel module to import at the very bottom.
 if __name__ == '__main__':
-    def __local_eval_fix(package):
+    def __local_eval_setup(root, debug=False):
         global __package__
-        import sys
-        __package__ = package
-        sys.path.insert(0, '/'.join(['..'] * (1 + package.count('.'))))
-        __import__(__package__)
-    __local_eval_fix('nitrogen.uri')
+        import os, sys
+        file = os.path.abspath(__file__)
+        sys.path.insert(0, file[:file.find(root)].rstrip(os.path.sep))
+        name = file[file.find(root):]
+        name = '.'.join(name[:-3].split(os.path.sep)[:-1])
+        __package__ = name
+        if debug:
+            print ('Setting up local environ:\n'
+                   '\troot: %(root)r\n'
+                   '\tname: %(name)r' % locals())
+        __import__(name)
+    __local_eval_setup('nitrogen', True)
 
 import collections
 import time

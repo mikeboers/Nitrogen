@@ -1,12 +1,23 @@
 """Module for dealing with WSGI errors."""
 
-# Setup path for local evaluation.
-# When copying to another file, just change the __package__ to be accurate.
+# Setup path for local evaluation. Do not modify anything except for the name
+# of the toplevel module to import at the very bottom.
 if __name__ == '__main__':
-    import sys
-    __package__ = 'nitrogen'
-    sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
-    __import__(__package__)
+    def __local_eval_setup(root, debug=False):
+        global __package__
+        import os, sys
+        file = os.path.abspath(__file__)
+        sys.path.insert(0, file[:file.find(root)].rstrip(os.path.sep))
+        name = file[file.find(root):]
+        name = '.'.join(name[:-3].split(os.path.sep)[:-1])
+        __package__ = name
+        if debug:
+            print ('Setting up local environ:\n'
+                   '\troot: %(root)r\n'
+                   '\tname: %(name)r' % locals())
+        __import__(name)
+    __local_eval_setup('nitrogen', True)
+
 
 import sys
 import traceback
@@ -14,10 +25,8 @@ import logging
 
 from mako.exceptions import RichTraceback as MakoTraceback
 
-from .views import render
-# from . import server
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 DEFAULT_ERROR_HTTP_STATUS = '500 Internal Server Error'
@@ -125,12 +134,12 @@ def error_logger(app, level=logging.ERROR):
                 yield x
         except Exception as e:
             report = format_error_report(environ, output=output).strip()
-            logger.log(level, 'error_logger caught %r\n' % e + report)
+            log.log(level, 'error_logger caught %r\n' % e + report)
             raise
     return inner
 
 
-def error_notifier(app, buffer=True, template='_500.tpl'):
+def error_notifier(app, template_environ, buffer=True, template='_500.tpl'):
     """WSGI middleware to display a template to the client in case of error.
 
     If on a development server (server.is_dev is True), the template will also
