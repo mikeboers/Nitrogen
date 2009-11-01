@@ -2,15 +2,7 @@
 
 """
 
-raise ImportError('do not import %s' % __name__)
 
-# Somewhere to hold threadsafe stuff.
-# It should work just fine for cgi and fcgi.
-# NOTE: I am assuming that this will work for the run_as_socket runner as well.
-local = threading.local()
-
-# Setup some dummy objects for testing.
-local.environ = {}
 
 class LocalProxy(object):
     """An object that proxies attribute and dict-like access to an object
@@ -48,6 +40,3 @@ class LocalProxy(object):
     
     def __contains__(self, key):
         return key in local.__dict__[self._local_key]
-
-
-environ = LocalProxy('environ')

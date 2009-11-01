@@ -19,12 +19,15 @@ if __name__ == '__main__':
         __import__(name)
     __local_eval_setup('nitrogen', True)
 
+
 import os
 import threading
+import logging
 
 import mako.lookup
 
 from defaults import context
+
 
 class ViewEnviron(object):
     
@@ -32,6 +35,8 @@ class ViewEnviron(object):
         self.name = str(name or id(self))
         self.log = logging.getLogger('%s?env=%s' % (__name__, self.name))
         
+        if path and isinstance(path, basestring):
+            path = [path]
         tmppath = path if path else []
         tmppath.append(os.path.abspath(__file__ + '/../../templates'))
         self.lookup = mako.lookup.TemplateLookup(

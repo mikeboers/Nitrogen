@@ -33,7 +33,7 @@ class ModelEnviron(object):
         
         self.engine = None
         self.Session = sessionmaker()
-        sels.session = scoped_session(Session)
+        self.session = scoped_session(self.Session)
         self.metadata = MetaData()
         self.Base = build_base(metadata=self.metadata)
         

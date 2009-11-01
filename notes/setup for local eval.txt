@@ -7,13 +7,14 @@ if __name__ == '__main__':
         global __package__
         import os, sys
         file = os.path.abspath(__file__)
-        sys.path.insert(0, file[:file.find(root)].rstrip(os.path.sep))
-        name = file[file.find(root):]
+        sys.path.insert(0, file[:file.rfind(root)].rstrip(os.path.sep))
+        name = file[file.rfind(root):]
         name = '.'.join(name[:-3].split(os.path.sep)[:-1])
-        __package__ = name
         if debug:
             print ('Setting up local environ:\n'
                    '\troot: %(root)r\n'
                    '\tname: %(name)r' % locals())
-        __import__(name)
-    __local_eval_setup('nitrogen', True)
+        if name:
+            __package__ = name
+            __import__(name)
+    __local_eval_setup('app', True)

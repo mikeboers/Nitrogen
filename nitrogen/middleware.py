@@ -27,6 +27,7 @@ from .encoding import utf8_encoder
 from .status import status_resolver, HttpNotFound
 from .error import error_logger, error_notifier
 from .webio import cookie_parser, cookie_builder, request_params, get_parser, post_parser
+from .view import TYPE_HEADER_HTML
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +37,8 @@ def output_buffer(app):
     The entire sub-app is completely exhausted before anything is returned
     from this. This allows you to call for WSGI start after you output, and
     multiple times (only the args from the last call are sent on).
+    
+    This behaviour is exhibited by quite a few other WSGI middlewares.
     
     """
     
@@ -58,7 +61,7 @@ def output_buffer(app):
     
     return inner
 
-def not_found_catcher(app, view_environ):
+def not_found_catcher(app, render):
     """Displays the _404.tpl template along with a "404 Not Found" status if a
     HttpNotFound is thrown within the app that it wraps. This error is
     normally thrown by routers.
@@ -70,7 +73,7 @@ def not_found_catcher(app, view_environ):
         except HttpNotFound as e:
             log.exception('caught 404 Not Found')
             start('404 Not Found', [TYPE_HEADER_HTML])
-            yield view_environ.render('_404.tpl')
+            yield render('_404.tpl')
     return inner        
 
 if __name__ == '__main__':

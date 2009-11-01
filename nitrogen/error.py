@@ -139,7 +139,7 @@ def error_logger(app, level=logging.ERROR):
     return inner
 
 
-def error_notifier(app, template_environ, buffer=True, template='_500.tpl'):
+def error_notifier(app, render, buffer=True, template='_500.tpl'):
     """WSGI middleware to display a template to the client in case of error.
 
     If on a development server (server.is_dev is True), the template will also

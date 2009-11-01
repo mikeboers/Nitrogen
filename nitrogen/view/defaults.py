@@ -23,7 +23,8 @@ if __name__ == '__main__':
 import json
 
 from markdown import markdown
-import webhelpers
+import webhelpers.text
+import webhelpers.html
 
 from tools import urlify_name, clean_html
 
