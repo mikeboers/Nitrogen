@@ -97,8 +97,10 @@ class FileHandler(logging.Handler):
         if path != self.last_path:
             if self.fh:
                 self.fh.close()
+            if not os.path.exists(path):
+                open(path, 'wb').close()    
+                os.chmod(path, 0777)
             self.fh = open(path, 'ab')
-            os.chmod(path, 0777)
         self.last_path = path
         
         self.fh.write(self.format(record))
