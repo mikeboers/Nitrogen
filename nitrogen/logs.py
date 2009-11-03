@@ -97,11 +97,8 @@ class FileHandler(logging.Handler):
         if path != self.last_path:
             if self.fh:
                 self.fh.close()
-            umask = os.umask(0)
-            try:
-                self.fh = open(path, 'ab')
-            finally:
-                os.umask(umask)
+            self.fh = open(path, 'ab')
+            os.chmod(path, 0777)
         self.last_path = path
         
         self.fh.write(self.format(record))
