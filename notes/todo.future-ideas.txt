@@ -26,7 +26,6 @@
   recorded in history)
 
 
-- Add the prowl log handler.
 
 - Basic eTaging middlewear which simply hashes everything it is about to send
   down, and compares it to the eTag. Just saves transmission costs.
