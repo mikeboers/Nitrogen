@@ -20,6 +20,8 @@ if __name__ == '__main__':
     __local_eval_setup('nitrogen', True)
 
 
+import re
+
 from BeautifulSoup import BeautifulSoup
 
 
