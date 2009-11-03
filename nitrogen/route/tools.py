@@ -37,9 +37,9 @@ from webtest import TestApp
 from ..uri import URI
 from ..uri.path import Path, encode, decode
 
-_ENVIRON_UNROUTED_KEY = 'route.unrouted'
-_ENVIRON_HISTORY_KEY = 'route.history'
-_ENVIRON_DATA_KEY = 'route.data'
+_ENVIRON_UNROUTED_KEY = 'nitrogen.route.unrouted'
+_ENVIRON_HISTORY_KEY = 'nitrogen.route.history'
+_ENVIRON_DATA_KEY = 'nitrogen.route.data'
 
 _HistoryChunk = collections.namedtuple('HistoryChunk', 'path unrouted router data builder args kwargs'.split())
 class HistoryChunk(_HistoryChunk):
