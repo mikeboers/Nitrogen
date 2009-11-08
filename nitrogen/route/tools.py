@@ -1,16 +1,15 @@
 """Module containing tools to assist in building of WSGI routers.
 
+This routing system works by tracking the UNrouted part of the request, and
+watching how it changes as it passes through various routers.
+
 The routing history is a list of named tuples (HistoryChunk) with parts:
     before -- What the unrouted path was before this routing step.
     after -- What the unrouted path was after this routing step.
     router -- Whatever was responsible for this routing step.
-    builder -- A callable (or none) for rebuilding the unrouted path. See
-        below for more info.
-    args -- Positional args for the builder.
-    kwargs -- Keyword args for the builder.
+    builder -- A optional callable for rebuilding the unrouted path.
 
 About builders:
-    TODO
 
 """
 
@@ -39,10 +38,41 @@ from ..uri.path import Path, encode, decode
 
 ENVIRON_ROUTE_KEY = 'nitrogen.route'
 
-_HistoryChunk = collections.namedtuple('HistoryChunk', 'before after router data builder'.split())
-class HistoryChunk(_HistoryChunk):
-    def __new__(cls, before, after, router, data=None, builder=None):
-        return _HistoryChunk.__new__(cls, before, after, router, data, builder)
+class HistoryChunk(object):
+    
+    def __init__(self, before, after, router=None, data=None, builder=None):
+        self.before = before
+        self.after = after
+        self.router = router
+        self.data = data
+        self.builder = builder
+    
+    def is_simple_route(self):
+        return self.before.endswith(self.after)
+        
+    def get_routed(self):
+        if self.is_simple_route():
+            return self.before[:-len(self.after)] if self.after else self.before
+        raise ValueError('cannot trivially reverse route %r to %r' % (before, after))
+    
+    def rebuild(self, unrouted):
+        """Default builder function.
+
+        Requires the output of the router to be a suffix of the input.
+
+        Examples:
+            >>> HistoryChunk('/one/two', '/two').rebuild('/new')
+            '/one/new'
+            >>> HistoryChunk('/a/b/c', '/c').rebuild('/d')
+            '/a/b/d'
+            >>> HistoryChunk('/base', '').rebuild('/unrouted')
+            '/base/unrouted'
+
+        """
+        if self.builder:
+            return self.builder(unrouted)
+        return self.get_routed() + unrouted
+        
 
     
 def get_request_path(environ):
@@ -147,28 +177,6 @@ def set_unrouted(environ, unrouted, router, data=None, builder=None):
     history.append(HistoryChunk(before, after, router, data, builder))
 
 
-def simple_builder(before, after, new):
-    """Default builder function.
-    
-    Requires the output of the router to be a suffix of the input.
-    
-    Examples:
-        >>> simple_builder('/one/two', '/two', '/new')
-        '/one/new'
-        >>> simple_builder('/a/b/c', '/c', '/d')
-        '/a/b/d'
-        >>> simple_builder('/base', '', '/unrouted')
-        '/base/unrouted'
-    
-    """
-    
-    if before.endswith(after):
-        delta = before[:-len(after)] if after else before
-    else:
-        raise ValueError('cannot trivially reverse route %r to %r' % (before, after))
-    
-    return delta + new
-
 
 def build_from(environ, router, route=''):
     
@@ -181,11 +189,8 @@ def build_from(environ, router, route=''):
     
     validate_path(route)
     for chunk in reversed(history[:i+1]):
-        if chunk.builder:
-            route = chunk.builder(route)
-            validate_path(route)
-        else:
-            route = simple_builder(chunk.before, chunk.after, route)
+        route = chunk.rebuild(route)
+        validate_path(route)
     
     return route
     
@@ -210,7 +215,10 @@ def test_build_from():
     assert build_from(environ, 3, '/new') == '/a/b/c/new', build_from(environ, 3, 'new')
     
     
-    
+
+
+
+
 def test_routing_path_setup():
 
     def app(_environ, start):

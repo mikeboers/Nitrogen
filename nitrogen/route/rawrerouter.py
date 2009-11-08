@@ -187,8 +187,8 @@ def test_routing_path_setup():
     res = app.get('/one/two')
     # pprint(tools.get_history(res.environ))
     tools._assert_next_history_step(res,
-        path='/one/two',
-        unrouted='/two',
+        before='/one/two',
+        after='/two',
         router=router)
     
     res = app.get('/x-four/x-three/x-two/one')
@@ -196,13 +196,13 @@ def test_routing_path_setup():
     assert res.body == 'four\nthree\ntwo\none'
     # pprint(tools.get_history(res.environ))
     tools._assert_next_history_step(res,
-        path='/x-four/x-three/x-two/one', unrouted='/x-three/x-two/one', router=router, _data={'var': 'four'})
+        before='/x-four/x-three/x-two/one', after='/x-three/x-two/one', router=router, _data={'var': 'four'})
     tools._assert_next_history_step(res,
-        path='/x-three/x-two/one', unrouted='/x-two/one', router=router)
+        before='/x-three/x-two/one', after='/x-two/one', router=router)
     tools._assert_next_history_step(res,
-        path='/x-two/one', unrouted='/one', router=router)
+        before='/x-two/one', after='/one', router=router)
     tools._assert_next_history_step(res,
-        path='/one', unrouted='', router=router)
+        before='/one', after='', router=router)
     
         
     try:
