@@ -36,8 +36,8 @@
 
 - Compress all of the javascript and css files together with minify (or write
 my own minifier, which sounds like a bad idea).
-	- css doesn't need compression if it is coming from sass
-	- Shane said to look at sprockets (it is in ruby)
+    - css doesn't need compression if it is coming from sass
+    - Shane said to look at sprockets (it is in ruby)
 
 - as_request should be a class with __get__ so that it knows when to inject a
     self at the front
@@ -56,3 +56,27 @@ my own minifier, which sounds like a bad idea).
     - takes a dict mapping status to template to throw
     - a traceback parameter determines if it should dump a traceback with env
       and everything
+
+- logs should be timestamping with utc time, not local time
+
+- the (Raw)ReRouter(s) should take a second parameter which, if supplied, is
+  the replacement string that will be used as the unrouted after this router
+  is done.
+    - Can maybe do some crazy logic with the ReRouter to provide a reverse path as well.
+
+- it might be a good idea to write my own pickling sockets instead of using
+  the Listener and Client from multiprocessing.connection
+    - Then I can have more standard symantics about when the socket is closed, and such
+
+- daemon class
+    - The massive PyPi library: http://pypi.python.org/pypi/python-daemon/
+    - Pretty clean daemon implementation here: http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
+
+    - The second one in general looks a lot nicer to work work, but needs to
+      be extended to be smarter about the pid file, possibly using some
+      filelocks (that I have written, not using the filelock module)
+
+
+
+
+
