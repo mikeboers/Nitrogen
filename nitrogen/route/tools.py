@@ -141,41 +141,57 @@ def set_unrouted(environ, unrouted, router, data=None, builder=None, args=tuple(
     
     validate_path(unrouted)
     history = get_history(environ)
-    history.append(HistoryChunk(get_unrouted(environ), unrouted, router, data, builder, args, kwargs))
+    
+    before = get_unrouted(environ)
+    after = unrouted
+    history.append(HistoryChunk(before, after, router, data, builder or
+        build_simple_route_builder(before, after), args, kwargs))
 
 
-def default_builder(route, previous_path, previous_unrouted):
+def build_simple_route_builder(before, after):
     """Default builder function.
     
     Requires the output of the router to be a suffix of the input.
     
     Examples:
-        >>> default_builder('/new', '/one/two', '/two')
+        >>> build_simple_route_builder('/one/two', '/two')('/new', None)
         '/one/new'
-        >>> default_builder('/d', '/a/b/c', '/c')
+        >>> build_simple_route_builder('/a/b/c', '/c')('/d', None)
         '/a/b/d'
-        >>> default_builder('/unrouted', '/base', '')
+        >>> build_simple_route_builder('/base', '')('/unrouted', None)
         '/base/unrouted'
     
     """
-    if not previous_path.endswith(previous_unrouted):
-        raise ValueError('previous result is not suffix of operand: path=%r unrouted=%r' % (previous_path, previous_unrouted))
-    diff = previous_path[:-len(previous_unrouted)] if previous_unrouted else previous_path
-    return diff + route
+    
+    if before.endswith(after):
+        delta = before[:-len(after)] if after else before
+    else:
+        delta = None
+    
+    def builder(route, extra):
+        if delta is None:
+            raise ValueError('cannot trivially reverse route %r to %r' % (before, after))
+        return delta + route
+    
+    return builder
 
 
-def build_from(environ, router, route=''):
+def build_from(environ, router, route='', extra=None):
+    
     history = get_history(environ)
     for i, chunk in enumerate(history):
         if chunk.router == router:
             break
     else:
         raise ValueError('could not find router in history')
+    
+    extra = dict(extra) if extra else {}
+    
+    validate_path(route)
     for chunk in reversed(history[:i+1]):
-        if chunk.builder:
-            route = chunk.builder(route, *chunk.args, **chunk.kwargs)
-        else:
-            route = default_builder(route, chunk.path, chunk.unrouted)
+        route = chunk.builder(route, extra, *chunk.args, **chunk.kwargs)
+        validate_path(route)
+    
     return route
     
 
@@ -193,6 +209,8 @@ def test_build_from():
     assert build_from(environ, 3) == '/a/b/c'
     assert build_from(environ, 2) == '/a/b'
     assert build_from(environ, 1) == '/a'
+    
+    assert build_from(environ, 3, '/new') == '/a/b/c/new', build_from(environ, 3, 'new')
     
     
     
