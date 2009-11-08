@@ -37,9 +37,7 @@ from webtest import TestApp
 from ..uri import URI
 from ..uri.path import Path, encode, decode
 
-_ENVIRON_UNROUTED_KEY = 'nitrogen.route.unrouted'
-_ENVIRON_HISTORY_KEY = 'nitrogen.route.history'
-_ENVIRON_DATA_KEY = 'nitrogen.route.data'
+ENVIRON_ROUTE_KEY = 'nitrogen.route'
 
 _HistoryChunk = collections.namedtuple('HistoryChunk', 'path unrouted router data builder args kwargs'.split())
 class HistoryChunk(_HistoryChunk):
@@ -100,18 +98,17 @@ def validate_path(path):
    
 def get_unrouted(environ):
     """Returns the unrouted portion of the requested URI from the environ."""
-    if _ENVIRON_UNROUTED_KEY not in environ:
-        path = get_request_path(environ)
-        validate_path(path)
-        environ[_ENVIRON_UNROUTED_KEY] = path
-    return environ[_ENVIRON_UNROUTED_KEY]
+    history = get_history(environ)
+    if history:
+        return history[-1].unrouted
+    return get_request_path(environ)
 
 
 def get_history(environ):
     """Gets the list of routing history from the environ."""
-    if _ENVIRON_HISTORY_KEY not in environ:
-        environ[_ENVIRON_HISTORY_KEY] = []
-    return environ[_ENVIRON_HISTORY_KEY]
+    if ENVIRON_ROUTE_KEY not in environ:
+        environ[ENVIRON_ROUTE_KEY] = []
+    return environ[ENVIRON_ROUTE_KEY]
 
 
 def get_route_data(environ):
@@ -145,7 +142,6 @@ def set_unrouted(environ, unrouted, router, data=None, builder=None, args=tuple(
     validate_path(unrouted)
     history = get_history(environ)
     history.append(HistoryChunk(get_unrouted(environ), unrouted, router, data, builder, args, kwargs))
-    environ[_ENVIRON_UNROUTED_KEY] = unrouted
 
 
 def default_builder(route, previous_path, previous_unrouted):
@@ -166,6 +162,7 @@ def default_builder(route, previous_path, previous_unrouted):
         raise ValueError('previous result is not suffix of operand: path=%r unrouted=%r' % (previous_path, previous_unrouted))
     diff = previous_path[:-len(previous_unrouted)] if previous_unrouted else previous_path
     return diff + route
+
 
 def build_from(environ, router, route=''):
     history = get_history(environ)
