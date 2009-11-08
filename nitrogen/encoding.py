@@ -16,7 +16,7 @@ def utf8_encoder(app):
     def inner(environ, start):
         if 'utf-8' not in environ.get('HTTP_ACCEPT_CHARSET', '').lower():
             for x in app(environ, start):
-                yield x.encode('ascii', 'replace')
+                yield x.encode('ascii', 'xmlcharrefreplace')
             return
         def inner_start(status, headers):
             has_type = False
@@ -51,6 +51,9 @@ def test_utf8_encoder():
     app = TestApp(app)
 
     res = app.get('/')
+    assert res.body == '&#161;&#8482;&#163;&#162;&#8734;&#167;&#182;&#8226;&#170;&#186;'
+    
+    res = app.get('/', headers=[('accept-charset', 'utf-8')])
     assert res.headers['content-type'] == 'text/plain; charset=UTF-8', 'Wrong content type.'
     assert res.body == u'¡™£¢∞§¶•ªº'.encode('utf8'), 'Not encoded properly.'
 
