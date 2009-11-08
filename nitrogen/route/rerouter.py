@@ -241,11 +241,11 @@ def test_routing_path_setup():
     @router.register(r'/{word:one|two|three}')
     def one(environ, start):
         start('200 OK', [('Content-Type', 'text-plain')])
-        yield tools.get_route_data(environ).word
+        yield tools.get_data(environ).word
 
     @router.register(r'/x-{num:\d+}', _parsers=dict(num=int))
     def two(environ, start):
-        kwargs = tools.get_route_data(environ)
+        kwargs = tools.get_data(environ)
         output = list(router(environ, start))
         yield '%02d\n' % kwargs['num']
         for x in output:
@@ -254,7 +254,7 @@ def test_routing_path_setup():
     @router.register(r'/{key:pre\}post}')
     def three(environ, start, *args, **kwargs):
         start('200 OK', [('Content-Type', 'text-plain')])
-        kwargs = tools.get_route_data(environ)
+        kwargs = tools.get_data(environ)
         yield kwargs['key']
 
     app = TestApp(router)
@@ -304,11 +304,11 @@ def test_route_building():
     @router.register('word', r'/{word:one|two|three}')
     def one(environ, start):
         start('200 OK', [('Content-Type', 'text-plain')])
-        yield tools.get_route_data(environ).word
+        yield tools.get_data(environ).word
 
     @router.register('num', r'/x-{num:\d+}', _parsers=dict(num=int))
     def two(environ, start):
-        kwargs = tools.get_route_data(environ)
+        kwargs = tools.get_data(environ)
         output = list(router(environ, start))
         yield '%02d\n' % kwargs['num']
         for x in output:

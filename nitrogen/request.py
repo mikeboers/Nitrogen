@@ -23,7 +23,7 @@ from .webio import request_params
 from .cookie import Container as CookieContainer
 from .headers import DelayedHeaders, MutableHeaders
 from .webio import request_params
-from .route.tools import get_route_data
+from .route.tools import get_data
 
 class _Common(object):
     pass
@@ -49,7 +49,7 @@ class Request(_Common):
         if start:
             self._response = Response(start)
         
-        self.route = get_route_data(environ)
+        self.route = get_data(environ)
     
     environ = _attr_getter('_environ')
     response = _attr_getter('_response')
