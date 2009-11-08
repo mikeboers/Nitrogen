@@ -39,10 +39,10 @@ from ..uri.path import Path, encode, decode
 
 ENVIRON_ROUTE_KEY = 'nitrogen.route'
 
-_HistoryChunk = collections.namedtuple('HistoryChunk', 'path unrouted router data builder args kwargs'.split())
+_HistoryChunk = collections.namedtuple('HistoryChunk', 'before after router data builder'.split())
 class HistoryChunk(_HistoryChunk):
-    def __new__(cls, path, unrouted, router, data=None, builder=None, args=None, kwargs=None):
-        return _HistoryChunk.__new__(cls, path, unrouted, router, data, builder, args or tuple(), kwargs or {})
+    def __new__(cls, before, after, router, data=None, builder=None):
+        return _HistoryChunk.__new__(cls, before, after, router, data, builder)
 
     
 def get_request_path(environ):
@@ -97,10 +97,10 @@ def validate_path(path):
    
    
 def get_unrouted(environ):
-    """Returns the unrouted portion of the requested URI from the environ."""
+    """Get the thus unrouted portion of the requested URI from the environ."""
     history = get_history(environ)
     if history:
-        return history[-1].unrouted
+        return history[-1].after
     return get_request_path(environ)
 
 
@@ -117,11 +117,11 @@ def get_route_data(environ):
         return history[-1].data
 
 
-def set_unrouted(environ, unrouted, router, data=None, builder=None, args=tuple(), kwargs={}):
+def set_unrouted(environ, unrouted, router, data=None, builder=None):
     """Sets the unrouted path and adds to routing history.
     
     This function is to be used by routers which are about to redirect
-    control to another WSGI app after consuing some of the unrouted requested
+    control to another WSGI app after consuming some of the unrouted requested
     path. It also established a routing history at the same time which is
     used for debugging (visually in the logs) and for constructing slightly
     modified URLs.
@@ -144,21 +144,20 @@ def set_unrouted(environ, unrouted, router, data=None, builder=None, args=tuple(
     
     before = get_unrouted(environ)
     after = unrouted
-    history.append(HistoryChunk(before, after, router, data, builder or
-        build_simple_route_builder(before, after), args, kwargs))
+    history.append(HistoryChunk(before, after, router, data, builder))
 
 
-def build_simple_route_builder(before, after):
+def simple_builder(before, after, new):
     """Default builder function.
     
     Requires the output of the router to be a suffix of the input.
     
     Examples:
-        >>> build_simple_route_builder('/one/two', '/two')('/new', None)
+        >>> simple_builder('/one/two', '/two', '/new')
         '/one/new'
-        >>> build_simple_route_builder('/a/b/c', '/c')('/d', None)
+        >>> simple_builder('/a/b/c', '/c', '/d')
         '/a/b/d'
-        >>> build_simple_route_builder('/base', '')('/unrouted', None)
+        >>> simple_builder('/base', '', '/unrouted')
         '/base/unrouted'
     
     """
@@ -166,17 +165,12 @@ def build_simple_route_builder(before, after):
     if before.endswith(after):
         delta = before[:-len(after)] if after else before
     else:
-        delta = None
+        raise ValueError('cannot trivially reverse route %r to %r' % (before, after))
     
-    def builder(route, extra):
-        if delta is None:
-            raise ValueError('cannot trivially reverse route %r to %r' % (before, after))
-        return delta + route
-    
-    return builder
+    return delta + new
 
 
-def build_from(environ, router, route='', extra=None):
+def build_from(environ, router, route=''):
     
     history = get_history(environ)
     for i, chunk in enumerate(history):
@@ -185,15 +179,18 @@ def build_from(environ, router, route='', extra=None):
     else:
         raise ValueError('could not find router in history')
     
-    extra = dict(extra) if extra else {}
-    
     validate_path(route)
     for chunk in reversed(history[:i+1]):
-        route = chunk.builder(route, extra, *chunk.args, **chunk.kwargs)
-        validate_path(route)
+        if chunk.builder:
+            route = chunk.builder(route)
+            validate_path(route)
+        else:
+            route = simple_builder(chunk.before, chunk.after, route)
     
     return route
     
+
+
 
 def test_build_from():
     
@@ -269,8 +266,8 @@ def test_routing_path_setup():
     res = app.get('/one/two')
     # print get_history(res.environ)
     _assert_next_history_step(res, 
-            path='/one/two',
-            unrouted='/two',
+            before='/one/two',
+            after='/two',
             router=_app), 'history is wrong'
 
 if __name__ == '__main__':

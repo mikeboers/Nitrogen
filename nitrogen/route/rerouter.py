@@ -219,9 +219,7 @@ class ReRouter(object):
                 tools.set_unrouted(environ,
                     unrouted=unmatched,
                     router=self,
-                    data=match,
-                    builder=self._builder,
-                    args=(match, )
+                    data=match
                 )
 
                 return app(environ, start)
@@ -230,9 +228,6 @@ class ReRouter(object):
             return self.default(environ, start)
         
         raise HttpNotFound()
-    
-    def _builder(self, route, extra, match):
-        return match.route.build(**extra)
 
 
 
@@ -268,10 +263,9 @@ def test_routing_path_setup():
     assert res.body == 'one'
     # pprint(tools.get_history(res.environ))
     tools._assert_next_history_step(res,
-            path='/one/two',
-            unrouted='/two',
-            router=router,
-            builder=router._builder
+            before='/one/two',
+            after='/two',
+            router=router
     )
 
     res = app.get('/x-4/x-3/x-2/one')
@@ -279,13 +273,13 @@ def test_routing_path_setup():
     assert res.body == '04\n03\n02\none'
     # pprint(tools.get_history(res.environ))
     tools._assert_next_history_step(res,
-        path='/x-4/x-3/x-2/one', unrouted='/x-3/x-2/one', router=router, builder=router._builder, _data={'num': 4})
+        before='/x-4/x-3/x-2/one', after='/x-3/x-2/one', router=router, _data={'num': 4})
     tools._assert_next_history_step(res,
-        path='/x-3/x-2/one', unrouted='/x-2/one', router=router, builder=router._builder, _data={'num': 3})
+        before='/x-3/x-2/one', after='/x-2/one', router=router, _data={'num': 3})
     tools._assert_next_history_step(res,
-        path='/x-2/one', unrouted='/one', router=router, builder=router._builder, _data={'num': 2})
+        before='/x-2/one', after='/one', router=router, _data={'num': 2})
     tools._assert_next_history_step(res,
-        path='/one', unrouted='', router=router, builder=router._builder, _data={'word': 'one'})
+        before='/one', after='', router=router, _data={'word': 'one'})
 
     try:
         app.get('/-does/not/exist')
