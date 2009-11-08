@@ -209,6 +209,7 @@ class ReRouter(object):
 
     def __call__(self, environ, start):
         path = tools.get_unrouted(environ)
+        # print repr(path)
         log.debug('matching on %r' % path)
         for route, app in self._apps:
             m = route.match(path)
@@ -220,18 +221,18 @@ class ReRouter(object):
                     router=self,
                     data=match,
                     builder=self._builder,
-                    kwargs={'data': match}
+                    args=(match, )
                 )
 
                 return app(environ, start)
 
         if self.default:
             return self.default(environ, start)
-
+        
         raise HttpNotFound()
     
-    def _builder(self, route, kwargs):
-        raise NotImplemented
+    def _builder(self, route, extra, match):
+        return match.route.build(**extra)
 
 
 
@@ -302,6 +303,35 @@ def test_routing_path_setup():
     assert res.body == 'pre}post'
 
 
+def test_route_building():
+
+    router = ReRouter()
+    
+    @router.register('word', r'/{word:one|two|three}')
+    def one(environ, start):
+        start('200 OK', [('Content-Type', 'text-plain')])
+        yield tools.get_route_data(environ).word
+
+    @router.register('num', r'/x-{num:\d+}', _parsers=dict(num=int))
+    def two(environ, start):
+        kwargs = tools.get_route_data(environ)
+        output = list(router(environ, start))
+        yield '%02d\n' % kwargs['num']
+        for x in output:
+            yield x
+    
+    @router.register('empty', '')
+    def three(environ, start):
+        start('200 OK', [('Content-Type', 'text/plain')])
+        yield 'empty'
+
+    app = TestApp(router)
+
+    res = app.get('/x-1')
+    # print repr(res.body)
+    # print repr(tools.build_from(res.environ, router, extra={'num': 42}))
+
 if __name__ == '__main__':
+    import logging
     from .. import test
     test.run()
