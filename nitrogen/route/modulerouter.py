@@ -77,8 +77,8 @@ class ModuleRouter(object):
         if name not in self._modules:
             try:
                 raw_module = __import__(name, fromlist=['nonempty'])
-            except ImportError:
-                raise HttpNotFound('could not import controller module %r' % name)
+            except ImportError as e:
+                raise HttpNotFound('could not import controller module %r: %r' % (name, e))
             self._modules[name] = Module(router=self, module=raw_module)
         
         module = self._modules[name]
