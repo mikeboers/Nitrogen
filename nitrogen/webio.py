@@ -6,35 +6,19 @@ input when they must. This gives a little bit of time to setup some
 configuration on how the files are parsed.
 
 By default, files are rejected; an exception is thrown when a file is posted.
-You can change the accept parameter on the files object to turn off this
-behavior. Then, by default, temporary files will be created that will be
-removed from the drive as soon as they are garbage collected.
+If you want to accept files you must specify a make_file attribute on the
+files object, which will be called with positional arguments `key` (the key it
+will have in the files dict), `filename` (as reported by the browser), and
+`length` (the content-length of the file as reported by the browser; may be
+None). It is expected to return a file-like object.
 
-The default temp files will also respond to a max_size attribute on the files
-object. They will not accept any more data than the number of bytes specified
-on the max_size attribute.
+There are two make_file functions provided: make_stringio and make_temp_file.
 
-If you want even more control over the files, you can specify a make_file
-attribute on the files object, which will be called with keyword arguments
-"key" (the key it will have in the files dict), "filename" (as reported by the
-browser), and "length" (the content-length of the file as reported by the
-browser). It is expected to return a file-like object.
-
-I don't do anything to deal with possibly incomplete files. You will need to
-implement your own make_file which returns an object that tracks the written
-amount and compares it to the reported content-length.
-
-Notes from cgi.FieldStorage:
-	fs.length is the reported content length
-		will be -1 if the content length is not given
-	fs.file will have the file object
-		it could be a stringIO
-	fs.name is the field name
-	fs.type_options has the type options (it is a dict)
-		maybe it has a charset key? =]
-	it has internal protection for recieving too much in the read_binary mode, but that is only triggered from read_single (when there is a length), which is triggerd when the content type is not multipart/* or application/x-www-form-urlencoded. If it is multipart, then a bunch of FieldStorages are made from the multiple parts and those are finally read with read_single
-		so if a length is provided, then it already stops reading after that far
-		if there is no length, it reads until the boundary or the end of file.
+The file-like object returned from make_file is wrapped in a class which makes
+sure that it only accepts as much data as we allow via the
+`max_file_length` attribute. There is protection elsewhere to make sure that
+the client reported length is smaller than the `max_file_length` but the client
+need not provide it.
 
 """
 
@@ -97,7 +81,6 @@ def make_temp_file(key, filename, length):
     """
     
     return tempfile.TemporaryFile("w+b") # We do need the "+" in there...
-    # old: TempFile(max_length=length)
 
 
 
@@ -216,7 +199,7 @@ def post_parser(app, make_file=None, max_file_length=None, environ=None, **kwarg
     """WSGI middleware which parses posted data.
     
     Lazy-evaluation via DelayedMultiMap(s) gives you enough time to specify
-    the make_file, and max_file_length as attributes of the files object.
+    the `make_file`, and `max_file_length` as attributes of the files object.
     
     Adds 'nitrogen.post' and 'nitrogen.files' to the environ. If the request
     is not a POST, then empty MultiMaps will be inserted instead. The files
@@ -325,6 +308,7 @@ def uri_parser(app, **kwargs):
 
 
 def header_parser(app, **kwargs):
+    """WSGI middleware which adds a header mapping to the environment."""
     def inner(environ, start):
         def gen():
             for k, v in environ.items():
@@ -336,7 +320,7 @@ def header_parser(app, **kwargs):
     
 
 def request_params(app, parse_headers=True, parse_uri=True, parse_get=True, parse_post=True,
-        parse_cookie=True, build_cookie=True, **kwargs):
+        parse_cookies=True, build_cookies=True, **kwargs):
     if parse_headers:
         app = header_parser(app, **kwargs)
     if parse_uri:
@@ -345,9 +329,9 @@ def request_params(app, parse_headers=True, parse_uri=True, parse_get=True, pars
         app = get_parser(app, **kwargs)
     if parse_post:
         app = post_parser(app, **kwargs)
-    if parse_cookie:
+    if parse_cookies:
         app = cookie_parser(app, **kwargs)
-    if build_cookie:
+    if build_cookies:
         app = cookie_builder(app, **kwargs)
     return app
 
