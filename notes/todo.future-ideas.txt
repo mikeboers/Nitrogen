@@ -1,10 +1,8 @@
-- The FieldStorage which drives the post parser may have clues as to it's
-  content type. Should, perhaps, decode from that instead of utf8.
-  
+
 - It might be a idea to convert to ascii with xml references at the end,
   instead of actual unicode. Need to look into this.
   
-- route.Mapper could be areally simple dict-based router going off of the
+- route.Mapper could be a really simple dict-based router going off of the
   first segment.
 
 - URIs:
@@ -21,11 +19,8 @@
 - Look into using paste.gzipper middleware.
 - copy what paste.fileapp is doing (or just use it =P)
 
-
 - route adapter for normal wsgi apps (so that their changes to PATH_INFO get
   recorded in history)
-
-
 
 - Basic eTaging middlewear which simply hashes everything it is about to send
   down, and compares it to the eTag. Just saves transmission costs.

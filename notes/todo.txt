@@ -22,12 +22,8 @@
     - The webhelpers one also looks a bit easier to extend.
     - Make line breaks drop in <br />
 
-- Adapt the API format into a couple of wsgi middlewear and such.
-    - Methods are just seperate WSGI apps (different paths), likely set apart
-      by their ".json" postfix.
-    - An ApiRequest is similar to the standard Request. It has dict access to
-      parameters. Key errors throw an api error. All error's are caught and
-      turned into API errors.
+
+
 
 - Api model editable access should be a WSGI app class. It will be acceable through
   /news/model/add or what have you.
