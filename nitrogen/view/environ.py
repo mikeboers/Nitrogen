@@ -49,6 +49,7 @@ class ViewEnviron(object):
         
     def _prep_data(self, data):
         data.update(self.context)
+        data.update(self.local.__dict__)
         data['flash_messages'] = self.flash_messages
         if hasattr(self.local, 'environ'):
             environ = self.local.environ
