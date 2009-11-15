@@ -26,7 +26,7 @@ from BeautifulSoup import BeautifulSoup
 
 
 def clean_html(html):
-    """Asserts the "cleanliness" of html. Closes tags and such."""
+    """Asserts the "cleanliness" of html. Closes tags, indents, etc."""
     return BeautifulSoup(html).prettify()
 
 

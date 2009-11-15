@@ -1,3 +1,13 @@
+"""nitrogen.view.defaults
+
+This module contains default values for use with view environments. Currently
+it only contains a `context` dict, which will be used as a starting point for
+the `globals` attribute on a view environment.
+
+It contains a number of functions and helpers that we tend to use all over the
+place.
+
+"""
 
 # Setup path for local evaluation. Do not modify anything except for the name
 # of the toplevel module to import at the very bottom.
