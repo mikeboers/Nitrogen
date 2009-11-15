@@ -71,7 +71,9 @@ class ApiResponse(ApiBase):
     def start(self, code=None):
         if code is None:
             code = 200 if self.get('status') == 'ok' else 500
-        self.raw_response.start(code, plain=True)
+        # self.raw_response.content_type = 'application/json'    
+        self.raw_response.content_type = 'text/plain'
+        self.raw_response.start(code)
         self.started = True
     
     def encode(self, obj=None, indent=4, sort_keys=True):
