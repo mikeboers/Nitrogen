@@ -18,7 +18,7 @@ if __name__ == '__main__':
         __import__(name)
     __local_eval_setup('nitrogen', True)
 
-
+from cgi import escape
 import sys
 import traceback
 import logging
@@ -41,7 +41,8 @@ little while and try again.
 Thank you for you patience as we resolve this matter.
 """
 
-def build_error_report(environ, output=None):
+
+def build_error_report(environ, output=None, html=False):
     """Returns an iterator of consecutive parts of an error report with
     traceback, environment, and buffered output, if supplied.
     
@@ -51,7 +52,8 @@ def build_error_report(environ, output=None):
         environ -- The WSGI environ that the error occoured in.
         output -- Any WSGI output captured.
     
-    Example:
+    Examples:
+    
         >>> try:
         ...     raise ValueError('Testing')
         ... except:
@@ -63,46 +65,102 @@ def build_error_report(environ, output=None):
         ValueError: Testing
         Environment:
           HTTP_HOST: 'example.com'
-        Sent 2 chunks (6 bytes):
+        Output 2 chunks (6 bytes):
         ==============================================================================
         onetwo
         ==============================================================================
         <BLANKLINE>
         
+        
+        >>> try:
+        ...     raise ValueError('Testing')
+        ... except:
+        ...     print format_error_report(environ={'HTTP_HOST': 'example.com'}, output=['one', 'two'], html=True).replace('\\t', '    ')
+        ... # doctest: +ELLIPSIS
+        <h2>Traceback <em>(most recent call last)</em>:</h2>
+        <ol>
+            <li>
+                File <strong>"&lt;doctest ....build_error_report[1]&gt;"</strong>, line <strong>2</strong>, in <strong>&lt;module&gt;</strong><br/>
+                <code>raise ValueError('Testing')</code></li>
+        </ol>
+        <h3>ValueError: Testing</h3>
+        <h2>Environment:</h2>
+        <ul>
+            <li><strong>HTTP_HOST</strong>: <code>'example.com'</code></li>
+        </ul>
+        <h2>Output <strong>2</strong> chunks (<strong>6</strong> bytes):</h2>
+        <pre>onetwo</pre>
+        
     """
-    
-    yield "Traceback (most recent call last):\n"
-    for x in traceback.format_list(get_cleaned_traceback()):
-        yield x
+        
     type, value, tb = sys.exc_info()
-    for x in traceback.format_exception_only(type, value):
-        yield x
     
-    # yield '\n'
-    yield 'Environment:\n'
-    yield '\n'.join('  %s: %r' % x for x in sorted(environ.items()))
-    yield '\n'
+    if html:
+        yield '<h2>Traceback <em>(most recent call last)</em>:</h2>\n'
+        yield '<ol>\n'
+        for filename, lineno, function, line in get_cleaned_traceback():
+            yield '\t<li>\n'
+            yield '\t\tFile <strong>"%s"</strong>, line <strong>%d</strong>, in <strong>%s</strong><br/>' % (escape(filename), lineno, escape(function))
+            if line:
+                yield '\n\t\t<code>%s</code>' % escape(line)
+            yield '</li>\n'
+        yield '</ol>\n'
+        yield '<h3>'
+        yield ''.join(traceback.format_exception_only(type, value)).strip()
+        yield '</h3>\n'
+        
+    else:
+        yield 'Traceback (most recent call last):\n'
+        for x in traceback.format_list(get_cleaned_traceback()):
+            yield x
+        for x in traceback.format_exception_only(type, value):
+            yield x
+    
+    if html:
+        yield '<h2>Environment:</h2>\n'
+        yield '<ul>\n'
+        for k, v in sorted(environ.items()):
+            yield '\t<li><strong>%s</strong>: <code>%s</code></li>\n' % (
+                escape(str(k)), escape(repr(v)))
+        yield '</ul>\n'
+    
+    else:
+        yield 'Environment:\n'
+        yield '\n'.join('  %s: %r' % x for x in sorted(environ.items()))
+        yield '\n'
+    
     if output is not None:
         output = list(output)
         output_len = sum(len(x) for x in output)
-        # yield '\n\n'
-        yield 'Sent %d chunks (%d bytes)' % (len(output), sum(len(x) for x in output))
-        if output_len:
-            yield ':\n'
-            yield '=' * 78 + '\n'
+        
+        if html:
+            yield '<h2>Output <strong>%d</strong> chunk%s (<strong>%d</strong> bytes)%s</h2>\n' % (
+                len(output), '' if len(output) == 1 else 's',
+                output_len, ':' if output else ''
+            )
+            yield '<pre>'
             for x in output:
                 yield x
-            if not x.endswith('\n'):
-                yield '\n'
-            yield '=' * 78
+            yield '</pre>'
+        
         else:
-            yield '.'
-        yield '\n'
+            yield 'Output %d chunk%s (%d bytes)' % (len(output), '' if len(output) == 1 else 's', sum(len(x) for x in output))
+            if output_len:
+                yield ':\n'
+                yield '=' * 78 + '\n'
+                for x in output:
+                    yield x
+                if not x.endswith('\n'):
+                    yield '\n'
+                yield '=' * 78
+            else:
+                yield '.'
+            yield '\n'
 
 
-def format_error_report(environ, output=None):
+def format_error_report(environ, output=None, html=False):
     """Returns a stringified error report as built by build_error_report."""
-    return ''.join(build_error_report(environ, output))
+    return ''.join(build_error_report(environ=environ, output=output, html=html))
 
 
 def get_cleaned_traceback():
@@ -171,27 +229,31 @@ def error_notifier(app, render=None, traceback=False, template='_500.tpl'):
                 for x in self.output:
                     yield x
             except Exception as e:
+                
+                text_report = format_error_report(self.environ, self.output)
+                html_report = format_error_report(self.environ, self.output, html=True)
+                
+                try:
+                    self.start('500 Internal Server Error', [('Content-Type',
+                        'text/html; charset=UTF-8')])
+                except:
+                    pass
+                
                 if render:
-                    tb = get_cleaned_traceback()
                     try:
-                        self.start('500 Internal Server Error', [('Content-Type',
-                            'text/html; charset=UTF-8')])
-                    except:
+                        yield render(template, **(dict(
+                            text_report=text_report,
+                            html_report=html_report
+                            ) if traceback else {})).encode('utf8')
+                        return
+                    except Exception as e:
+                        log.error('error while rendering error view', exc_info=sys.exc_info())
                         pass
-                    yield render(template, **({
-                        'environ': self.environ,
-                        'error': e,
-                        'traceback': tb,
-                        'output': self.output
-                        } if traceback else {})).encode('utf8')
-                else:
-                    report = format_error_report(self.environ)
-                    try:
-                        self.start('500 Internal Server Error', [('Content-Type',
-                            'text/plain; charset=UTF-8')])
-                    except:
-                        pass
-                    yield report
+                
+                yield html_report
+                yield '<!-- This is the same error report but in plaintext.\n\n'
+                yield text_report
+                yield '\n-->'
                     
     return inner
 
