@@ -51,6 +51,8 @@ import sys
 import tempfile
 import logging
 
+from cStringIO import StringIO
+
 from . import cookie
 from .uri import URI
 from .uri.query import Query
@@ -61,59 +63,143 @@ from .headers import DelayedHeaders
 log = logging.getLogger(__name__)
 
 
-class DefaultFile(object):
-    """Class for file uploads in default state."""
-    def __init__(self, max_size):
-        self.fh = tempfile.TemporaryFile("w+b")
-        self.max_size = max_size
-        self.written = 0
-        
-        # Transfer all the methods.
-        for attr in 'read flush seek tell fileno'.split():
-            setattr(self, attr, getattr(self.fh, attr))
+class MaxLengthWrapper(object):
+    
+    """Wrapper around file-like objects to ensure that they only recieve as
+    much data as we have permitted them to.
+
+    """
+    
+    def __init__(self, fh, max_length):
+        self.fh = fh
+        self.max_length = max_length
+        self.recieved = 0
+        self.seek = fh.seek
     
     def write(self, stuff):
-        self.written += len(stuff)
-        if self.max_size and self.max_size < self.written:
-            raise ValueError("Too much written to file!")
+        self.recieved += len(stuff)
+        if self.max_length is not None and self.recieved > self.max_length:
+            raise ValueError("too much data recieved")
         return self.fh.write(stuff)
 
 
-def build_raw_field_storage(environ, accept_files, make_file, max_file_size):
-    class FieldStorage(cgi.FieldStorage):    
+def make_stringio(key, filename, length):
+    """Simple make_file which returns a StringIO."""
+    return StringIO()
+
+
+def make_temp_file(key, filename, length):
+    """Simple make_file which returns a temporary file.
+    
+    The underlaying file will be removed from the disk when this object is
+    garbage collected. See the tempfile module.
+    
+    """
+    
+    return tempfile.TemporaryFile("w+b") # We do need the "+" in there...
+    # old: TempFile(max_length=length)
+
+
+
+
+def field_storage(environ, make_file, max_file_length):
+    """Build the FieldStorage that we pull the post and file data from.
+    
+    We need to define two FieldStorage classes here: one master for driving
+    the parsing of the request, and one child for representing the individual
+    parameters (but only used for files as the base uses a MiniFieldStorage
+    class for straight key/value pairs).
+    
+    In the master, we overload the read_single method to raise an error if
+    there is any data present. This is because we expect the read_single to
+    never be called in normal usage. Depending on the content type of the
+    request, either read_urlencoded (for "application/x-www-form-urlencoded"),
+    read_multi (for "multipart/*"), or read_single (anything else) is called.
+    For the master we are clearly expecting only read_urlencoded or read_multi
+    to be called. However, when making a POST with an empty string or empty
+    object from jQuery, the content type is set to "text/plain" and no data
+    is actually sent. This was tricking this system into making files and
+    requiring a make_file function to be set even though no data will be
+    recieved.
+    
+    In the child, we overload the make_file function to make sure that we are
+    able to make files, make sure they are not too long (both by checking the
+    posted content length and wrapping the files in a MaxLengthWrapper
+    object), and handle the calling of the make_file function.
+    
+    """
+    
+    class ChildFieldStorage(cgi.FieldStorage):
+        
+        def __init__(self, *args, **kwargs):
+            cgi.FieldStorage.__init__(self, *args, **kwargs)
+            self.made_file = False
+            
         def make_file(self, binary=None):
-            if not accept_files:
-                raise ValueError("Not accepting posted files.")
-            if make_file:
-                return make_file(
-                    key=self.name,
-                    filename=self.filename,
-                    length=(self.length if self.length > 0 else 0)
-                )
-            if self.length > max_file_size:
-                raise ValueError("Reported file size is too big.")
-            return DefaultFile(max_size=max_file_size)
+            self.made_file = True
+            if not make_file:
+                raise ValueError("not accepting posted files; "
+                    "no make_file set")
+            if max_file_length is not None and self.length > max_file_length:
+                raise ValueError("reported file size is too big: %r > %r" % (
+                    self.length, max_file_length))
+            return MaxLengthWrapper(make_file(
+                self.name,
+                self.filename,
+                self.length if self.length > 0 else 0
+            ), max_file_length)
+    
+    class MasterFieldStorage(cgi.FieldStorage):
+        
+        FieldStorageClass = ChildFieldStorage
+        
+        def read_single(self):
+            if self.length == 0:
+                return
+            if self.length > 0:
+                raise ValueError("we don't understand %r content-type" %
+                    self.type)
+            if self.fp.read(1):
+                raise ValueError("we don't understand %r content-type" %
+                    self.type)
+            return
+    
     environ = environ.copy()
     environ['QUERY_STRING'] = ''
-    fs = FieldStorage(
+    fs = MasterFieldStorage(
         fp=environ.get('wsgi.input'),
         environ=environ,
         keep_blank_values=True
     )
     
-    # Assert that all the files have been written out.
+    
+    # The list isn't always there. Try to post a empty string with
+    # jQuery and it sends content-type "text/plain", so fs.list will be None.
+    fs.list = fs.list or []
+    
+    # Assert that no more StringIO objects (from the FieldStorage) are left
+    # and that all the files have been written out through the make_file.
     for chunk in fs.list:
-        if chunk.filename and hasattr(chunk.file, 'getvalue'): # IT is a stringIO
+        
+        # Using an attribute I added to FieldStorage to see if the internal
+        # StringIO is still in use.
+        if chunk.filename and not chunk.made_file:
             contents = chunk.file.getvalue()
-            chunk.file = chunk.make_file(None)
+            chunk.file = chunk.make_file()
             chunk.file.write(contents)
             chunk.file.seek(0)
+        
+        # Pull the actual files out of the MaxLengthWrapper(s).
+        if chunk.filename:
+            chunk.file = chunk.file.fh
+    
     return fs
+
 
 def get_parser(app, **kwargs):
     """WSGI middleware which parses the query string.
     
-    A read-only MultiMap is stored on the environment at 'nitrogen.get'.
+    A read-only DelayedMultiMap is stored on the environment at 'nitrogen.get'.
     
     """
     
@@ -124,64 +210,68 @@ def get_parser(app, **kwargs):
         environ['nitrogen.get'] = DelayedMultiMap(gen)
         return app(environ, start)
     return inner    
-    
-def post_parser(app, accept_files=False, make_file=None, max_file_size=None, environ=None, **kwargs):
+
+
+def post_parser(app, make_file=None, max_file_length=None, environ=None, **kwargs):
     """WSGI middleware which parses posted data.
     
-    Lazy-evaluation gives you enough time to specify the accept_files, make_file,
-    and max_file_size as attributes of the files object.
+    Lazy-evaluation via DelayedMultiMap(s) gives you enough time to specify
+    the make_file, and max_file_length as attributes of the files object.
     
-    Adds 'nitrogen.post' and 'nitrogen.files' to the environ.
+    Adds 'nitrogen.post' and 'nitrogen.files' to the environ. If the request
+    is not a POST, then empty MultiMaps will be inserted instead. The files
+    mapping will still have the default make_file and max_file_length, but it
+    will not do anything with them.
     
     Params:
         app - The WSGI app to wrap.
-        accept_files - Boolean if files should be accepted or not.
-        make_file - Callback that returns a file-like object to recieve data.
-        max_file_size - Maximum acepted file size for default file reciever.
+        make_file - None, or a callback that returns a file-like object to
+            recieve data.
+        max_file_length - Maximum amount of data to recieve for any file.
     
     make_file:
-        If None, a default file object will be used (object of DefaultFile)
-        which uses the tempfile module to make a temporary file.
-        
-        If not None, it must be a callable object which takes key, filename,
-        and length as keyword arguments, and returns an object with
+        If None, files will not be accepted. Otherwise it must be a callable
+        object which takes key, filename, and length as posotional arguments,
+        and returns an object with a write method.
     
     """
     
     def inner(environ, start):
         
-        # Post and files.
-        post  = environ['nitrogen.post']  = DelayedMultiMap()
-        files = environ['nitrogen.files'] = DelayedMultiMap()
+        # Don't need to bother doing anything fancy if it isn't a POST.
+        if environ['REQUEST_METHOD'].lower() != 'post':
+            post  = MultiMap()
+            files = MultiMap()
         
-        def map_supplier_builder(is_files):
-            def inner():
-                fs = map_supplier_builder.fs
-                if not fs:
-                    fs = map_supplier_builder.fs = build_raw_field_storage(
-                        environ=environ,
-                        accept_files=files.accept_files,
-                        make_file=files.make_file,
-                        max_file_size=files.max_file_size
-                    )
-                for chunk in fs.list:
-                    # sys.stderr.write(str(chunk.filename) + '\n')
-                    if chunk.filename and is_files:
-                        # Send to files object.
-                        yield (chunk.name.decode('utf8', 'replace'), chunk.file)
-                    elif not chunk.filename and not is_files:
-                        # Send to post object.
-                        yield (chunk.name.decode('utf8', 'replace'), chunk.value.decode('utf8', 'replace'))
-            return inner
-        map_supplier_builder.fs = None
-        
-        files.accept_files = accept_files
+        else:
+            def map_supplier_builder(is_files):
+                def supplier():
+                    fs = map_supplier_builder.fs
+                    if not fs:
+                        fs = map_supplier_builder.fs = field_storage(
+                            environ=environ,
+                            make_file=files.make_file,
+                            max_file_length=files.max_file_length
+                        )
+                    for chunk in fs.list:
+                        charset = fs.type_options.get('charset', 'utf8')
+                        # Send to files object?
+                        if chunk.filename and is_files:
+                            yield (chunk.name.decode(charset, 'error'), chunk.file)
+                        # Send to post object?
+                        elif not chunk.filename and not is_files:
+                            yield (chunk.name.decode(charset, 'error'), chunk.value.decode(charset, 'error'))
+                return supplier
+            map_supplier_builder.fs = None
+            
+            post  = DelayedMultiMap(map_supplier_builder(is_files=False))
+            files = DelayedMultiMap(map_supplier_builder(is_files=True))
+            
         files.make_file = make_file
-        files.max_file_size = max_file_size
+        files.max_file_length = max_file_length
         
-        post.supplier = map_supplier_builder(is_files=False)
-        files.supplier = map_supplier_builder(is_files=True)
-        
+        environ['nitrogen.post'] = post
+        environ['nitrogen.files'] = files
         return app(environ, start)
     
     return inner
@@ -219,7 +309,8 @@ def cookie_builder(app, **kwargs):
             start(status, headers)
         return app(environ, inner_start)
     return inner
-    
+
+
 def uri_parser(app, **kwargs):
     """WSGI middleware which adds a URI object into the environment.
     
@@ -232,6 +323,7 @@ def uri_parser(app, **kwargs):
         return app(environ, start)
     return inner
 
+
 def header_parser(app, **kwargs):
     def inner(environ, start):
         def gen():
@@ -241,7 +333,8 @@ def header_parser(app, **kwargs):
         environ['nitrogen.headers'] = DelayedHeaders(gen)
         return app(environ, start)
     return inner
-        
+    
+
 def request_params(app, parse_headers=True, parse_uri=True, parse_get=True, parse_post=True,
         parse_cookie=True, build_cookie=True, **kwargs):
     if parse_headers:
@@ -257,6 +350,14 @@ def request_params(app, parse_headers=True, parse_uri=True, parse_get=True, pars
     if build_cookie:
         app = cookie_builder(app, **kwargs)
     return app
+
+
+
+
+
+
+
+
 
 
 def test_DelayedMultiMap_1():
