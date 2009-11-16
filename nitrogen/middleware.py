@@ -23,6 +23,7 @@ import logging
 import hashlib
 
 from .request import as_request, Request, Response
+from .headers import Headers
 from .compressor import compressor
 from .encoding import utf8_encoder
 from .http.status import status_resolver, HttpNotFound
@@ -37,25 +38,30 @@ log = logging.getLogger(__name__)
 def etagger(app):
     def inner(environ, start):
         
-        status = None
-        headers = None
-        def inner_start(new_status, new_headers):
-            global status, headers
-            status = new_status
-            headers = new_headers
+        state = dict(
+            status=None,
+            headers=None
+        )
+        def inner_start(status, headers):
+            state.update(dict(
+                status=status,
+                headers=headers
+            ))
         
         output = ''.join(app(environ, inner_start))
-        etag = hashlib.md5(output).hexdigest()
+        etag = 'auto-md5:' + hashlib.md5(output).hexdigest()
         
+        log.debug(state['headers'])
         req = Request(environ=environ)
-        res = Response(start=start, headers=headers)
+        res = Response(start=start, headers=state['headers'])
         
-        res.etag = etag
+        res.etag = res.etag or etag
+        
         if req.etag == etag:
             res.start('not modified')
             return
         
-        res.start()
+        res.start(state['status'])
         yield output
     
     return inner
