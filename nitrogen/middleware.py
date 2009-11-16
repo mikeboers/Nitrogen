@@ -20,8 +20,9 @@ if __name__ == '__main__':
 
 
 import logging
+import hashlib
 
-from .request import as_request
+from .request import as_request, Request, Response
 from .compressor import compressor
 from .encoding import utf8_encoder
 from .http.status import status_resolver, HttpNotFound
@@ -33,6 +34,32 @@ from .view import TYPE_HEADER_HTML
 log = logging.getLogger(__name__)
 
 
+def etagger(app):
+    def inner(environ, start):
+        
+        status = None
+        headers = None
+        def inner_start(new_status, new_headers):
+            global status, headers
+            status = new_status
+            headers = new_headers
+        
+        output = ''.join(app(environ, inner_start))
+        etag = hashlib.md5(output).hexdigest()
+        
+        req = Request(environ=environ)
+        res = Response(start=start, headers=headers)
+        
+        res.etag = etag
+        if req.etag == etag:
+            res.start('not modified')
+            return
+        
+        res.start()
+        yield output
+    
+    return inner
+        
 def output_buffer(app):
     """WSGI middleware which buffers all output before sending it on.
     
