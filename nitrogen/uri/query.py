@@ -196,16 +196,16 @@ Easy signatures!
     True
     >>> query.verify('bad key')
     False
-    >>> query.verify('another_key', maxage=-1)
+    >>> query.verify('another_key', max_age=-1)
     False
-    >>> query.verify('another_key', maxage=-1, strict=True)
+    >>> query.verify('another_key', max_age=-1, strict=True)
     Traceback (most recent call last):
     ...
     ValueError: signature is too old
     
     >>> query = Query(v='value')
     >>> query['_n'] = '123abc'
-    >>> query.sign('key', maxage=60, add_time=True, add_nonce=False)
+    >>> query.sign('key', max_age=60, add_time=True, add_nonce=False)
     >>> str(query) # doctest: +ELLIPSIS
     'v=value&_n=123abc&_t=...&_x=...&_s=...'
     >>> query.verify('key')
@@ -380,7 +380,7 @@ class Query(MutableMultiMap):
         assert len(value) == 6, 'Encoded int is too short.'
         return struct.unpack('I', base64.b64decode(str(value) + '==', '-_'))[0]
     
-    def sign(self, key, hasher=None, maxage=None, add_time=None, add_nonce=True,
+    def sign(self, key, hasher=None, max_age=None, add_time=None, add_nonce=True,
         nonce_bits=128, time_key = '_t', sig_key='_s', nonce_key='_n',
         expiry_key='_x'):
         
@@ -389,10 +389,10 @@ class Query(MutableMultiMap):
         # encode_time = self._encode_float
         # encode_time = self._encode_int
         
-        if add_time or (add_time is None and maxage is None):
+        if add_time or (add_time is None and max_age is None):
             self[time_key] = encode_time(time.time())
-        if maxage is not None:
-            self[expiry_key] = encode_time(time.time() + maxage)
+        if max_age is not None:
+            self[expiry_key] = encode_time(time.time() + max_age)
         if add_nonce:
             self[nonce_key] = base64.b64encode(
                 hashlib.sha256(os.urandom(1024)).digest(), '-_')[
@@ -403,7 +403,7 @@ class Query(MutableMultiMap):
         #print repr(str(copy))
         self[sig_key] = copy._signature(key, hasher)
 
-    def verify(self, key, hasher=None, maxage=None, time_key = '_t',
+    def verify(self, key, hasher=None, max_age=None, time_key = '_t',
         sig_key='_s', nonce_key='_n', expiry_key='_x', strict=False):
 
         # Make sure there is a sig.
@@ -439,14 +439,14 @@ class Query(MutableMultiMap):
                 return False
 
         # Make sure it isnt too old.
-        if maxage is not None and time_key in self:
+        if max_age is not None and time_key in self:
             try:
                 creation_time = decode_time(self[time_key]) 
             except Exception:
                 if strict:
                     raise
                 return False
-            if creation_time + maxage < time.time():
+            if creation_time + max_age < time.time():
                 if strict:
                     raise ValueError('signature is too old')
                 return False

@@ -74,5 +74,3 @@ my own minifier, which sounds like a bad idea).
 
 
 
-
-

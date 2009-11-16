@@ -7,9 +7,9 @@ tearing it apart.
 TODO:
     - determine how this all works with unicode
 
-NOTE on maxage
-    maxage is None -> Session cookie
-    maxage <=  0 -> Expired
+NOTE on max_age
+    max_age is None -> Session cookie
+    max_age <=  0 -> Expired
 
 NOTE on all properties:
     If you just change the value of a cookie and not say anything about path/domain/expiry, the path/domain/expiry all get reset ANYWAYS.
@@ -82,7 +82,7 @@ Set one with an expiry time:
 
     >>> cookies = Container()
     >>> cookies['expires'] = 'value that expires'
-    >>> cookies['expires'].maxage = 10
+    >>> cookies['expires'].max_age = 10
     >>> cookies.build_headers()
     [('Set-Cookie', 'expires="value that expires"; Max-Age=10; Path=/')]
 
@@ -91,8 +91,8 @@ Set one that is more complex.
     >>> cookies.create('key', 'value',
     ...     domain='domain',
     ...     path='path',
-    ...     maxage=60*60,
-    ...     httponly=True,
+    ...     max_age=60*60,
+    ...     http_only=True,
     ...     secure=True
     ... )
     >>> cookies.build_headers()
@@ -290,9 +290,9 @@ _attr_map = {
     "path" : "Path",
     "comment" : "Comment",
     "domain" : "Domain",
-    "maxage" : "Max-Age",
+    "max_age" : "Max-Age",
     "secure" : "secure",
-    "httponly" : "httponly",
+    "http_only" : "httponly",
     "version" : "Version",
 }
 
@@ -302,7 +302,7 @@ class Cookie(object):
     #   max-age secure  version
     #
     # This is an extension from Microsoft:
-    #   httponly
+    #   http_only
     
     # This dictionary provides a mapping from the lowercase
     # variant on the left to the appropriate traditional
@@ -340,13 +340,13 @@ class Cookie(object):
     def expire(self):
         """Tell the browser to drop this cookie.
         
-        Effectively sets maxage to 0.
+        Effectively sets max_age to 0.
         """
         
-        self.maxage = 0
+        self.max_age = 0
     
     def is_expired(self):
-        return self.maxage is not None and self.maxage <= 0
+        return self.max_age is not None and self.max_age <= 0
     
     def __str__(self):
         """Returns the value of the cookie."""
@@ -373,7 +373,7 @@ class Cookie(object):
                     result.append("%s=%d" % (name, value))
                 elif key == "secure" and value:
                     result.append(name)
-                elif key == "httponly" and value:
+                elif key == "http_only" and value:
                     result.append(name)
                 else:
                     result.append("%s=%s" % (name, value))
@@ -543,7 +543,7 @@ def make_encrypted_container(entropy):
     
     return EncryptedContainer
 
-def make_signed_container(hmac_key, maxage=None):
+def make_signed_container(hmac_key, max_age=None):
     """Builds a signed cookie container class.
     
     Examples:
@@ -566,7 +566,7 @@ def make_signed_container(hmac_key, maxage=None):
         KeyError: 'key'
         
         >>> signed = SignedClass()
-        >>> signed.create('key', 'this expires', maxage=10)
+        >>> signed.create('key', 'this expires', max_age=10)
         >>> encoded = signed.build_headers()[0][1]
         >>> encoded # doctest:+ELLIPSIS
         'key="v=this+expires&x=...&n=...&s=..."; Max-Age=10; Path=/'
@@ -588,9 +588,9 @@ def make_signed_container(hmac_key, maxage=None):
             def _dumps(self, value):
                 query = Query()
                 query['v'] = value
-                maxages = [x for x in [self.maxage, maxage] if x is not None]
-                if maxages:
-                    query['x'] = int(time.time()) + min(maxages)
+                max_ages = [x for x in [self.max_age, max_age] if x is not None]
+                if max_ages:
+                    query['x'] = int(time.time()) + min(max_ages)
                 query['n'] = os.urandom(4).encode('hex')
                 query['s'] = hmac.new(hmac_key, str(query), hashlib.md5).hexdigest()
                 return str(query)
