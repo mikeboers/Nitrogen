@@ -14,8 +14,10 @@ if __name__ == '__main__':
     sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
     __import__(__package__)
 
-from StringIO import StringIO
+from cStringIO import StringIO
 import re
+import logging
+from cgi import parse_header
 
 from webtest import TestApp
 
@@ -25,12 +27,18 @@ from .webio import request_params
 from .cookie import Container as CookieContainer
 from .headers import DelayedHeaders, MutableHeaders
 from .webio import request_params
-from .route.tools import get_data
+from .route.tools import get_data as get_route_data
 
-class _Common(object):
-    pass
+
+log = logging.getLogger(__name__)
 
 def _environ_getter(key, callback=None):
+    """Builds a property for getting values out of the environ.
+    
+    A callback can be specified to modify the return value.
+    
+    """
+    
     if callback:
         def getter(self):
             return callback(self.environ.get(key))
@@ -39,22 +47,49 @@ def _environ_getter(key, callback=None):
             return self.environ.get(key)
     return property(getter)
 
+
+def _environ_time_getter(key):
+    """Builds a property for getting times out of the environ.
+    
+    An unparsable time results in None.
+    
+    TODO: test for what bad dates do
+    """
+    
+    def getter(self):
+        v = self.environ.get(key)
+        if v is None:
+            return None
+        try:
+            dt = parse_http_time(v)
+            return dt
+        except ValueError:
+            return None
+    return property(getter)
+
+
 def _attr_getter(key):
+    """Builds a property which gets an attribute off the object."""
     def getter(self):
         return getattr(self, key)
     return property(getter)
 
-class Request(_Common):
+
+class Request(object):
+    
+    """HTTP request abstraction class."""
     
     def __init__(self, environ, start=None):
         self._environ = environ
         if start:
-            self._response = Response(start)
-        
-        self.route = get_data(environ)
+            self._response = Response(start=start)
     
     environ = _attr_getter('_environ')
     response = _attr_getter('_response')
+    
+    @property
+    def route(self):
+        return get_route_data(self.environ)
     
     method = _environ_getter('REQUEST_METHOD', str.upper)
     is_get = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'GET')
@@ -75,9 +110,9 @@ class Request(_Common):
     etag = _environ_getter('HTTP_IF_NONE_MATCH')
     
     # Other generic stuff.
-    date = _environ_getter('HTTP_DATE', lambda x: x and parse_http_time(x))
+    date = _environ_time_getter('HTTP_DATE')
     host = _environ_getter('HTTP_HOST')
-    if_modified_since = _environ_getter('HTTP_IF_MODIFIED_SINCE', lambda x: x and parse_http_time(x))
+    if_modified_since = _environ_time_getter('HTTP_IF_MODIFIED_SINCE')
     referer = _environ_getter('HTTP_REFERER')
     user_agent = _environ_getter('HTTP_USER_AGENT')
     
@@ -90,49 +125,93 @@ class Request(_Common):
 
 
 def _content_type_property(spec):
+    """Build a property for quick setting of content types.
+    
+    You can only set these properties to be True. When you do so, the content-
+    type of the response is set to the type specified by `spec`.
+    
+    """
+    
     @property
     def prop(self):
         return self.content_type == spec
     @prop.setter
     def prop(self, value):
         if not value:
-            raise ValueError('cannot be set to non-true value')
+            raise ValueError('cannot be set to non-true value')        
         self.content_type = spec
     return prop
 
 
 def _header_setter(key, get=None, set=None):
-    if get is None:
-        @property
-        def prop(self):
-            return self.headers.get(key)
-    else:
-        @property
-        def prop(self):
-            return get(self.headers.get(key))
-    if set is None:
-        @prop.setter
-        def prop(self, value):
+    """Build a header property.
+    
+    Optional get and set transform the header value on it's way in and out.
+    
+    """
+    
+    @property
+    def prop(self):
+        v = self.headers.get(key)
+        return get(v) if get else v
+        
+    @prop.setter
+    def prop(self, value):
+        value = set(value) if set else value
+        if value is None:
+            self.headers.remove(key)
+        else:
             self.headers[key] = value
-    else:
-        @prop.setter
-        def prop(self, value):
-            self.headers[key] = set(value)
     return prop
 
 
-class Response(_Common):
+def _header_time_setter(key):
+    """Build a header property which sets a time value.
     
-    def __init__(self, start):
+    This property reveals a datetime interface, while it sets the actual
+    header to a string.
+    
+    """
+    
+    @property
+    def prop(self):
+        x = self.headers.get(key)
+        try:
+            dt = parse_http_time(x)
+            return dt
+        except ValueError:
+            pass
+        return None
+    
+    @prop.setter
+    def prop(self, value):
+        if value is None:
+            self.headers.remove(key)
+        else:
+            self.headers[key] = format_http_time(value)
+            
+    return prop
+
+
+class Response(object):
+    
+    """HTTP response abstraction."""
+    
+    def __init__(self, headers=None, start=None):
         self._start = start
-        self._headers = MutableHeaders()
+        self._headers = MutableHeaders(headers or [])
         
         self._status = None
         self.status = '200 OK'
         
-        self._content_type = 'text/html'
-        self._charset = 'utf-8'
-        self._build_content_type_header()
+        if 'content-type' in self.headers:
+            ctype, cdict = parse_header(self.headers['content-type'])
+            self._content_type = ctype
+            self._charset = cdict.get('charset')
+        else:
+            self._content_type = 'text/html'
+            self._charset = 'utf-8'
+            self._build_content_type_header()
         
         self._filename = None
     
@@ -140,14 +219,14 @@ class Response(_Common):
     
     as_html = _content_type_property('text/html')
     as_text = _content_type_property('text/plain')
+    as_json = _content_type_property('application/json')
     
     etag = _header_setter('etag')
     location = _header_setter('location')
     
-    date = _header_setter('date', lambda x: x and parse_http_time(x), lambda x: x and format_http_time(x))
-    last_modified = _header_setter('last-modified', lambda x: x and parse_http_time(x), lambda x: x and format_http_time(x))
-    expires = _header_setter('expires', lambda x: x and parse_http_time(x), lambda x: x and format_http_time(x))
-    
+    date = _header_time_setter('date')
+    last_modified = _header_time_setter('last-modified')
+    expires = _header_time_setter('expires')
     
     @property
     def max_age(self):
@@ -161,7 +240,7 @@ class Response(_Common):
     @max_age.setter
     def max_age(self, value):
         # TODO: make this not overwrite other stuff.
-        self.headers['cache-control'] = 'max-age=%d' % value
+        self.headers['cache-control'] = 'max-age=%d, must-revalidate' % value
     
     @property
     def filename(self):
@@ -173,7 +252,7 @@ class Response(_Common):
         if self._filename is not None:
             self.headers.content_disposition = 'attachment; filename="%s"' % self.filename.replace('"', '\\"')
         else:
-            del self.headers['content-disposition']
+            self.headers.remove('content-disposition')
         
     @property
     def content_type(self):
@@ -183,6 +262,8 @@ class Response(_Common):
     def content_type(self, value):
         self._content_type = value
         self._build_content_type_header()
+    
+    type = content_type
     
     @property
     def charset(self):
@@ -202,13 +283,15 @@ class Response(_Common):
         self._status = resolve_status(value)
     
     def _build_content_type_header(self):
-        if self.charset:
+        if self.content_type is None:
+            self.headers.remove('content-type')
+        elif self.charset:
             self.headers['content-type'] = '%s; charset=%s' % (
                 self.content_type, self.charset)
         else:
             self.headers['content-type'] = self.content_type
     
-    def start(self, status=None, headers=None, plain=None, html=None):
+    def start(self, status=None, headers=None, plain=None, html=None, **kwargs):
         """Start the wsgi return sequence.
 
         If called with status, that status is resolved. If status is None, we
@@ -218,23 +301,28 @@ class Response(_Common):
         added to self.headers.
         """
         
-        status = resolve_status(status) if status is not None else self.status
+        if not self._start:
+            raise ValueError('no WSGI start')
+        
+        if status:
+            self.status = status
         
         # Deal with content-type overrides and properties.
         if plain or html:
-            del self.headers['content-type']
+            log.warning('use of html/plain kwargs is depreciated')
             if html:
                 self.content_type = 'text/html'
             else:
                 self.content_type = 'text/plain'
         
-        # Deal with etag.
-        if self.etag is not None:
-            self.headers['etag'] = str(self.etag)
-        
+        for k, v in kwargs.items():
+            if not hasattr(self, k):
+                raise ValueError('no request attribute %r' % k)
+            setattr(self, k, v)
+                
         headers = self.headers.allitems() + (list(headers) if headers else [])
         
-        self._start(status, headers)
+        self._start(self.status, headers)
 
 
 def as_request(app):
@@ -248,6 +336,11 @@ def as_request(app):
             return app(self, request)
         return app(request)
     return inner
+
+
+
+
+
 
 
 def test_request_get():
