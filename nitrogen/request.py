@@ -18,6 +18,7 @@ from cStringIO import StringIO
 import re
 import logging
 from cgi import parse_header
+import base64
 
 from webtest import TestApp
 
@@ -115,6 +116,17 @@ class Request(object):
     if_modified_since = _environ_time_getter('HTTP_IF_MODIFIED_SINCE')
     referer = _environ_getter('HTTP_REFERER')
     user_agent = _environ_getter('HTTP_USER_AGENT')
+    
+    # @property
+    # def basic_username(self):
+    #     auth = self.headers.get('Authorization')
+    #     if not auth:
+    #         return None
+    #     if not auth.startswith('Basic '):
+    #         return None
+    #     
+    #     username, password = base64.b64decode(auth.split()[1]).split(':')
+    #     return username
     
     # This will be handled another way soon.
     user = _environ_getter('app.user')
@@ -290,6 +302,22 @@ class Response(object):
                 self.content_type, self.charset)
         else:
             self.headers['content-type'] = self.content_type
+    
+    # @property
+    # def basic_realm(self):
+    #     auth = self.headers.get('WWW-Authenticate')
+    #     if auth is None:
+    #         return None
+    #     mode, blob = auth.split()
+    #     if mode.lower() != 'basic':
+    #         return none
+    #     if blob.startswith('realm="') and blob[-1] == '"':
+    #         return blob[7:-1]
+    #     return None
+    # 
+    # @basic_realm.setter
+    # def basic_realm(self, value):
+    #     self.headers['WWW-Authenticate'] = 'Basic realm="%s"' % value    
     
     def start(self, status=None, headers=None, plain=None, html=None, **kwargs):
         """Start the wsgi return sequence.
