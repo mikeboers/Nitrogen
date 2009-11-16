@@ -42,7 +42,7 @@ from webtest import TestApp
 
 from . import tools
 from ..uri import Path
-from ..status import HttpNotFound
+from ..http.status import HttpNotFound
 
 log = logging.getLogger(__name__)
 

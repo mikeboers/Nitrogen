@@ -20,7 +20,7 @@ import logging
 
 from tools import *
 
-from ..status import HttpNotFound
+from ..http.status import HttpNotFound
 from ..uri.path import Path
 
 class FileRouter(object):

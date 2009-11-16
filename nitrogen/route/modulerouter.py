@@ -16,7 +16,7 @@ import re
 import logging
 
 from ..uri.path import Path
-from ..status import HttpNotFound
+from ..http.status import HttpNotFound
 from .tools import get_unrouted, set_unrouted
 
 

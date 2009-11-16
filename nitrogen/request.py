@@ -19,13 +19,13 @@ import re
 
 from webtest import TestApp
 
-from .status import resolve_status
+from .http.status import resolve_status
+from .http.time import parse_http_time, format_http_time
 from .webio import request_params
 from .cookie import Container as CookieContainer
 from .headers import DelayedHeaders, MutableHeaders
 from .webio import request_params
 from .route.tools import get_data
-from .httptime import parse_http_time, format_http_time
 
 class _Common(object):
     pass

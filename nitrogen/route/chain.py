@@ -10,7 +10,7 @@ if __name__ == '__main__':
         __import__(__package__)
     __local_eval_fix('nitrogen.uri')
 
-from ..status import HttpNotFound
+from ..http.status import HttpNotFound
 
 class Chain(list):
     

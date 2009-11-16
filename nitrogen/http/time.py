@@ -1,4 +1,6 @@
 
+from __future__ import absolute_import
+
 from rfc822 import parsedate_tz
 from datetime import datetime
 from time import mktime

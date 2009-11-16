@@ -24,7 +24,7 @@ import logging
 from .request import as_request
 from .compressor import compressor
 from .encoding import utf8_encoder
-from .status import status_resolver, HttpNotFound
+from .http.status import status_resolver, HttpNotFound
 from .error import error_logger, error_notifier
 from .webio import cookie_parser, cookie_builder, request_params, get_parser, post_parser
 from .view import TYPE_HEADER_HTML
