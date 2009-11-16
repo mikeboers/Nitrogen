@@ -1,5 +1,16 @@
 """Module for WSGI status helping functions."""
 
+
+# Setup path for local evaluation.
+# When copying to another file, just change the __package__ to be accurate.
+if __name__ == '__main__':
+    import sys
+    __package__ = 'nitrogen.http'
+    sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
+    __import__(__package__)
+
+
+
 from httplib import responses as _code_to_message
 
 _message_to_code = dict((v.lower(), k) for k, v in _code_to_message.items())
@@ -49,12 +60,21 @@ def resolve_status(status):
         '999 Not in List'
         >>> resolve_status('200 Custom Message')
         '200 Custom Message'
-    
+        
+        >>> resolve_status('200')
+        '200 OK'
+        
     """
     
     # None implies 200.
     if status is None:
         return '200 OK'
+    
+    # Strings of numbers should be numbers
+    try:
+        status = int(status)
+    except ValueError:
+        pass
     
     # See if status is a status code.
     try:
@@ -138,5 +158,5 @@ def test_status_resolver():
     assert res.status == '307 Temporary Redirect', 'Status did not get resolved.'
 
 if __name__ == '__main__':
-    from test import run
+    from ..test import run
     run()
