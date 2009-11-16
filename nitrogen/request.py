@@ -15,6 +15,7 @@ if __name__ == '__main__':
     __import__(__package__)
 
 from StringIO import StringIO
+import re
 
 from webtest import TestApp
 
@@ -24,6 +25,7 @@ from .cookie import Container as CookieContainer
 from .headers import DelayedHeaders, MutableHeaders
 from .webio import request_params
 from .route.tools import get_data
+from .httptime import parse_http_time, format_http_time
 
 class _Common(object):
     pass
@@ -54,26 +56,38 @@ class Request(_Common):
     environ = _attr_getter('_environ')
     response = _attr_getter('_response')
     
+    method = _environ_getter('REQUEST_METHOD', str.upper)
     is_get = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'GET')
     is_post = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'POST')
     is_put = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'PUT')
     is_delete = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'DELETE')
     is_head = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'HEAD')
     
+    # The objects these pull are provided by webio.request_params (I think).
     get = _environ_getter('nitrogen.get')
     post = _environ_getter('nitrogen.post')
     files = _environ_getter('nitrogen.files')
     cookies = _environ_getter('nitrogen.cookies')
     headers = _environ_getter('nitrogen.headers')
     
+    # These two are the same. I just like `etag` much more.
+    if_none_match = _environ_getter('HTTP_IF_NONE_MATCH')
     etag = _environ_getter('HTTP_IF_NONE_MATCH')
     
-    method = _environ_getter('REQUEST_METHOD', str.upper)
+    # Other generic stuff.
+    date = _environ_getter('HTTP_DATE', lambda x: x and parse_http_time(x))
+    host = _environ_getter('HTTP_HOST')
+    if_modified_since = _environ_getter('HTTP_IF_MODIFIED_SINCE', lambda x: x and parse_http_time(x))
+    referer = _environ_getter('HTTP_REFERER')
+    user_agent = _environ_getter('HTTP_USER_AGENT')
+    
+    # This will be handled another way soon.
     user = _environ_getter('app.user')
     
     @property
     def is_admin_area(self):
         return self.environ.get('SERVER_NAME', '').startswith('admin.')
+
 
 def _content_type_property(spec):
     @property
@@ -85,6 +99,7 @@ def _content_type_property(spec):
             raise ValueError('cannot be set to non-true value')
         self.content_type = spec
     return prop
+
 
 def _header_setter(key, get=None, set=None):
     if get is None:
@@ -104,6 +119,7 @@ def _header_setter(key, get=None, set=None):
         def prop(self, value):
             self.headers[key] = set(value)
     return prop
+
 
 class Response(_Common):
     
@@ -127,6 +143,25 @@ class Response(_Common):
     
     etag = _header_setter('etag')
     location = _header_setter('location')
+    
+    date = _header_setter('date', lambda x: x and parse_http_time(x), lambda x: x and format_http_time(x))
+    last_modified = _header_setter('last-modified', lambda x: x and parse_http_time(x), lambda x: x and format_http_time(x))
+    expires = _header_setter('expires', lambda x: x and parse_http_time(x), lambda x: x and format_http_time(x))
+    
+    
+    @property
+    def max_age(self):
+        if 'cache-control' not in self.headers:
+            return None
+        m = re.search(r'max-age=(\d+)', self.headers['cache-control'])
+        if not m:
+            return None
+        return int(m.group(1))
+    
+    @max_age.setter
+    def max_age(self, value):
+        # TODO: make this not overwrite other stuff.
+        self.headers['cache-control'] = 'max-age=%d' % value
     
     @property
     def filename(self):
