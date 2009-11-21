@@ -41,6 +41,7 @@ my own minifier, which sounds like a bad idea).
 - decide if the cookie container should default to the path being '/'
 
 - write a Mailer class using the sendmail functions. write a MailLogger to go with it
+    - use the rfc822 address functions/classes to handle addresses
 
 - rename the nitrogen.logs.FileLogger to something that indicates it is time based
 
@@ -71,6 +72,17 @@ my own minifier, which sounds like a bad idea).
     - The second one in general looks a lot nicer to work work, but needs to
       be extended to be smarter about the pid file, possibly using some
       filelocks (that I have written, not using the filelock module)
+
+- move headers into http package? or pull everything back out of http package.
+
+- admin gateway should work again
+
+- model_adapter should work again
+
+- editables should work again
+
+- write a session
+
 
 
 

@@ -4,6 +4,3 @@
 - route rebuilding sould actually work.
 
 - get the dispatcher into nitrogen
-
-- need to cleanup the errors handlers and how they print out plaintext vs
-  html, and how they decide if they are printing out details or not
