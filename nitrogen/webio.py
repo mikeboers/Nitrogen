@@ -22,12 +22,6 @@ need not provide it.
 
 """
 
-if __name__ == '__main__':
-    import sys
-    __package__ = 'nitrogen'
-    sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
-    __import__(__package__)
-
 
 import cgi
 import collections
@@ -386,7 +380,7 @@ def test_post():
     res = app.post('/', 'key=value&same=first&same=second')
     assert res.body == 'START|key=value|same=first|same=second|END'
         
-        
+
 if __name__ == '__main__':
-    from nitrogen.test import run
+    from .test import run
     run()

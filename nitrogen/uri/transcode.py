@@ -57,7 +57,5 @@ def decode(string):
     return urllib.unquote(string.encode('ascii', 'ignore')).decode('utf8', 'replace')
 
 if __name__ == '__main__':
-    import sys
-    sys.path.insert(0, '..')
-    from test import run
+    from ..test import run
     run()

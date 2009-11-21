@@ -48,20 +48,14 @@ Examples:
     
 """
 
+
 from __future__ import division
 
 import re
 from math import ceil
 
-# Setup path for local evaluation.
-# When copying to another file, just change the __package__ to be accurate.
-if __name__ == '__main__':
-    import sys
-    __package__ = 'nitrogen'
-    sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
-    __import__(__package__)
-
 from webhelpers.html import HTML
+
 
 class Pager(object):
     

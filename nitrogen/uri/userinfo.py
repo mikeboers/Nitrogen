@@ -1,25 +1,8 @@
 # coding: UTF-8
 """Module for query.Userinfo object."""
 
-# Setup path for local evaluation. Do not modify anything except for the name
-# of the toplevel module to import at the very bottom.
-if __name__ == '__main__':
-    def __local_eval_setup(root, debug=False):
-        global __package__
-        import os, sys
-        file = os.path.abspath(__file__)
-        sys.path.insert(0, file[:file.find(root)].rstrip(os.path.sep))
-        name = file[file.find(root):]
-        name = '.'.join(name[:-3].split(os.path.sep)[:-1])
-        __package__ = name
-        if debug:
-            print ('Setting up local environ:\n'
-                   '\troot: %(root)r\n'
-                   '\tname: %(name)r' % locals())
-        __import__(name)
-    __local_eval_setup('nitrogen', True)
-
 from .transcode import *
+
 
 class Userinfo(list):
     u"""A representation of the userinfo segment in a URI.
@@ -106,7 +89,5 @@ class Userinfo(list):
         return '<uri.Userinfo:%s>' % list.__repr__(self)
 
 if __name__ == '__main__':
-    import sys
-    sys.path.insert(0, '..')
-    from test import run
+    from ..test import run
     run()

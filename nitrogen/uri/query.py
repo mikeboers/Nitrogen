@@ -39,14 +39,15 @@ Cast back to a string:
     >>> str(query)
     'one=1&two=2'
 
-It can deal with multiple values per key (although by all the normal dict methods it does not appear this way).:
+It can deal with multiple values per key (although by all the normal dict
+methods it does not appear this way).:
 
     >>> query = Query('key=value1&key=value2')
     >>> query['key']
     u'value1'
     >>> len(query)
     1
-    
+
     >>> query.getall('key')
     [u'value1', u'value2']
 
@@ -59,7 +60,9 @@ Order is maintained very precisely, even with multiple values per key:
     >>> query.allitems()
     [(u'a', u'1'), (u'b', u'2'), (u'a', u'3')]
 
-Setting is a little more difficult. Assume that unless something that extends a tuple or list (ie passes isinstance(input, (tuple, list))) it is supposed to be the ONLY string value for that key.
+Setting is a little more difficult. Assume that unless something that extends
+a tuple or list (ie passes isinstance(input, (tuple, list))) it is supposed to
+be the ONLY string value for that key.
 
     >>> # Notice that we are still using the query with multiple values for a.
     >>> query.getall(u'a')
@@ -74,7 +77,9 @@ Setting a list:
     >>> query.getall('key')
     [u'a', u'b', u'c']
 
-You can provide a sequence that is not a tuple or list by using the setlist method. This will remove all existing pairs by key, and append the new ones on the end of the query.
+You can provide a sequence that is not a tuple or list by using the setlist
+method. This will remove all existing pairs by key, and append the new ones
+on the end of the query.
 
     >>> def g():
     ...     for x in [1, 2, 3]:
@@ -83,7 +88,8 @@ You can provide a sequence that is not a tuple or list by using the setlist meth
     >>> query.getall('key')
     [u'1', u'2', u'3']
 
-The query can be sorted via list.sort (notice that the key function is passed a key/value tuple):
+The query can be sorted via list.sort (notice that the key function is passed
+a key/value tuple):
 
     >>> query = Query('a=1&c=2&b=3')
     >>> query.sort()
@@ -93,7 +99,8 @@ The query can be sorted via list.sort (notice that the key function is passed a 
     >>> query.allitems()
     [(u'c', u'2'), (u'b', u'3'), (u'a', u'1')]
 
-Pairs can be appended with list.append and list.insert and list.extend. (We will just cast the values to tuples and assert they have length 2.)
+Pairs can be appended with list.append and list.insert and list.extend. (We
+will just cast the values to tuples and assert they have length 2.)
 
     >>> query = Query()
     >>> query.append((u'a', u'1'))
@@ -157,7 +164,8 @@ Parse and unparses properly
     'key=value/with/slashes.and.dots=and=equals'
 
 Unicode does work properly.
-    # >>> query = Query('k%C3%A9y=%C2%A1%E2%84%A2%C2%A3%C2%A2%E2%88%9E%C2%A7%C2%B6%E2%80%A2%C2%AA%C2%BA')
+    # >>> query = Query('k%C3%A9y=%C2%A1%E2%84%A2%C2%A3%C2%A2%E2%88%9E%C2%A7%'
+    # ... 'C2%B6%E2%80%A2%C2%AA%C2%BA')
     # >>> print query.keys()[0]
     # kéy
     # >>> print query[u'kéy']
@@ -202,7 +210,7 @@ Easy signatures!
     Traceback (most recent call last):
     ...
     ValueError: signature is too old
-    
+
     >>> query = Query(v='value')
     >>> query['_n'] = '123abc'
     >>> query.sign('key', max_age=60, add_time=True, add_nonce=False)
@@ -220,24 +228,6 @@ Easy signatures!
 """
 
 from __future__ import division
-
-# Setup path for local evaluation. Do not modify anything except for the name
-# of the toplevel module to import at the very bottom.
-if __name__ == '__main__':
-    def __local_eval_setup(root, debug=False):
-        global __package__
-        import os, sys
-        file = os.path.abspath(__file__)
-        sys.path.insert(0, file[:file.find(root)].rstrip(os.path.sep))
-        name = file[file.find(root):]
-        name = '.'.join(name[:-3].split(os.path.sep)[:-1])
-        __package__ = name
-        if debug:
-            print ('Setting up local environ:\n'
-                   '\troot: %(root)r\n'
-                   '\tname: %(name)r' % locals())
-        __import__(name)
-    __local_eval_setup('nitrogen', True)
 
 import collections
 import time
@@ -359,7 +349,7 @@ class Query(MutableMultiMap):
         'L8sEAA'
         """
         return base64.b64encode(struct.pack('I', int(value)), '-_').rstrip('=')
-    
+
     @staticmethod
     def _decode_int(value):
         """
@@ -369,26 +359,26 @@ class Query(MutableMultiMap):
         1
         >>> Query._decode_int('L8sEAA')
         314159
-        
+
         >>> t = int(time.time())
         >>> enc = Query._encode_int(t)
         >>> dec = Query._decode_int(enc)
         >>> t == dec
         True
-        
+
         """
         assert len(value) == 6, 'Encoded int is too short.'
         return struct.unpack('I', base64.b64decode(str(value) + '==', '-_'))[0]
-    
+
     def sign(self, key, hasher=None, max_age=None, add_time=None, add_nonce=True,
         nonce_bits=128, time_key = '_t', sig_key='_s', nonce_key='_n',
         expiry_key='_x'):
-        
+
         # encode_time = lambda x: str(int(x))
         encode_time = lambda x: '%.2f' % x
         # encode_time = self._encode_float
         # encode_time = self._encode_int
-        
+
         if add_time or (add_time is None and max_age is None):
             self[time_key] = encode_time(time.time())
         if max_age is not None:
@@ -398,7 +388,7 @@ class Query(MutableMultiMap):
                 hashlib.sha256(os.urandom(1024)).digest(), '-_')[
                     :int(math.ceil(nonce_bits / 6))]
         copy = self.copy()
-        del copy[sig_key]
+        copy.remove(sig_key)
         copy.sort()
         #print repr(str(copy))
         self[sig_key] = copy._signature(key, hasher)
@@ -409,12 +399,12 @@ class Query(MutableMultiMap):
         # Make sure there is a sig.
         if sig_key not in self:
             return False
-        
+
         # decode_time = int
         decode_time = float
         # decode_time = self._decode_float
         # decode_time = self._decode_int
-        
+
         # Make sure it is good.
         copy = self.copy()
         del copy[sig_key]
@@ -441,7 +431,7 @@ class Query(MutableMultiMap):
         # Make sure it isnt too old.
         if max_age is not None and time_key in self:
             try:
-                creation_time = decode_time(self[time_key]) 
+                creation_time = decode_time(self[time_key])
             except Exception:
                 if strict:
                     raise

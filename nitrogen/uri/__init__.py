@@ -189,23 +189,6 @@ two levels of encoding in the doctests):
     
 """
 
-# Setup path for local evaluation. Do not modify anything except for the name
-# of the toplevel module to import at the very bottom.
-if __name__ == '__main__':
-    def __local_eval_setup(root, debug=False):
-        global __package__
-        import os, sys
-        file = os.path.abspath(__file__)
-        sys.path.insert(0, file[:file.find(root)].rstrip(os.path.sep))
-        name = file[file.find(root):]
-        name = '.'.join(name[:-3].split(os.path.sep)[:-1])
-        __package__ = name
-        if debug:
-            print ('Setting up local environ:\n'
-                   '\troot: %(root)r\n'
-                   '\tname: %(name)r' % locals())
-        __import__(name)
-    __local_eval_setup('nitrogen', True)
 
 import urllib
 import urlparse
@@ -217,7 +200,9 @@ from .userinfo import Userinfo
 from .path import Path
 from .query import Query
 
+
 SplitUri = collections.namedtuple('SplitUri', 'scheme userinfo host port path query fragment'.split())
+
 
 def split(uri):
     """Split up a URI into its base components. Returns a SplitUri (which is a
@@ -276,6 +261,7 @@ def split(uri):
         
     return SplitUri(**ret)
 
+
 def _split_authority(authority):
     """Split up an authority part into userinfo, host, and port. Returns a dict.
     
@@ -311,7 +297,9 @@ def _split_authority(authority):
         'port': m.group(5)
     }
 
+
 class URI(object):
+    
     def __init__(self, uri='', **kwargs):
         uri = uri if isinstance(uri, SplitUri) else split(uri)
         uri = uri._asdict()
@@ -471,8 +459,6 @@ class URI(object):
         return T
         
         
-            
-            
 
 if __name__ == '__main__':
     from .. import test
