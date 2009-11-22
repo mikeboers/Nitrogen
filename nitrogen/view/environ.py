@@ -108,4 +108,7 @@ class ViewEnviron(object):
         if not hasattr(self._local, 'flash_messages'):
             self._local.flash_messages = []
         return self._local.flash_messages
+    
+    def add_flash_message(self, class_, message):
+        self.flash_messages.append((class_, message))
 
