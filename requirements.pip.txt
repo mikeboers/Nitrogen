@@ -13,3 +13,4 @@ simplejson==2.0.9
 
 webhelpers
 flup
+markdown
