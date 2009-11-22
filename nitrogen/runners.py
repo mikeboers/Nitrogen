@@ -1,17 +1,15 @@
 """WSGI application runners."""
 
-# Setup path for local evaluation.
-# When copying to another file, just change the __package__ to be accurate.
-if __name__ == '__main__':
-    import sys
-    __package__ = 'nitrogen'
-    sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
-    __import__(__package__)
 
 import threading
-   
+from wsgiref.simple_server import make_server
+from wsgiref.handlers import CGIHandler
+
+from flup.server.fcgi import WSGIServer as FCGIHandler
+
 from .logs import setup_logging
 from . import error
+
 
 def run_via_cgi(app):
     """Run a web application via the CGI interface of a web server.
@@ -20,8 +18,7 @@ def run_via_cgi(app):
         app -- The WSGI app to run.
     """
     
-    import wsgiref.handlers
-    handler = wsgiref.handlers.CGIHandler()
+    handler = CGIHandler()
     handler.error_status = error.DEFAULT_ERROR_HTTP_STATUS
     handler.error_headers = error.DEFAULT_ERROR_HTTP_HEADERS
     handler.error_body = error.DEFAULT_ERROR_BODY
@@ -37,8 +34,7 @@ def run_via_fcgi(app, multithreaded=True):
             if the server is under load.
     """
     
-    from fcgi import WSGIServer
-    WSGIServer(setup_logging(app), multithreaded=multithreaded).run()
+    FCGIHandler(setup_logging(app), multithreaded=multithreaded).run()
 
 def run_via_socket(app, host='', port=8000, once=False):
     """Run a web aplication directly via a socket.
@@ -50,7 +46,6 @@ def run_via_socket(app, host='', port=8000, once=False):
         once -- Only accept a single connection.
     """
     
-    from wsgiref.simple_server import make_server
     httpd = make_server(host, port, setup_logging(app))
     if once:
         httpd.handle_request()
@@ -72,4 +67,5 @@ if __name__ == '__main__':
     print 'Starting on port %d.' % port
     
     run_via_socket(app, port=port, once=True)
-    
+
+
