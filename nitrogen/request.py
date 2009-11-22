@@ -99,12 +99,14 @@ class Request(object):
     is_delete = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'DELETE')
     is_head = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'HEAD')
     
-    # The objects these pull are provided by webio.request_params (I think).
+    # The objects these pull are provided by webio.request_params.
     get = _environ_getter('nitrogen.get')
     post = _environ_getter('nitrogen.post')
     files = _environ_getter('nitrogen.files')
     cookies = _environ_getter('nitrogen.cookies')
     headers = _environ_getter('nitrogen.headers')
+    
+    session = _environ_getter('beaker.session')
     
     # These two are the same. I just like `etag` much more.
     if_none_match = _environ_getter('HTTP_IF_NONE_MATCH')

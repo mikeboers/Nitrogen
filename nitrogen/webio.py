@@ -28,7 +28,6 @@ import collections
 import sys
 import tempfile
 import logging
-
 from cStringIO import StringIO
 
 from . import cookie
@@ -279,7 +278,7 @@ def cookie_builder(app, **kwargs):
     This tends to be used along with the cookie_parser.
     """
     def inner(environ, start):
-        def inner_start(status, headers):
+        def inner_start(status, headers, exc_info=None):
             cookies = environ['nitrogen.cookies']
             log.debug('setting cookies: %r' % cookies)
             headers.extend(cookies.build_headers())

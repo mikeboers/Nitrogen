@@ -30,7 +30,7 @@ from .http.status import status_resolver, HttpNotFound
 from .error import error_logger, error_notifier
 from .webio import cookie_parser, cookie_builder, request_params, get_parser, post_parser
 from .view import TYPE_HEADER_HTML
-
+from .session import session_wrapper
 
 log = logging.getLogger(__name__)
 

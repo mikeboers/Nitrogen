@@ -7,6 +7,13 @@ back, but if I ever need them I will deal with them at that time.
 
 """
 
+
+import logging
+
+
+log = logging.getLogger(__name__)
+
+
 def utf8_encoder(app):
     """WSGI middleware that encodes everything to a UTF-8 string.
     
@@ -18,7 +25,7 @@ def utf8_encoder(app):
             for x in app(environ, start):
                 yield x.encode('ascii', 'xmlcharrefreplace')
             return
-        def inner_start(status, headers):
+        def inner_start(status, headers, exc_info=None):
             has_type = False
             for i, h in enumerate(headers):
                 if h[0].lower() == 'content-type':
