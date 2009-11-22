@@ -42,7 +42,7 @@ def etagger(app):
             status=None,
             headers=None
         )
-        def inner_start(status, headers):
+        def inner_start(status, headers, exc_info=None):
             state.update(dict(
                 status=status,
                 headers=headers

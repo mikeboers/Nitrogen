@@ -172,7 +172,7 @@ def compressor(app):
             if algo in environ.get('HTTP_ACCEPT_ENCODING', '').lower():
                 algos.append(algo)
 
-        def inner_start(status, headers):
+        def inner_start(status, headers, exc_info=None):
             headers = Headers(headers)
             if 'content-encoding' in headers:
                 algos[:] = []

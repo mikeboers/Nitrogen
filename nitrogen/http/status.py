@@ -99,7 +99,7 @@ def status_resolver(app):
     """
     
     def inner(environ, start):
-        def inner_start(status, headers):
+        def inner_start(status, headers, exc_info=None):
             start(resolve_status(status), headers)
         return app(environ, inner_start)
     return inner
