@@ -78,7 +78,10 @@ class ModuleRouter(object):
             try:
                 raw_module = __import__(name, fromlist=['nonempty'])
             except ImportError as e:
-                raise HttpNotFound('could not import controller module %r: %r' % (name, e))
+                if e.args[0] == 'cannot import name %s' % name:
+                    raise HttpNotFound('could not import controller module %r: %r' % (name, e))
+                else:
+                    raise
             self._modules[name] = Module(router=self, module=raw_module)
         
         module = self._modules[name]
