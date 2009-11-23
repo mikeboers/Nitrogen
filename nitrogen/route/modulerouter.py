@@ -78,7 +78,9 @@ class ModuleRouter(object):
             try:
                 raw_module = __import__(name, fromlist=['nonempty'])
             except ImportError as e:
-                if e.args[0] == 'cannot import name %s' % name:
+                # This is my ugly attempt to only throw a 404 if this import
+                # fails, and not some import that this impor triggers.
+                if e.args[0] == 'No module named %s' % segment:
                     raise HttpNotFound('could not import controller module %r: %r' % (name, e))
                 else:
                     raise
