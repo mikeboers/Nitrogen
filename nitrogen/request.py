@@ -80,14 +80,9 @@ class Request(object):
     
     """HTTP request abstraction class."""
     
-    def __init__(self, environ, start=None):
-        self._environ = environ
-        if start:
-            self._response = Response(start=start)
-    
-    environ = _attr_getter('_environ')
-    response = _attr_getter('_response')
-    
+    def __init__(self, environ):
+        self.environ = environ
+        
     @property
     def route(self):
         return get_route_data(self.environ)
@@ -211,7 +206,7 @@ class Response(object):
     
     """HTTP response abstraction."""
     
-    def __init__(self, headers=None, start=None):
+    def __init__(self, start=None, headers=None):
         self._start = start
         self._headers = MutableHeaders(headers or [])
         
@@ -361,10 +356,11 @@ def as_request(app):
     def inner(self, environ, start=None):
         if start is None:
             self, environ, start = start, self, environ
-        request = Request(environ, start)
+        request = Request(environ)
+        response = Response(start)
         if self:
-            return app(self, request)
-        return app(request)
+            return app(self, request, response)
+        return app(request, response)
     return inner
 
 
@@ -375,13 +371,13 @@ def as_request(app):
 
 def test_request_get():
     def app(environ, start):
-        req = Request(environ, start)
+        req = Request(environ)
         assert req.method == 'GET'
         assert req.is_get
         assert not req.is_post
         assert req.get['key'] == 'value'
 
-        res = req.response
+        res = Response(start)
         assert res.headers.content_type == 'text/html; charset=utf-8'
         res.as_text = True
         assert res.headers.content_type == 'text/plain; charset=utf-8'
@@ -395,8 +391,8 @@ def test_request_get():
 
 def test_request_get_file():
     def app(environ, start):
-        req = Request(environ, start)
-        res = req.response
+        req = Request(environ)
+        res = Response(start)
         res.filename = 'hello.txt'
         assert res.headers.content_disposition == 'attachment; filename="hello.txt"'
         res.filename = 'hello"world.quoted'
@@ -411,7 +407,7 @@ def test_request_get_file():
 
 def test_request_post_and_etag():
     def app(environ, start):
-        req = Request(environ, start)
+        req = Request(environ)
         assert req.method == 'POST'
         assert req.is_post
         assert not req.is_get
@@ -419,7 +415,7 @@ def test_request_post_and_etag():
         assert req.post['key'] == 'value'
         assert req.etag == 'etag_goes_here'
 
-        res = req.response
+        res = Response(start)
         res.as_html = True
         assert res.headers.content_type == 'text/html; charset=utf-8'
         res.etag = 'new_etag'
