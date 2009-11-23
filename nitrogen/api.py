@@ -5,7 +5,7 @@
 import json
 import logging
 
-from request import as_request
+from request import Request, Response
 
 
 INTERNAL_ERROR = 'internal server error'
@@ -21,9 +21,13 @@ class ApiKeyError(KeyError, ApiError):
 
 class ApiBase(dict):
     
+    def log_message(self):
+        return '\n'.join([self.__class__.__name__] + [
+            '    %s: %r' % x for x in sorted(self.items())])
+        
     def log(self, logger=None, level=logging.INFO):
-        (logger or log).log(level, '\n'.join([self.__class__.__name__] + [
-            '    %s: %r' % x for x in sorted(self.items())]))
+        (logger or log).log(level, self.log_message())
+      
             
 class ApiRequest(ApiBase):
     
@@ -32,25 +36,31 @@ class ApiRequest(ApiBase):
     """
     
     def __init__(self, request):
-        dict.__init__(self, request.get)
-        self.update(request.post)
+        if not isinstance(request, Request):
+            request = Request(request)
+        self.raw = request
         
-        self.raw_request = request
-        self.response = ApiResponse(self)
+        self.update(self.raw.get)
+        self.update(self.raw.post)
         
     def __getitem__(self, key):
         try:
             return dict.__getitem__(self, key)
         except KeyError as e:
             raise ApiKeyError(key)
-        
+
+   
 class ApiResponse(ApiBase):
     
-    def __init__(self, request):
-        self.request = request
-        self.raw_response = request.raw_request.response
-        self.started = False
+    def __init__(self, response=None, **kwargs):
+        if response:
+            if not isinstance(response, Response):
+                response = Response(response)
+        self.raw = response
         
+        self.update(kwargs)
+        
+        self.started = False
         self['status'] = 'ok'
     
     def __enter__(self):
@@ -71,9 +81,9 @@ class ApiResponse(ApiBase):
     def start(self, code=None):
         if code is None:
             code = 200 if self.get('status') == 'ok' else 500
-        # self.raw_response.content_type = 'application/json'    
-        self.raw_response.content_type = 'text/plain'
-        self.raw_response.start(code)
+        # self.raw.content_type = 'application/json'    
+        self.raw.content_type = 'text/plain'
+        self.raw.start(code)
         self.started = True
     
     def encode(self, obj=None, indent=4, sort_keys=True):
@@ -110,12 +120,12 @@ class ApiResponse(ApiBase):
         
         
 def as_api(app):
-    @as_request
-    def inner(raw_request):
-        request = ApiRequest(raw_request)
-        with request.response:
-            app(request, request.response)
-        return request.response    
+    def inner(environ, start):
+        request = ApiRequest(environ)
+        response = ApiResponse(start)
+        with response:
+            app(request, response)
+        return response    
     return inner
 
 
