@@ -4,6 +4,7 @@
 
 import json
 import logging
+import datetime
 
 from request import Request, Response
 
@@ -28,7 +29,8 @@ class ApiBase(dict):
     def log(self, logger=None, level=logging.INFO):
         (logger or log).log(level, self.log_message())
       
-            
+
+    
 class ApiRequest(ApiBase):
     
     """WSGI API request helper class.
@@ -86,8 +88,16 @@ class ApiResponse(ApiBase):
         self.raw.start(code)
         self.started = True
     
+    def json_default(self, value):
+        if isinstance(value, datetime.date):
+            ret = {}
+            for key in 'year month day'.split():
+                ret[key] = getattr(value, key)
+            return ret
+        raise TypeError()
+
     def encode(self, obj=None, indent=4, sort_keys=True):
-        return json.dumps(obj or dict(self), indent=indent, sort_keys=sort_keys)
+        return json.dumps(obj or dict(self), indent=indent, sort_keys=sort_keys, default=self.json_default)
     
     def __iter__(self):
         
@@ -120,11 +130,21 @@ class ApiResponse(ApiBase):
         
         
 def as_api(app):
-    def inner(environ, start):
+    def inner(*args):
+        if len(args) == 2:
+            self = None
+            environ, start = args
+        elif len(args) == 3:
+            self, environ, start = args
+        else:
+            raise ValueError('as_api inner only accept 2 or 3 arguments')
         request = ApiRequest(environ)
         response = ApiResponse(start)
         with response:
-            app(request, response)
+            if self:
+                app(self, request, response)
+            else:
+                app(request, response)
         return response    
     return inner
 
