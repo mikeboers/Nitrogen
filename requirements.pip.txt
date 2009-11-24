@@ -12,5 +12,4 @@ nose==0.11.1
 simplejson==2.0.9
 
 webhelpers
-flup
 markdown

@@ -5,7 +5,10 @@ import threading
 from wsgiref.simple_server import make_server
 from wsgiref.handlers import CGIHandler
 
-from flup.server.fcgi import WSGIServer as FCGIHandler
+from .lib.fcgi import WSGIServer as FCGIHandler
+
+print FCGIHandler
+
 
 from .logs import setup_logging
 from . import error
