@@ -1,5 +1,9 @@
 
+
+import logging
+
 from .api import as_api, ApiError, ApiKeyError
+
 
 """
 
@@ -11,6 +15,9 @@ ModelAdapter(name='newspost',
      partial_key='post'),
      
 """
+
+log = logging.getLogger(__name__)
+
 
 class Editable(object):
     
@@ -28,7 +35,7 @@ class Editable(object):
         self.keys = keys or [col.name for col in self.table.columns]
         
         self.before_save = before_save
-
+    
     @as_api
     def __call__(self, req, res):
         with res:

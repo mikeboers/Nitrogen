@@ -32,7 +32,7 @@ class ModelEnviron(object):
         self.log = logging.getLogger('%s?env=%s' % (__name__, self.name))
         
         self.engine = None
-        self.Session = sessionmaker()
+        self.Session = sessionmaker(autoflush=True)
         self.session = scoped_session(self.Session)
         self.metadata = MetaData()
         self.Base = build_declarative_base(metadata=self.metadata)
