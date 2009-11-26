@@ -72,6 +72,7 @@ class ModuleRouter(object):
         
         unrouted = Path(get_unrouted(environ))
         segment = unrouted[0] if unrouted else self.default
+        segment = re.sub(r'[^a-wA-Z0-9_]+', '_', segment)
         name = '.'.join(filter(None, self.package.split('.') + [segment]))
         
         if name not in self._modules:

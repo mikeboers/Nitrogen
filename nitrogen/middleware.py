@@ -51,15 +51,14 @@ def etagger(app):
         output = ''.join(app(environ, inner_start))
         etag = 'auto-md5:' + hashlib.md5(output).hexdigest()
         
-        log.debug(state['headers'])
         req = Request(environ=environ)
         res = Response(start=start, headers=state['headers'])
         
-        res.etag = res.etag or etag
-        
-        if req.etag == etag:
-            res.start('not modified')
-            return
+        if res.etag is None:
+            res.etag = etag
+            if req.etag == etag:
+                res.start('not modified')
+                return
         
         res.start(state['status'])
         yield output
