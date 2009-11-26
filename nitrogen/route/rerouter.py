@@ -166,9 +166,6 @@ class ReMatch(collections.Mapping):
     
     def __len__(self):
         return len(self.data)
-    
-    def __items__(self):
-        return colle
 
        
 class ReRouter(object):

@@ -39,10 +39,11 @@ def utf8_encoder(app):
                 headers.append(('Content-Type', 'text/plain; charset=UTF-8'))
             start(status, headers)
         for x in app(environ, inner_start):
-            if not isinstance(x, unicode):
-                x = unicode(x, 'utf8', 'replace')
-            # Should this be ascii? Then all the unicode characters go as XML refs.
-            yield x.encode('utf8', 'xmlcharrefreplace')
+            if isinstance(x, unicode):
+                x = x.encode('utf8', 'xmlcharrefreplace')
+            elif not isinstance(x, str):
+                x = str(x)
+            yield x
     return inner
 
 
