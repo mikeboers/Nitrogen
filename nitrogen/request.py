@@ -28,7 +28,7 @@ from .webio import request_params
 from .cookie import Container as CookieContainer
 from .headers import DelayedHeaders, MutableHeaders
 from .webio import request_params
-from .route.tools import get_data as get_route_data
+from .route.tools import get_data as get_route_data, get_unrouted
 
 
 log = logging.getLogger(__name__)
@@ -114,6 +114,10 @@ class Request(object):
     referer = _environ_getter('HTTP_REFERER')
     user_agent = _environ_getter('HTTP_USER_AGENT')
     
+    @property
+    def unrouted(self):
+        return get_unrouted(self.environ)
+    
     # @property
     # def basic_username(self):
     #     auth = self.headers.get('Authorization')
@@ -124,6 +128,7 @@ class Request(object):
     #     
     #     username, password = base64.b64decode(auth.split()[1]).split(':')
     #     return username
+    
     
     # This will be handled another way soon.
     user = _environ_getter('app.user')
