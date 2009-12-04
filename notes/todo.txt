@@ -83,6 +83,6 @@ my own minifier, which sounds like a bad idea).
 
 - write a session
 
-
+- consider having default log path include the thread-id as well so that they are running into seperate files
 
 
