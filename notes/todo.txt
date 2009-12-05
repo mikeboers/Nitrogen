@@ -85,4 +85,6 @@ my own minifier, which sounds like a bad idea).
 
 - consider having default log path include the thread-id as well so that they are running into seperate files
 
+- textblobs should have an environ object just like models and views
+	- the javascript to make them go should also be in the markup
 
