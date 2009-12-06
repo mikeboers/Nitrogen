@@ -11,6 +11,7 @@ place.
 
 
 import json
+import pprint
 
 from markdown import markdown
 import webhelpers.text
@@ -29,6 +30,8 @@ context['markdown'] = lambda x: clean_html(markdown(x.encode('utf8'))).decode('u
 context['format_date'] = lambda d, f: (d.strftime(f) if d else '')
 context['randomize'] = lambda x: sorted(x, key=lambda y: random.random())
 context['nl2br'] = lambda s: s.replace("\n", "<br />")
+
+context['pformat'] = pprint.pformat
 
 # context['textblob'] = textblob
 # context['textblob_md'] = markdownblob
