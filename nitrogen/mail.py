@@ -27,6 +27,7 @@ import smtplib
 from threading import RLock
 import re
 import string
+from subprocess import Popen, PIPE
 
 def format_address(addr, strict=True):
     r"""
@@ -66,6 +67,57 @@ def format_address_list(addrs):
     return [format_address(x) for x in addrs]
 
 
+def format_mail(from_, to, subject=None, text=None, html=None, cc=None,
+    bcc=None):
+    
+    if isinstance(text, unicode):
+        text = text.encode('utf8')
+    elif text is not None:
+        text = str(text)
+
+    if isinstance(html, unicode):
+        html = html.encode('utf8')
+    elif html is not None:
+        html = str(html)
+        
+    if text is None and html is None:
+        raise ValueError('must be given atleast either text or html')
+    
+    from_ = format_address(from_)
+    to = format_address_list(to)
+    cc = format_address_list(cc)
+    bcc = format_address_list(bcc)
+    
+    mail = MIMEMultipart('alternative')
+    
+    # Only encode the subject if we need to.
+    if subject is not None:
+        if re.match('[ a-zA-Z0-9' + re.escape(string.punctuation) + ']*$', subject):
+            mail['Subject'] = subject
+        else:
+            mail['Subject'] = Header(subject, 'utf8')
+        
+    mail['From'] = from_
+    mail['To'] = ', '.join(to)
+    if cc:
+        mail['Cc'] = ', '.join(cc)
+    
+    # If we set the charset in the MIMEText constructor, the message gets
+    # base64 encoded, which may be optimal for network safety, but I want
+    # it to be as small as possible (and be able to read what the output
+    # is while debugging).
+    if text is not None:
+        text_part = MIMEText(text, 'plain')
+        text_part.set_charset('utf8')
+        mail.attach(text_part)
+    if html is not None:
+        html_part = MIMEText(html, 'html')
+        html_part.set_charset('utf8')
+        mail.attach(html_part)
+    
+    return (from_, to + cc + bcc, mail.as_string())
+
+
 class Mailer(object):
     
     def __init__(self, host=None, port=None, username=None, password=None):
@@ -73,6 +125,7 @@ class Mailer(object):
         self.port = port
         self.username = username
         self.password = password
+        
         self._smtp = None
         self._smtp_lock = RLock()
     
@@ -98,63 +151,24 @@ class Mailer(object):
             self.smtp.quit()
             self.smtp = None
         
-    def send(self, from_, to, subject, text=None, html=None, cc=None,
-        bcc=None):
-        
-        if isinstance(text, unicode):
-            text = text.encode('utf8')
-        elif text is not None:
-            text = str(text)
-
-        if isinstance(html, unicode):
-            html = html.encode('utf8')
-        elif html is not None:
-            html = str(html)
-            
-        if text is None and html is None:
-            raise ValueError('must be given atleast either text or html')
-        
-        from_ = format_address(from_)
-        to = format_address_list(to)
-        cc = format_address_list(cc)
-        bcc = format_address_list(bcc)
-        
-        mail = MIMEMultipart('alternative')
-        
-        # Only encode the subject if we need to.
-        if re.match('[ a-zA-Z0-9' + re.escape(string.punctuation) + ']*$', subject):
-            mail['Subject'] = subject
-        else:
-            mail['Subject'] = Header(subject, 'utf8')
-            
-        mail['From'] = from_
-        mail['To'] = ', '.join(to)
-        if cc:
-            mail['Cc'] = ', '.join(cc)
-        
-        # If we set the charset in the MIMEText constructor, the message gets
-        # base64 encoded, which may be optimal for network safety, but I want
-        # it to be as small as possible (and be able to read what the output
-        # is while debugging).
-        if text is not None:
-            text_part = MIMEText(text, 'plain')
-            text_part.set_charset('utf8')
-            mail.attach(text_part)
-        if html is not None:
-            html_part = MIMEText(html, 'html')
-            html_part.set_charset('utf8')
-            mail.attach(html_part)
-        
+    def send(self, *args, **kwargs):
+        from_, to, mail = format_mail(*args, **kwargs)
         with self._smtp_lock:
             self.connect()
             return self._smtp.sendmail(
                 from_,
-                to + cc + bcc,
-                mail.as_string()
+                to,
+                mail
             )
 
 
-def sendmail(**kwargs):
+def sendmail(*args, **kwargs):
+    from_, to, mail = format_mail(*args, **kwargs)
+    proc = Popen(['sendmail'] + [str(_parse_addr(x)) for x in to], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    out, err = proc.communicate(mail)
+    return out, err
+
+def send(**kwargs):
     init_keys = set('host port username password'.split())
     init_kwargs = {}
     send_kwargs = {}
@@ -176,16 +190,11 @@ if __name__ == '__main__':
     print
     print "Sending..."
     mailer = Mailer(
-        # host='localhost',
-        # port=1025,
-        
         host='localhost',
-        port=587,
-        username='johndoe',
-        password='12345',
+        port=25,
     )
-    mailer.send(
-        from_=(__name__ + ': TESTING', 'test@example.com'),
+    print mailer.send(
+        from_=('Mike Boers', 'mail@example.com'),
         text='This is the text message.',
         html=u'<b>This</b> is the <i>html</i> message. ¡™£¢∞§¶•ªº',
         to=[('Jim Bob', 'mail@example.com')],
