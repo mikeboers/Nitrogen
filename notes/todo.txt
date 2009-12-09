@@ -102,15 +102,6 @@ my own minifier, which sounds like a bad idea).
 - see if I can make a daemonize function out of multiprocessing, so that the locks still work
 	they are semaphores, which are based on file descriptors. so just dont kill them all!
 
-- see if I can sendmail from the command line on this machine, and the vps
-	if I can, then make a Sendmail class which uses this instead of SMTP like the Mailer
-	
-	- I can sendmail from the VPS. It doesnt need anything fancier than:
-		sendmail mail@example.com
-		this is a test
-		^D
-	
-	port 25 is blocked by teksavvy. they should remove it upon request
 
 - route history objects should proxy item access to the data object
 	should have some more properties (prev -> previous piece of history, next,
