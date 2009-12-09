@@ -7,9 +7,6 @@ from wsgiref.handlers import CGIHandler
 
 from .lib.fcgi import WSGIServer as FCGIHandler
 
-print FCGIHandler
-
-
 from .logs import setup_logging
 from . import error
 
@@ -27,6 +24,7 @@ def run_via_cgi(app):
     handler.error_body = error.DEFAULT_ERROR_BODY
     handler.run(setup_logging(app))
 
+
 def run_via_fcgi(app, multithreaded=True):
     """Run a web application via a FastCGI interface of a web server.
     
@@ -38,6 +36,7 @@ def run_via_fcgi(app, multithreaded=True):
     """
     
     FCGIHandler(setup_logging(app), multithreaded=multithreaded).run()
+
 
 def run_via_socket(app, host='', port=8000, once=False):
     """Run a web aplication directly via a socket.
@@ -54,6 +53,7 @@ def run_via_socket(app, host='', port=8000, once=False):
         httpd.handle_request()
     else:
         httpd.serve_forever()
+
 
 if __name__ == '__main__':
     
