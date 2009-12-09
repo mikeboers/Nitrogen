@@ -21,6 +21,3 @@
 
 - route adapter for normal wsgi apps (so that their changes to PATH_INFO get
   recorded in history)
-
-- Basic eTaging middlewear which simply hashes everything it is about to send
-  down, and compares it to the eTag. Just saves transmission costs.

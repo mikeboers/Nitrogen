@@ -87,3 +87,37 @@ my own minifier, which sounds like a bad idea).
 
 - textblobs should have an environ object just like models and views
 
+- hash IPs in the logs, so we dont store actual IPs. need to salt them or do something else fancy
+	maybe hash together a salt, ip, user-agent, and anything else that is constant from that user
+
+- the setup_logging middleware should not be added automatically by the runners
+	it is not that special
+
+- file logger should put the format string through `time.strftime(format.replace('%(', '%%')), time.gmtime()) % params`
+  to get the file name (also so it is in GMT). actually need to double the number of percent signs in except for those that precede a single letter
+
+- multiple processes logging to the same file is not safe. the docs seems to suggest
+  that the multiprocessing module could be handy in writing a new file handler
+
+- see if I can make a daemonize function out of multiprocessing, so that the locks still work
+	they are semaphores, which are based on file descriptors. so just dont kill them all!
+
+- see if I can sendmail from the command line on this machine, and the vps
+	if I can, then make a Sendmail class which uses this instead of SMTP like the Mailer
+	
+	- I can sendmail from the VPS. It doesnt need anything fancier than:
+		sendmail mail@example.com
+		this is a test
+		^D
+	
+	port 25 is blocked by teksavvy. they should remove it upon request
+
+- route history objects should proxy item access to the data object
+	should have some more properties (prev -> previous piece of history, next,
+	first, last, is_first, is_last, rebuild -> rebuilds this routeing chunk,
+	rebuild_route builds the full route back to the beginning... or from one
+	router to another
+
+	
+)
+
