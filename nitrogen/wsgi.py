@@ -2,7 +2,7 @@
 
 
 import itertools
-import multiprocessing
+import multiprocessing.util
 import os
 from wsgiref.handlers import CGIHandler as _CGIHandler
 from wsgiref.simple_server import make_server as _make_server
