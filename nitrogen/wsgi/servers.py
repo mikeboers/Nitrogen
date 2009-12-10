@@ -7,11 +7,32 @@ import os
 from wsgiref.handlers import CGIHandler as _CGIServer
 from wsgiref.simple_server import make_server as _make_server
 
+from flup.server.fcgi_base import Request as _FlupFCGIRequest
 from flup.server.fcgi import WSGIServer as _FCGIThreadPoolServer
 from flup.server.fcgi_fork import WSGIServer as _FCGIForkServer
 
 from .. import error
-from .lib.fcgi import WSGIServer as _FCGIThreadServer
+from .lib.fcgi import Request as _FCGIRequest, WSGIServer as _FCGIThreadServer
+
+
+def monkeypatch_fcgi_request(Request):
+    """Fixing a memory leak in the fcgi Request classes.
+    
+    It dels all the data associated with this request. There appears to be a
+    number of references cycles involving the request, its input/output,
+    environment, ect. Before I did his the process gained 1MB after a couple
+    dozen requests. After, it gains less than 1MB over 10k requests.
+    
+    """
+    old_end = Request._end
+    def new_end(self, *args):
+        old_end(self, *args)
+        self.__dict__.clear()
+    Request._end = new_end
+
+
+monkeypatch_fcgi_request(_FCGIRequest)
+monkeypatch_fcgi_request(_FlupFCGIRequest)
 
 
 class CGIServer(_CGIServer):
