@@ -24,7 +24,7 @@ class CGIHandler(_CGIHandler):
         self.app = app
 
     def run(self):
-        self.run(self.app)
+        _CGIHandler.run(self, self.app)
 
 
 class FCGIThreadHandler(_FCGIThreadHandler):
