@@ -25,7 +25,7 @@ def run_via_fcgi_fork(app, **kwargs):
     FCGIForkServer(app, **kwargs).run()
     
 
-run_via_fcgi = run_via_fcgi_thread
+run_via_fcgi = run_via_fcgi_thread_pool
 
 
 def run_via_socket(app, host='', port=8000, once=False):

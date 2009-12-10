@@ -1,4 +1,21 @@
-"""WSGI application runners."""
+"""WSGI application runners.
+
+The threading FCGI servers from the single library and flup have some memory
+leaks. I was able to patch one of the larger ones. This patch also fixes the
+prefork server as well. After the memory stablizes, we are now using ~45MB
+maxres, instead of ~60MB (after a few thousand... but this one would keep
+growing). I actually saw the unpatched one hit 150MB once.
+
+Forking notes:
+    - the master proc does not appear to leak memory it all. it is constant at
+      around 18M of memory. this is not using a manager
+    - a child starts at 2961408
+    - by 1000 requests: 3809280
+    - by 2000 requests: 3809280
+    - it does not go higher
+
+
+"""
 
 
 import itertools
@@ -63,7 +80,7 @@ class FCGIThreadPoolServer(_FCGIThreadPoolServer):
 
 class FCGIForkServer(_FCGIForkServer):
 
-    def __init__(self, app, min_spare=1, max_spare=5, max_children=50,
+    def __init__(self, app, min_spare=1, max_spare=4, max_children=10,
         max_requests=0, setup=None, teardown=None):
 
         self._setup_child = setup
