@@ -7,10 +7,11 @@ import os
 from wsgiref.handlers import CGIHandler as _CGIHandler
 from wsgiref.simple_server import make_server as _make_server
 
-from flup.server.fcgi import WSGIServer as _FCGIThreadHandler
+from flup.server.fcgi import WSGIServer as _FCGIThreadPoolHandler
 from flup.server.fcgi_fork import WSGIServer as _FCGIForkHandler
 
-from . import error
+from .fcgi import WSGIServer as FCGIThreadHandler
+from .. import error
 
 
 class CGIHandler(_CGIHandler):
@@ -27,10 +28,10 @@ class CGIHandler(_CGIHandler):
         _CGIHandler.run(self, self.app)
 
 
-class FCGIThreadHandler(_FCGIThreadHandler):
+class FCGIThreadPoolHandler(_FCGIThreadPoolHandler):
 
     def __init__(self, app, min_spare=1, max_spare=5, max_threads=50):
-        super(FCGIThreadHandler, self).__init__(app, minSpare=min_spare,
+        super(FCGIThreadPoolHandler, self).__init__(app, minSpare=min_spare,
             maxSpare=max_spare, maxThreads=max_threads)
 
 

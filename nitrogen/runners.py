@@ -1,31 +1,27 @@
-"""WSGI application runners."""
+"""WSGI application runners.
+
+This is only here to be backwards compatible with my earlier sites.
+
+"""
 
 
-import logging
-
-from .wsgi import CGIHandler, FCGIThreadHandler, FCGIForkHandler, SocketHandler
-
-
-log = logging.getLogger(__name__)
+from .wsgi.handlers import (CGIHandler, FCGIThreadHandler, FCGIThreadPoolHandler,
+    FCGIForkHandler, SocketHandler)
 
 
 def run_via_cgi(app):
-    """Run a web application via the CGI interface of a web server.
-    
-    Parameters:
-        app -- The WSGI app to run.
-    """
-    log.warning('run_via_cgi is depreciated')
     CGIHandler(app).run()
 
 
 def run_via_fcgi_thread(app, **kwargs):    
-    log.warning('run_via_fcgi_thread is depreciated')
     FCGIThreadHandler(app, **kwargs).run()
 
 
+def run_via_fcgi_thread_pool(app, **kwargs):    
+    FCGIThreadPoolHandler(app, **kwargs).run()
+    
+
 def run_via_fcgi_fork(app, **kwargs):
-    log.warning('run_via_fcgi_fork is depreciated')
     FCGIForkHandler(app, **kwargs).run()
     
 
@@ -33,16 +29,6 @@ run_via_fcgi = run_via_fcgi_thread
 
 
 def run_via_socket(app, host='', port=8000, once=False):
-    """Run a web aplication directly via a socket.
-    
-    Parameters:
-        app -- The WSGI app to run.
-        host -- What host to run on. Defaults to a wildcard.
-        port -- What port to accept connections to.
-        once -- Only accept a single connection.
-    """
-    
-    log.warning('run_via_socket is depreciated')
     handler = SocketHandler(app, host, port)
     if once:
         handler.handle_request()
