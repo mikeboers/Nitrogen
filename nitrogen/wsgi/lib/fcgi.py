@@ -596,6 +596,14 @@ class Request(object):
     def _end(self, appStatus=0L, protocolStatus=FCGI_REQUEST_COMPLETE):
         self._conn.end_request(self, appStatus, protocolStatus)
         
+        # This is added by Mike Boers to attempt to fix a memory leak. It dels
+        # all the data associated with this request. There appears to be a
+        # number of references cycles involving the request, its input/output,
+        # environment, ect. Before I did his the process gained 1MB after a
+        # couple dozen requests. After, it gains less than 1MB over 10k
+        # requests.
+        self.__dict__.clear()
+        
     def _flush(self):
         self.stdout.close()
         self.stderr.close()
