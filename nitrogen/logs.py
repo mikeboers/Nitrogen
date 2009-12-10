@@ -13,45 +13,42 @@ import sys
 import logging
 import logging.handlers
 import threading
+import multiprocessing
 import time
-
-thread_local = threading.local()
-
-
-class setup_logging(object):
-    """WSGI middleware that stores information about the request so that logs
-    will contain the request id, and remote address.
-    
-    Currently stores the environment on environ, and a one-based request
-    counter on request_index.
-    
-    """
-    
-    def __init__(self, app):
-        self.app = app
-        self.request_count = 0
-        self.lock = threading.Lock()
-
-    def __call__(self, environ, start):
-        with self.lock:
-            self.request_count += 1
-            thread_local.request_index = self.request_count
-            thread_local.remote_addr = environ['REMOTE_ADDR']
-        return self.app(environ, start)
 
 
 base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(request_index)d ip:%(remote_addr)s -- %(name)s: %(message)s"
-class Formatter(logging.Formatter):
+
+
+class ThreadLocalFormatter(logging.Formatter):
+    
+    @staticmethod
+    def _build_local():
+        return threading.local().__dict__
+    
+    @staticmethod
+    def _build_lock():
+        return threading.Lock()
+    
+    lock_constructor = threading.Lock
+    
+    def __init__(self, *args, **kwargs):
+        logging.Formatter.__init__(self, *args, **kwargs)
+        
+        self.local_extra = self._build_local()
+        self.request_count = 0
+        self.request_count_lock = self._build_lock()
+        
     def format(self, record):
         data = {
             'remote_addr': None,
             'request_index': 0,
             'process': 0,
-            'asctime': 'DATETIME',
-            'levelname': 'LEVELNAME',
-            'message': 'MESSAGE'
+            'asctime': '<DATETIME>',
+            'levelname': '<LEVELNAME>',
+            'message': '<MESSAGE>'
         }
-        data.update(thread_local.__dict__)
+        data.update(self.local_extra)
         data.update(record.__dict__)
         
         if '%(asctime)' in base_format:
@@ -74,9 +71,26 @@ class Formatter(logging.Formatter):
             message += record.exc_text
         
         return message
-        
+    
+    def setup_wsgi(self, app):
+        def ThreadLocalFormatter__wrap_wsgi_app__inner(environ, start):
+            with self.request_count_lock:
+                self.request_count += 1
+                self.local_extra['request_index'] = self.request_count
+                self.local_extra['remote_addr'] = environ['REMOTE_ADDR']
+            return app(environ, start)
+        return ThreadLocalFormatter__wrap_wsgi_app__inner
 
-formatter = Formatter()
+
+class ProcLocalFormatter(ThreadLocalFormatter):
+    
+    @staticmethod
+    def _build_local():
+        return dict()
+    
+    @staticmethod
+    def _build_lock():
+        return multiprocessing.Lock()
 
 
 class FileHandler(logging.Handler):

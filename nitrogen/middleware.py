@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 
 def etagger(app):
-    def inner(environ, start):
+    def etagger_app(environ, start):
         
         state = dict(
             status=None,
@@ -43,7 +43,7 @@ def etagger(app):
         res.start(state['status'])
         yield output
     
-    return inner
+    return etagger_app
         
 def output_buffer(app):
     """WSGI middleware which buffers all output before sending it on.
@@ -56,7 +56,7 @@ def output_buffer(app):
     
     """
     
-    class inner(object):
+    class output_buffer_app(object):
         
         def __init__(self, environ, start):
             self.environ = environ
@@ -64,23 +64,23 @@ def output_buffer(app):
             self.start_args = None
             self.start_kwargs = None
             
-        def app_start(self, *args, **kwargs):
+        def inner_start(self, *args, **kwargs):
             self.start_args = args
             self.start_kwargs = kwargs
             
         def __iter__(self, ):
-            output = ''.join(app(self.environ, self.app_start))
+            output = ''.join(app(self.environ, self.inner_start))
             self.start(*self.start_args, **self.start_kwargs)
             yield output
     
-    return inner
+    return output_buffer_app
 
 def not_found_catcher(app, render):
     """Displays the _404.tpl template along with a "404 Not Found" status if a
     HttpNotFound is thrown within the app that it wraps. This error is
     normally thrown by routers.
     """
-    def inner(environ, start):
+    def not_found_catcher_app(environ, start):
         try:
             for x in app(environ, start):
                 yield x
@@ -88,7 +88,7 @@ def not_found_catcher(app, render):
             log.info('caught HttpNotFound', exc_info=e)
             start('404 Not Found', [TYPE_HEADER_HTML])
             yield render('_404.tpl')
-    return inner        
+    return not_found_catcher_app        
 
 if __name__ == '__main__':
     from . import test

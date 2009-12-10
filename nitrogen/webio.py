@@ -179,13 +179,13 @@ def get_parser(app, **kwargs):
     
     """
     
-    def inner(environ, start):
+    def webio__get_parser_app(environ, start):
         def gen():
             query = environ.get('QUERY_STRING', '')
             return Query(query).allitems()
         environ['nitrogen.get'] = DelayedMultiMap(gen)
         return app(environ, start)
-    return inner    
+    return webio__get_parser_app    
 
 
 def post_parser(app, make_file=None, max_file_length=None, environ=None, **kwargs):
@@ -212,7 +212,7 @@ def post_parser(app, make_file=None, max_file_length=None, environ=None, **kwarg
     
     """
     
-    def inner(environ, start):
+    def webio__post_parser_app(environ, start):
         
         # Don't need to bother doing anything fancy if it isn't a POST.
         if environ['REQUEST_METHOD'].lower() != 'post':
@@ -250,7 +250,7 @@ def post_parser(app, make_file=None, max_file_length=None, environ=None, **kwarg
         environ['nitrogen.files'] = files
         return app(environ, start)
     
-    return inner
+    return webio__post_parser_app
         
 
 def cookie_parser(app, hmac_key=None, **kwargs):
@@ -264,10 +264,10 @@ def cookie_parser(app, hmac_key=None, **kwargs):
     """
     
     class_ = cookie.make_signed_container(hmac_key) if hmac_key else cookie.Container
-    def inner(environ, start):
+    def webio__cookie_parser_app(environ, start):
         environ['nitrogen.cookies'] = class_(environ.get('HTTP_COOKIE', ''))
         return app(environ, start)    
-    return inner
+    return webio__cookie_parser_app
 
 
 def cookie_builder(app, **kwargs):
@@ -277,14 +277,13 @@ def cookie_builder(app, **kwargs):
     
     This tends to be used along with the cookie_parser.
     """
-    def inner(environ, start):
-        def inner_start(status, headers, exc_info=None):
+    def webio__cookie_builder_app(environ, start):
+        def webio__cookie_builder_start(status, headers, exc_info=None):
             cookies = environ['nitrogen.cookies']
-            log.debug('setting cookies: %r' % cookies)
             headers.extend(cookies.build_headers())
             start(status, headers)
-        return app(environ, inner_start)
-    return inner
+        return app(environ, webio__cookie_builder_start)
+    return webio__cookie_builder_app
 
 
 def uri_parser(app, **kwargs):
@@ -294,22 +293,22 @@ def uri_parser(app, **kwargs):
     
     """
     
-    def inner(environ, start):
+    def webio__uri_parser_app(environ, start):
         environ['nitrogen.uri'] = URI('http://' + environ['SERVER_NAME'] + environ.get('REQUEST_URI', ''))
         return app(environ, start)
-    return inner
+    return webio__uri_parser_app
 
 
 def header_parser(app, **kwargs):
     """WSGI middleware which adds a header mapping to the environment."""
-    def inner(environ, start):
+    def webio__header_parser_app(environ, start):
         def gen():
             for k, v in environ.items():
                 if k.startswith('HTTP_'):
                     yield k[5:], v
         environ['nitrogen.headers'] = DelayedHeaders(gen)
         return app(environ, start)
-    return inner
+    return webio__header_parser_app
     
 
 def request_params(app, parse_headers=True, parse_uri=True, parse_get=True, parse_post=True,

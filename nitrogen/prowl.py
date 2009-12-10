@@ -20,10 +20,12 @@ See: http://prowl.weks.net/
 
 """
 
+
 import urllib
 import urllib2
 import logging
 import threading
+
 
 API_URL = 'https://prowl.weks.net/publicapi/%s'
 DEFAULT_PRIORITY = 0
@@ -35,6 +37,7 @@ def verify(key):
     data = {'apikey': key}
     res = urllib2.urlopen(API_URL % 'verify', urllib.urlencode(data))
     print res.read()
+    
     
 def send(key, message, priority=None, app=None, event=None):
     """Send a message.
@@ -61,6 +64,7 @@ def send(key, message, priority=None, app=None, event=None):
     # print res_data
     res.close()
     return success
+
 
 class Prowl(object):
     """An object to simplify repeated prowling.
@@ -89,26 +93,41 @@ class Prowl(object):
             event=event or self.event
         )
 
+
 class LogHandler(logging.Handler, Prowl):
     """Log handler which sends messages via Prowl.
     
     Constructor takes prowl parameters which will be used when sending logs.
     """
     
-    def __init__(self, threaded=False, **kwargs):
+    def __init__(self, async=False, **kwargs):
         logging.Handler.__init__(self)
         Prowl.__init__(self, **kwargs)
-        self.threaded = threaded
+        self.async = async
 
     def emit(self, record):
-        app = (self.app % record.__dict__) if self.app else None
-        event = (self.event % record.__dict__) if self.event else None
+        
+        app = self.app
+        try:
+            app = app % record.__dict__
+        except:
+            pass
+        
+        event = self.event
+        try:
+            event = event % record.__dict__
+        except:
+            pass
+        
         msg = self.format(record)
-        if self.threaded:
+        
+        if self.async:
             threading.Thread(target=self.send, kwargs=dict(message=msg,
                 app=app, event=event)).start()
         else:
             self.send(message=msg, app=app, event=event)
+
+
 
 if __name__ == '__main__':
     import time, threading, atexit

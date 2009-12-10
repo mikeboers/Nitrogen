@@ -167,7 +167,7 @@ def error_logger(app, level=logging.ERROR):
 
     """
 
-    def inner(environ, start):
+    def error_logger_app(environ, start):
         output = []
         try:
             for x in app(environ, start):
@@ -177,7 +177,7 @@ def error_logger(app, level=logging.ERROR):
             report = format_error_report(environ, output=output).strip()
             log.log(level, 'error_logger caught %r\n' % e + report)
             raise
-    return inner
+    return error_logger_app
 
 
 def error_notifier(app, render=None, traceback=False, template='_500.tpl'):

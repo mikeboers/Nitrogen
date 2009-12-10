@@ -30,3 +30,10 @@ class ModelEnviron(object):
     
     def create_tables(self):
         self.metadata.create_all(self.engine)
+    
+    def wsgi_reset(self, app):
+        def ModelEnviron_wsgi_reset_app(environ, start):
+            for x in app(environ, start):
+                yield x
+            self.session.close()
+        return ModelEnviron_wsgi_reset_app

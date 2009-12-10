@@ -109,6 +109,5 @@ my own minifier, which sounds like a bad idea).
 	rebuild_route builds the full route back to the beginning... or from one
 	router to another
 
-	
-)
-
+- all the wsgi inner functions should be named such as:
+	ModelEnviron__clear_after_request__wsgi_app with the classname and method and everything

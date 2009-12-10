@@ -20,12 +20,12 @@ def utf8_encoder(app):
     Forces text/* content types to have a UTF-8 charset.
     If there is no Content-Type, it adds a utf8 plain text one.
     """
-    def inner(environ, start):
+    def utf8_encoder_app(environ, start):
         if 'utf-8' not in environ.get('HTTP_ACCEPT_CHARSET', '').lower():
             for x in app(environ, start):
                 yield x.encode('ascii', 'xmlcharrefreplace')
             return
-        def inner_start(status, headers, exc_info=None):
+        def utf8_encoder_start(status, headers, exc_info=None):
             has_type = False
             for i, h in enumerate(headers):
                 if h[0].lower() == 'content-type':
@@ -38,13 +38,13 @@ def utf8_encoder(app):
             if not has_type:
                 headers.append(('Content-Type', 'text/plain; charset=UTF-8'))
             start(status, headers)
-        for x in app(environ, inner_start):
+        for x in app(environ, utf8_encoder_start):
             if isinstance(x, unicode):
                 x = x.encode('utf8', 'xmlcharrefreplace')
             elif not isinstance(x, str):
                 x = str(x)
             yield x
-    return inner
+    return utf8_encoder_app
 
 
 def test_utf8_encoder():

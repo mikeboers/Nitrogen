@@ -160,7 +160,7 @@ def decompress_gzip(data, level=9):
 
 
 def compressor(app):
-    def inner(environ, start):
+    def compressor_app(environ, start):
 
         # Figure out which compression algos we are allowed to use
         algos = []
@@ -172,7 +172,7 @@ def compressor(app):
             if algo in environ.get('HTTP_ACCEPT_ENCODING', '').lower():
                 algos.append(algo)
 
-        def inner_start(status, headers, exc_info=None):
+        def compressor_start(status, headers, exc_info=None):
             headers = Headers(headers)
             if 'content-encoding' in headers:
                 algos[:] = []
@@ -182,7 +182,7 @@ def compressor(app):
 
         # Do the compression.
         compressor = None
-        for x in app(environ, inner_start):
+        for x in app(environ, compressor_start):
             if compressor is None:
                 if algos:
                     compressor = algos_map[algos[0]]()
@@ -193,7 +193,7 @@ def compressor(app):
         if compressor:
             yield compressor.flush()
 
-    return inner
+    return compressor_app
 
 
 
