@@ -4,38 +4,43 @@
 import itertools
 import multiprocessing.util
 import os
-from wsgiref.handlers import CGIHandler as _CGIHandler
+from wsgiref.handlers import CGIHandler as _CGIServer
 from wsgiref.simple_server import make_server as _make_server
 
-from flup.server.fcgi import WSGIServer as _FCGIThreadPoolHandler
-from flup.server.fcgi_fork import WSGIServer as _FCGIForkHandler
+from flup.server.fcgi import WSGIServer as _FCGIThreadPoolServer
+from flup.server.fcgi_fork import WSGIServer as _FCGIForkServer
 
-from .fcgi import WSGIServer as FCGIThreadHandler
 from .. import error
+from .lib.fcgi import WSGIServer as _FCGIThreadServer
 
 
-class CGIHandler(_CGIHandler):
+class CGIServer(_CGIServer):
 
     error_status = error.DEFAULT_ERROR_HTTP_STATUS
     error_headers = error.DEFAULT_ERROR_HTTP_HEADERS
     error_body = error.DEFAULT_ERROR_BODY
 
     def __init__(self, app):
-        _CGIHandler.__init__(self)
+        _CGIServer.__init__(self)
         self.app = app
 
     def run(self):
-        _CGIHandler.run(self, self.app)
+        _CGIServer.run(self, self.app)
 
 
-class FCGIThreadPoolHandler(_FCGIThreadPoolHandler):
+class FCGIThreadServer(_FCGIThreadServer):
+    """Only purpose of this class is to change the class name."""
+    pass
+
+
+class FCGIThreadPoolServer(_FCGIThreadPoolServer):
 
     def __init__(self, app, min_spare=1, max_spare=5, max_threads=50):
-        super(FCGIThreadPoolHandler, self).__init__(app, minSpare=min_spare,
+        super(FCGIThreadPoolServer, self).__init__(app, minSpare=min_spare,
             maxSpare=max_spare, maxThreads=max_threads)
 
 
-class FCGIForkHandler(_FCGIForkHandler):
+class FCGIForkServer(_FCGIForkServer):
 
     def __init__(self, app, min_spare=1, max_spare=5, max_children=50,
         max_requests=0, setup=None, teardown=None):
@@ -44,7 +49,7 @@ class FCGIForkHandler(_FCGIForkHandler):
         self._teardown_child = teardown
         self._pid = os.getpid()
 
-        super(FCGIForkHandler, self).__init__(app, minSpare=min_spare,
+        super(FCGIForkServer, self).__init__(app, minSpare=min_spare,
             maxSpare=max_spare, maxChildren=max_children,
             maxRequests=max_requests)
 
@@ -79,14 +84,14 @@ class FCGIForkHandler(_FCGIForkHandler):
 
         self.setup_child()
 
-        ret = super(FCGIForkHandler, self)._child(*args)
+        ret = super(FCGIForkServer, self)._child(*args)
 
         self.teardown_child()
 
         return ret
 
 
-class SocketHandler(object):
+class SocketServer(object):
 
     def __init__(self, app, host='', port=8000):
         self.app = app

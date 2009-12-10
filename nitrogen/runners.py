@@ -5,31 +5,31 @@ This is only here to be backwards compatible with my earlier sites.
 """
 
 
-from .wsgi.handlers import (CGIHandler, FCGIThreadHandler, FCGIThreadPoolHandler,
-    FCGIForkHandler, SocketHandler)
+from .wsgi.servers import (CGIServer, FCGIThreadServer, FCGIThreadPoolServer,
+    FCGIForkServer, SocketServer)
 
 
 def run_via_cgi(app):
-    CGIHandler(app).run()
+    CGIServer(app).run()
 
 
 def run_via_fcgi_thread(app, **kwargs):    
-    FCGIThreadHandler(app, **kwargs).run()
+    FCGIThreadServer(app, **kwargs).run()
 
 
 def run_via_fcgi_thread_pool(app, **kwargs):    
-    FCGIThreadPoolHandler(app, **kwargs).run()
+    FCGIThreadPoolServer(app, **kwargs).run()
     
 
 def run_via_fcgi_fork(app, **kwargs):
-    FCGIForkHandler(app, **kwargs).run()
+    FCGIForkServer(app, **kwargs).run()
     
 
 run_via_fcgi = run_via_fcgi_thread
 
 
 def run_via_socket(app, host='', port=8000, once=False):
-    handler = SocketHandler(app, host, port)
+    handler = SocketServer(app, host, port)
     if once:
         handler.handle_request()
     else:
