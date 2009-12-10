@@ -27,7 +27,9 @@ def run_via_fcgi_thread(app, **kwargs):
 def run_via_fcgi_fork(app, **kwargs):
     log.warning('run_via_fcgi_fork is depreciated')
     FCGIForkHandler(app, **kwargs).run()
-run_via_fcgi = run_via_fcgi_fork
+    
+
+run_via_fcgi = run_via_fcgi_thread
 
 
 def run_via_socket(app, host='', port=8000, once=False):
