@@ -10,6 +10,9 @@ WebOb==0.9.6.1
 WebTest==1.2
 nose==0.11.1
 simplejson==2.0.9
-flup==1.0.3
+
+flup==1.0.3.dev-20091027
+
+
 webhelpers
 markdown

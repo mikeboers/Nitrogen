@@ -111,3 +111,90 @@ my own minifier, which sounds like a bad idea).
 
 - all the wsgi inner functions should be named such as:
 	ModelEnviron__clear_after_request__wsgi_app with the classname and method and everything
+
+- pull out a bunch of todo itesm from http://www.catonmat.net/blog/50-ideas-for-the-new-catonmat-website/?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+catonmat+%28good+coders+code%2C+great+reuse%29&utm_content=Google+Reader 
+  as it has some good ideas
+
+- user environ
+	- allow username, realname, or email to be used as password
+	- many different ways to authenticate: password, PPP, yubikey, email token
+	  prowl token, sms, openid, etc
+	- the login/authentication page should see that I am coming from 127.0.0.1
+	  and allow me to create a new user, or use a temporary superuser
+	- users should not need to be backed by the database, so that we can have
+	  a guest user (if we decide that we want one) and other temporary users
+	  (the temp superuser for local connections).
+	- middleware to make sure that a user is authenticated to get to the
+	  requested url. maybe have it check what the url is... or have some other
+	  middleware (more general) that runs these tests and optinally skips the
+	  next piece of middleware. so it goes through the authenticator if the
+	  domain starts with "admin." or something.
+	- permissions should be heirarchical split with /. maybe so something with
+	  absolute vs relative ones
+
+- redirectors
+	mappings of paths (or path regexes) to map from/to with a http status code
+	(301?) and a location header
+
+
+- consider breaking various parts of nitrogen into different packages.
+	- they would assemble into the same namespace using what magic module does that...
+	- use pip to install them with --no-install option to just build them
+	- then softlink them into the site-packages
+
+- in place editors:
+	- take all the options out of the email I sent shane
+	- consider http://usabilitythoughts.com/edit-in-place.html
+	- research other usability issues
+	- http://www.digital-web.com/articles/usability_for_rich_internet_applications/
+
+- some sort of SASS like meta language for specifying attributes of markup?
+	You have one layer of HAML for the markup itself, another layer for adding
+	classes and names and attributes to the markup itself, and another layer
+	of the css.
+	
+	Have it have python-like indentation, be haml like, and use markdown type
+	syntax for inline stuff.
+	
+	call it pyml (PYthon Markup Language)
+		#id
+			%p{'key': 'value', **attributes, (k, v) for something in data}
+				This is some content.
+				%strong
+					with inline strength
+				and
+				%em
+					inline emphasis
+				.
+				
+				A full blank line specifies that it should be a seperate
+				paragraph, but only if it is in a p block.
+			%
+				! if test():
+					some stuff in the test. you break out again by dropping out
+					of the if. the only nasty part is that we couldn't start
+					a tag in one block and finish it in another.
+				! endif
+				! for key in data:
+					## do something with key in here
+				! endfor
+				$ 'an expression'.title()
+				Or perhaps an ${'inline'.upper()} expression?				
+				## comment
+				
+				%img{'src':'/whatever.jpg'}
+
+
+script to auto-set the proper permissions for suexec on our server
+	looks in the conf/httpd.include for the
+	"SuexecUserGroup         mikeboers psacln" line to tell it what user/group
+	we need to run as
+	
+	check `id -Gn apache` to see if psasrv is there... then we know we are on
+	the vps
+	
+	or check the hostname...
+
+beta. and stage. should have a whitelist to allow entry. that whitelist should
+be able to be added to from the web with a password or by visiting some signed URL
+
