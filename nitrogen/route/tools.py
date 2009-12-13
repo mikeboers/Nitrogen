@@ -124,7 +124,7 @@ class RouteChunk(collections.Mapping):
             raise ValueError('cannot trivially reverse route %r to %r' % (before, after))
         return self.before[:-len(self.after)] if self.after else self.before
 
-    def generate(self, unrouted='', data=None, one=False):
+    def generate(self, unrouted='', extra=None, one=False):
         """Default generator function.
 
         Requires the output of the router to be a suffix of the input.
@@ -139,7 +139,11 @@ class RouteChunk(collections.Mapping):
 
         """
         
-        data = data if data is not None else {}
+        data = {}
+        if self.data is not None:
+            data.update(self.data)
+        if extra is not None:
+            data.update(extra)
         
         if self.generator:
             unrouted = self.generator(self, data, unrouted)
@@ -152,14 +156,10 @@ class RouteChunk(collections.Mapping):
 
         return unrouted
 
-    def url_for(self, route_name=None, *args, **kwargs):
-        data = {}
-        for arg in args:
-            data.update(arg)
-        data.update(kwargs)
+    def url_for(self, route_name=None, _use_unrouted=False, **kwargs):
         if route_name is not None:
-            data['route_name'] = route_name
-        return self.generate('', data)
+            kwargs['route_name'] = route_name
+        return self.generate(self.unrouted if _use_unrouted else '', kwargs)
 
 
 def get_request_path(environ):

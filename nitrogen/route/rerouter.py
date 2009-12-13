@@ -54,6 +54,13 @@ class Pattern(object):
     {'method': 'GET'}
     >>> r.format(method='post')
     '/POST'
+    
+    >>> r = Pattern('/{id:\d+}', _parsers=dict(id=int),
+    ...     _formatters=dict(id='%04d'))
+    >>> r.match('/123')[0]
+    {'id': 123}
+    >>> r.format(id=456)
+    '/0456'
 
 
     """
@@ -140,9 +147,12 @@ class Pattern(object):
     def format(self, **kwargs):
         data = self._constants.copy()
         data.update(kwargs)
-        for key, callback in self._formatters.items():
+        for key, formatter in self._formatters.items():
             if key in data:
-                data[key] = callback(data[key])
+                if isinstance(formatter, basestring):
+                    data[key] = formatter % data[key]
+                else:
+                    data[key] = formatter(data[key])
         return self._format % data
 
 
