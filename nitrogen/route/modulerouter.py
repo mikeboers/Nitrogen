@@ -6,7 +6,7 @@ import logging
 
 from ..uri.path import Path
 from ..http.status import HttpNotFound
-from .tools import get_unrouted, set_unrouted
+from .tools import get_unrouted, update_route
 
 
 log = logging.getLogger(__name__)
@@ -83,7 +83,7 @@ class ModuleRouter(object):
             unrouted = str(unrouted)
         else:
             unrouted = ''
-        set_unrouted(environ, unrouted=unrouted, router=self)
+        update_route(environ, unrouted=unrouted, router=self)
         
         return module(environ, start)
 

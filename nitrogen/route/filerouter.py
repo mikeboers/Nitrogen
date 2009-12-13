@@ -58,7 +58,7 @@ class FileRouter(object):
             self.load_app(environ, path)
         
         # Move the segment from unrouted to routed.
-        set_unrouted(environ, str(unrouted), self)
+        update_route(environ, str(unrouted), self)
         
         logging.info('Routing %r...' % name)
         return self.apps[path][1](environ, start)

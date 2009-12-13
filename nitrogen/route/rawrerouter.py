@@ -60,7 +60,7 @@ def compile_named_groups(raw, default_pattern='[^/]+?'):
 def extract_named_groups(match):
     kwargs = match.groupdict()
     named_spans = set(match.span(k) for k in kwargs)
-    args = [x for i, x in enumerate(match.groups()) if match.span(i + 1) not in named_spans]
+    args = [match.group(0)] + [x for i, x in enumerate(match.groups()) if match.span(i + 1) not in named_spans]
     return args, kwargs
 
 
@@ -76,9 +76,6 @@ class RawReMatch(collections.Mapping):
         if isinstance(key, basestring):
             return self.kwargs[key]
         raise TypeError('key must be int or str')
-        
-    def __getattr__(self, key):
-        return self[key]
     
     def group(self, group):
         return self.m.group(group)
@@ -134,7 +131,7 @@ class RawReRouter(object):
             m = pattern.search(path)
             if m is not None:
                 unrouted = path[m.end():]
-                tools.set_unrouted(environ,
+                tools.update_route(environ,
                     unrouted=unrouted,
                     router=self,
                     data=RawReMatch(m)
@@ -155,13 +152,13 @@ def test_routing_path_setup():
     
     @router.register(r'/(one|two|three)')
     def one(environ, start):
-        word = tools.get_data(environ)[0]
+        word = tools.get_route(environ)[-1][1]
         start('200 OK', [('Content-Type', 'text-plain')])
         yield word
     
     @router.register(r'/x-{var}')
     def two(environ, start):
-        kwargs = tools.get_data(environ)
+        kwargs = tools.get_route(environ)[-1]
         output = list(router(environ, start))
         yield kwargs['var'] + '\n'
         for x in output:
@@ -170,7 +167,7 @@ def test_routing_path_setup():
     @router.register(r'/{key:pre\}post}')
     def three(environ, start):
         start('200 OK', [('Content-Type', 'text-plain')])
-        yield tools.get_data(environ).key
+        yield tools.get_route(environ)[-1]['key']
     
     app = TestApp(router)
 

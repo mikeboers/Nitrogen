@@ -14,9 +14,9 @@ The routing history is a list of RouteChunk objects with attributes:
     unrouted -- What the unrouted path was after this routing step.
     router -- Whatever was responsible for this routing step.
     data
-    builder -- A optional callable for rebuilding the unrouted path.
+    generator -- A optional callable for generateing the unrouted path.
 
-About builders:
+About generators:
 
 """
 
@@ -32,18 +32,73 @@ from ..uri.path import Path, encode, decode
 
 ENVIRON_ROUTE_KEY = 'nitrogen.route'
 
-class RouteChunk(object):
 
-    def __init__(self, previous, unrouted, router=None, data=None, builder=None):
+class Route(list):
+    
+    def __init__(self, environ):
+        self.append(RouteChunk(None, get_request_path(environ), None))
+    
+    def __getattr__(self, name):
+        return getattr(self[-1], name)
+    
+    @property
+    def first(self):
+        return self[0]
+    
+    @property
+    def last(self):
+        return self[-1]
+    
+    def update(self, unrouted, router, data=None, generator=None):
+        """Sets the unrouted path and adds to routing history.
+
+        This function is to be used by routers which are about to redirect
+        control to another WSGI app after consuming some of the unrouted requested
+        path. It also established a routing history at the same time which is
+        used for debugging (visually in the logs) and for constructing slightly
+        modified URLs.
+
+        The unrouted path must pass validation by validate_path(unrouted)
+
+        Params:
+            environ -- The request environ that is being routed.
+            unrouted -- The new unrouted path.
+            router -- Whatever is responsible for this change.
+            generator -- A callable for generateing the route in reverse. See the
+                module docstring for more info.
+
+        """
+        validate_path(unrouted)
+        self.append(RouteChunk(self[-1], unrouted, router, data, generator))
+        return self[-1]
+        
+        
+
+
+class RouteChunk(collections.Mapping):
+
+    def __init__(self, previous, unrouted, router=None, data=None, generator=None):
         self.previous = previous
         self.unrouted = unrouted
         self.router = router
         self.data = data
-        self.builder = builder
-
+        self.generator = generator
+    
+    def __getitem__(self, key):
+        return self.data[key]
+    
+    def __getattr__(self, name):
+        return getattr(self.data, name)
+    
+    def __iter__(self):
+        return iter(self.data)
+    
+    def __len__(self):
+        return len(self.data)
+    
     @property
     def before(self):
-        if not self.previous:
+        if self.previous is None:
             raise ValueError('first RouteChunk has no previously unrouted')
         return self.previous.unrouted
 
@@ -54,41 +109,57 @@ class RouteChunk(object):
     def __repr__(self):
         return '<%s.%s object at 0x%x: %r by %r>' % (__name__,
             self.__class__.__name__, id(self), self.unrouted, self.router)
-
-    def is_simple_route(self):
+            
+    @property
+    def has_simple_diff(self):
         return self.before.endswith(self.after)
+    
+    @property
+    def is_first(self):
+        return self.previous is None
 
-    def get_routed(self):
-        if not self.is_simple_route():
+    @property
+    def simple_diff(self):
+        if not self.has_simple_diff:
             raise ValueError('cannot trivially reverse route %r to %r' % (before, after))
         return self.before[:-len(self.after)] if self.after else self.before
 
-    def rebuild(self, unrouted, one=False):
-        """Default builder function.
+    def generate(self, unrouted='', data=None, one=False):
+        """Default generator function.
 
         Requires the output of the router to be a suffix of the input.
 
         Examples:
-            >>> RouteChunk(RouteChunk(None,'/one/two'), '/two').rebuild('/new')
+            >>> RouteChunk(RouteChunk(None,'/one/two'), '/two').generate('/new')
             '/one/new'
-            >>> RouteChunk(RouteChunk(None, '/a/b/c'), '/c').rebuild('/d')
+            >>> RouteChunk(RouteChunk(None, '/a/b/c'), '/c').generate('/d')
             '/a/b/d'
-            >>> RouteChunk(RouteChunk(None, '/base'), '').rebuild('/unrouted')
+            >>> RouteChunk(RouteChunk(None, '/base'), '').generate('/unrouted')
             '/base/unrouted'
 
         """
-
-        if self.builder:
-            unrouted = self.builder(unrouted)
+        
+        data = data if data is not None else {}
+        
+        if self.generator:
+            unrouted = self.generator(self, data, unrouted)
             validate_path(unrouted)
         else:
-            unrouted = self.get_routed() + unrouted
+            unrouted = self.simple_diff + unrouted
 
-        if not one and self.previous and self.previous.previous:
-            return self.previous.rebuild(unrouted, one=one)
+        if not one and not self.is_first and not self.previous.is_first:
+            return self.previous.generate(unrouted, data, one)
 
         return unrouted
 
+    def url_for(self, route_name=None, *args, **kwargs):
+        data = {}
+        for arg in args:
+            data.update(arg)
+        data.update(kwargs)
+        if route_name is not None:
+            data['route_name'] = route_name
+        return self.generate('', data)
 
 
 def get_request_path(environ):
@@ -122,105 +193,68 @@ def validate_path(path):
         >>> validate_path('relative')
         Traceback (most recent call last):
         ...
-        ValueError: request path is not absolute: 'relative'
+        ValueError: path not absolute: 'relative'
 
         >>> validate_path('/.')
         Traceback (most recent call last):
         ...
-        ValueError: request path not normalized: '/.'
+        ValueError: path not normalized: '/.'
 
     """
     if not path:
         return
     if not path.startswith('/'):
-        raise ValueError('request path is not absolute: %r' % path)
+        raise ValueError('path not absolute: %r' % path)
 
     encoded = Path(path)
     normalized = Path(path)
     normalized.remove_dot_segments()
     if str(encoded) != str(normalized):
-        raise ValueError('request path not normalized: %r' % path)
-
-
-def get_unrouted(environ):
-    """Get the thus unrouted portion of the requested URI from the environ."""
-    return get_route(environ)[-1].unrouted
+        raise ValueError('path not normalized: %r' % path)
 
 
 def get_route(environ):
     """Gets the list of routing history from the environ."""
     if ENVIRON_ROUTE_KEY not in environ:
-        environ[ENVIRON_ROUTE_KEY] = [
-            RouteChunk(None, get_request_path(environ), None)
-        ]
+        environ[ENVIRON_ROUTE_KEY] = Route(environ)
     return environ[ENVIRON_ROUTE_KEY]
 
 
+def get_unrouted(environ):
+    """Get the thus unrouted portion of the requested URI from the environ."""
+    return get_route(environ).unrouted
+
+
 def get_route_data(environ):
-    return get_route(environ)[-1].data
+    return get_route(environ).data
 
 
-def update_route(environ, unrouted, router, data=None, builder=None):
-    """Sets the unrouted path and adds to routing history.
-
-    This function is to be used by routers which are about to redirect
-    control to another WSGI app after consuming some of the unrouted requested
-    path. It also established a routing history at the same time which is
-    used for debugging (visually in the logs) and for constructing slightly
-    modified URLs.
-
-    The unrouted path must pass validation by validate_path(unrouted)
-
-    Params:
-        environ -- The request environ that is being routed.
-        unrouted -- The new unrouted path.
-        router -- Whatever is responsible for this change.
-        builder -- A callable for rebuilding the route in reverse. See the
-            module docstring for more info.
-
-    """
-
-    validate_path(unrouted)
-    history = get_route(environ)
-
-    previous = history[-1] if history else None
-    history.append(RouteChunk(previous, unrouted, router, data, builder))
-
-    return history[-1]
-
-
-
-def build_from(environ, router, route=''):
-
-    history = get_route(environ)
-    for i, chunk in enumerate(history):
-        if chunk.router == router:
-            break
-    else:
-        raise ValueError('could not find router in history')
-
-    validate_path(route)
-    
-    return history[i].rebuild(route)
+def update_route(environ, *args, **kwargs):
+    return get_route(environ).update(*args, **kwargs)
 
 
 
 
-def test_build_from():
+
+
+
+
+
+def test_generate_from():
 
     environ = dict(REQUEST_URI='/a/b/c/d')
-    history = get_route(environ)
-    update_route(environ, '/b/c/d', 1)
-    update_route(environ, '/c/d', 2)
-    update_route(environ, '/d', 3)
-    update_route(environ, '', 4)
+    route = get_route(environ)
+    route.update('/b/c/d', 1)
+    route.update('/c/d', 2)
+    route.update('/d', 3)
+    route.update('', 4)
 
-    assert build_from(environ, 4) == '/a/b/c/d', build_from(environ, 4)
-    assert build_from(environ, 3) == '/a/b/c'
-    assert build_from(environ, 2) == '/a/b'
-    assert build_from(environ, 1) == '/a'
+    assert route[4].generate() == '/a/b/c/d', route[4].generate()
+    assert route[3].generate() == '/a/b/c'
+    assert route[2].generate() == '/a/b'
+    assert route[1].generate() == '/a'
 
-    assert build_from(environ, 3, '/new') == '/a/b/c/new', build_from(environ, 3, 'new')
+    assert route[3].generate('/new') == '/a/b/c/new', route[3].generate('/new')
 
 
 

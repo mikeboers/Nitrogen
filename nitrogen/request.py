@@ -21,7 +21,7 @@ from .webio import request_params
 from .cookie import Container as CookieContainer
 from .headers import DelayedHeaders, MutableHeaders
 from .webio import request_params
-from .route.tools import get_data as get_route_data, get_unrouted
+from .route.tools import get_route
 
 
 log = logging.getLogger(__name__)
@@ -75,10 +75,6 @@ class Request(object):
     
     def __init__(self, environ):
         self.environ = environ
-        
-    @property
-    def route(self):
-        return get_route_data(self.environ)
     
     method = _environ_getter('REQUEST_METHOD', str.upper)
     is_get = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'GET')
@@ -96,6 +92,10 @@ class Request(object):
     
     session = _environ_getter('beaker.session')
     
+    @property
+    def route(self):
+        return get_route(self.environ)
+    
     # These two are the same. I just like `etag` much more.
     if_none_match = _environ_getter('HTTP_IF_NONE_MATCH')
     etag = _environ_getter('HTTP_IF_NONE_MATCH')
@@ -106,10 +106,6 @@ class Request(object):
     if_modified_since = _environ_time_getter('HTTP_IF_MODIFIED_SINCE')
     referer = _environ_getter('HTTP_REFERER')
     user_agent = _environ_getter('HTTP_USER_AGENT')
-    
-    @property
-    def unrouted(self):
-        return get_unrouted(self.environ)
     
     # @property
     # def basic_username(self):

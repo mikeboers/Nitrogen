@@ -43,3 +43,43 @@ To build a new path from a given router:
 - simple decorator to assert the request mode is one of the given.
 - @accepts('get', 'post')
 - don't need to deal with all or none
+
+
+===== new scheme =====
+
+
+`Route` is the class the manages the whole route. It is essentially a list of one or more chunks. The chunks keep track of what part of the originally requested path remains unrouted. The first route chunk contains the original
+requested path.
+
+`RouteChunk` is an individual part of the route.
+
+The process of constructing a URL moving backwards along a route is called "generating".
+
+Starting with a request to "/controller/action/id"
+	1) a ModuleRouter pulls off the "controller" and launches controller.__app__.
+	2) a ReRouter matches /action/{id:\d+} and runs whatever app is registered.
+	
+	There are three chunks of route history:
+		1) "/controller/action/id"
+		2) "/action/id"
+		3) "" with data {'id': whatever}
+	
+As long as there is a segment left to route, the unrouted will be non-empty. So a unrouted "/" would indicate that there is an empty segment to route.
+
+With the setup how it currently is, there really is not way to have a global url_for-like function. You can specify data for the individual chunks, but then you have to have foreknowledge of it. Must figure out a way to have url_for pass its keyword arguments down the chain to slowly be consumed
+	ModuleRouter could have a url_for_key which determines what it should pop
+	out of the kwargs
+
+a RouteChunk will proxy __getitem__ and __getattr__ to the data object if they
+have one
+
+a Route will proxy __getitem__ and __getattr__ to the last route segment
+
+url_for will have the signature:
+	def url_for(route_name=None, **args, **kwargs)
+		the data gets updated with everything from args, then kwargs, then
+		route_name is set to route_name. then this data object is passed up
+		the chain
+
+RouteChunk.generate(unrouted, data=None, one=False)
+
