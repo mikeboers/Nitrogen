@@ -8,8 +8,6 @@ from .rerouter import ReRouter
 from .selfrouter import SelfRouter
 
 
-
-
 if __name__ == '__main__':
     from .. import test
     test.run()
