@@ -226,7 +226,9 @@ class Router(object):
         route_i = -1
         route_data = {}
         apply_route_data = route is not None
+        nodes = []
         while node is not None and hasattr(node, 'generate_step'):
+            nodes.append(node)
             route_i += 1
             if apply_route_data and (len(route) <= route_i or
                 route[route_i].router is not node):
@@ -240,7 +242,14 @@ class Router(object):
                 raise GenerationError(path, node, data)
             segment, node = x
             path.append(segment)
-        return ''.join(path)
+        
+        out = ''
+        for i, segment in reversed(list(enumerate(path))):
+            node = nodes[i]
+            out = segment + out
+            if hasattr(node, 'modify_path'):
+                out = node.modify_path(out)
+        return out
     
     def url_for(self, **data):
         return Router.generate(self, data)
