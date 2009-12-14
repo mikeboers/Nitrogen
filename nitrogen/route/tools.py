@@ -24,6 +24,7 @@ About generators:
 import re
 import collections
 from pprint import pprint
+import weakref
 
 from webtest import TestApp
 
@@ -236,31 +237,6 @@ def update_route(environ, *args, **kwargs):
 
 
 
-
-
-
-
-def test_generate_from():
-
-    environ = dict(REQUEST_URI='/a/b/c/d')
-    route = get_route(environ)
-    route.update('/b/c/d', 1)
-    route.update('/c/d', 2)
-    route.update('/d', 3)
-    route.update('', 4)
-
-    assert route[4].generate() == '/a/b/c/d', route[4].generate()
-    assert route[3].generate() == '/a/b/c'
-    assert route[2].generate() == '/a/b'
-    assert route[1].generate() == '/a'
-
-    assert route[3].generate('/new') == '/a/b/c/new', route[3].generate('/new')
-
-
-
-
-
-
 def test_routing_path_setup():
 
     def app(_environ, start):
@@ -320,6 +296,184 @@ def test_routing_path_setup():
             before='/one/two',
             after='/two',
             router=_app), 'history is wrong'
+            
+            
+
+
+def test_generate_from():
+
+    environ = dict(REQUEST_URI='/a/b/c/d')
+    route = get_route(environ)
+    route.update('/b/c/d', 1)
+    route.update('/c/d', 2)
+    route.update('/d', 3)
+    route.update('', 4)
+
+    assert route[4].generate() == '/a/b/c/d', route[4].generate()
+    assert route[3].generate() == '/a/b/c'
+    assert route[2].generate() == '/a/b'
+    assert route[1].generate() == '/a'
+
+    assert route[3].generate('/new') == '/a/b/c/new', route[3].generate('/new')
+    
+    
+    
+    
+    
+     
+            
+# ===== NEW STUFF UNDER HERE
+
+
+class NoParent(Exception):
+    pass
+
+class Unroutable(Exception):
+    pass
+
+class RouterBase(object):
+    
+    def __init__(self):
+        self._names = []
+        self._parents = []
+        self._name_to_child = {}
+    
+    def __repr__(self):
+        return '<%s.%s:%r>' % (__name__, self.__class__.__name__,
+            tuple(self.names))
+    
+    def __hash__(self):
+        return id(self)
+    
+    def register_child(self, child, name=None):
+        if hasattr(child, 'register_parent'):
+            child.register_parent(self, by_name=name)
+        if name is not None and name not in self._name_to_child:
+            self._name_to_child[name] = child
+    
+    def register_parent(self, parent, by_name):
+        self._parents.append(weakref.ref(parent))
+        if by_name is not None:
+            self._names.append(by_name)
+    
+    @property
+    def parents(self):
+        return [x for x in (ref() for ref in self._parents) if x is not None]
+    
+    @property
+    def parent(self):
+        for ref in self._parents:
+            x = ref()
+            if x is not None:
+                return x
+        raise NoParent(self)
+    
+    @property
+    def names(self):
+        return list(self._names)
+    
+    @property
+    def name(self):
+        return self._names[0] if self._names else None
+    
+    def route_step(self, path):
+        raise NotImplementedError()
+    
+    def route(self, path):
+        # print 'RouterBase.route'
+        route = [self]
+        router = self
+        while path:
+            x = router.route_step(path)
+            if x is None:
+                raise Unroutable(route, router, path)
+            router, path = x
+            route.append(router)
+        return route
+    
+    def modify_route(self, path):
+        raise NotImplementedError
+
+
+class PrefixRouter(RouterBase):
+    
+    def __init__(self, **kwargs):
+        super(PrefixRouter, self).__init__()
+        self.map = {}
+        for prefix, app in kwargs.iteritems():
+            self.register(None, prefix, app)
+    
+    def register(self, name, prefix=None, app=None):
+        if prefix is None:
+            name, prefix = None, name
+        if not prefix.startswith('/'):
+            prefix = '/' + prefix
+        if app:
+            self.map[prefix] = app
+            self.register_child(app, name=name)
+            return app
+        def PrefixRouter_register(app):
+            self.register(name, prefix, app)
+        return PrefixRouter_register
+    
+    def route_step(self, path):
+        for prefix, app in self.map.iteritems():
+            if path == prefix or path.startswith(prefix) and path[len(prefix)] == '/':
+                return app, path[len(prefix):]
+    
+
+def test_basic_routing():
+    
+    app1 = object()
+    app2 = object()
+    app3 = object()
+    
+    router = PrefixRouter()
+    a = PrefixRouter()
+    b = PrefixRouter()
+
+    router.register('a', '/a', a)
+    router.register('b', 'b', b)
+    
+    a.register('1', '/1', app1)
+    a.register('2', '/2', app2)
+    b.register('2', '2', app2)
+    b.register('3', '3', app3)
+    
+    x = router.route('/a/1')
+    assert x == [router, a, app1], x
+    x = router.route('/b/2')
+    assert x == [router, b, app2], x
+    try:
+        x = router.route('/a-extra')
+        assert False, x
+    except Unroutable:
+        pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 if __name__ == '__main__':
     from .. import test

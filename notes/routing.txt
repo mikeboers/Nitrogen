@@ -196,6 +196,53 @@ the algo to start at that router and prefix the result with that url.
 
 Then, a _name will trigger a tip-to-root search for that name along the route as taken, then start building up from there, and then run the modifiers all the way down.
 
+The name could be namespaced. Specify a sequence of names to look for (ie. ['news', 'index']) and we first do a width-first search for 'news', then look for 'index' under where we find news. Have to decide how to prioritize them though (maybe just the first found, or registered gets priority, assuming we can go all the way to ('news', 'index').
+
+	Do we want to specify the namespaces with an interable, or with a string
+	that has delimiters? How about an iterable is taken as it is, or a string
+	is split on '/'.
+
+The paremeters could concievably be namespaced as well, but that seems like the interface will be horrendously complicated.
+
+What is the full interface that is required on routers?
+
+	self.register_child(self, child)
+		does whatever it needs to in order to register the child for how this
+		router works. also must register the parent on the child.
+		
+	self.register_parent(self, parent)
+		sets self._parents to a list of weakref proxys to the parents
+	
+	Child.route_step(self, path):
+		route a single step. returns a RouteChunk or None if it can't be done
+	
+	Base.route(self, path):
+		return a list of route chunks for the path and a string of what
+		remains, or throws an Unroutable with the route so far, the router
+		that failed, and what it choked on.
+			raise Unroutable(route, router, path)
+	
+	Base.__call__(self, environ, start)
+	
+	self.route(self, unrouted)
+		return where it would route to, and what would be unrouted after
+	
+	self.find_by_name(self, name)
+		takes a list specifying a name, and finds the route which has it. this
+		would likely only be on the base
+		
+	self.list_children(self)
+		a list of all direct children
+		
+	self.find_children_with_name(self, name, depth=None, ignore=set(...))
+		returns a list of all children (in order of preference) who respond to
+		the given name (which is a single string). they should be all reachable children, not just direct children.
+		if a depth is given, return only children that deep, or None if you can't go that deep.
+		ignore children in the given set
+	
+	all routers should be hashable by their id
+	
+		
 
 
 
