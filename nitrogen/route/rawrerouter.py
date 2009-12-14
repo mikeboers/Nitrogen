@@ -113,15 +113,14 @@ class RawReRouter(tools.Router):
             if snap_back:
                 pattern += r'(?=/|$)'
             self._apps.append((re.compile(pattern, re.X), app))
-            return
+            return app
         
         # We are not being used directly, so return a decorator to do the
         # work later.
-        def decorator(app):
-            self.register(pattern, app, lock_front=lock_front,
+        def RawReRouter_register(app):
+            return self.register(pattern, app, lock_front=lock_front,
                 snap_back=snap_back)
-            return app
-        return decorator
+        return RawReRouter_register
     
     def route_step(self, path):
         log.debug('matching on %r' % path)

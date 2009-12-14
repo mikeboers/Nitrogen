@@ -13,7 +13,13 @@ from . import tools
 from ..uri import Path
 from ..http.status import HttpNotFound
 
+
 log = logging.getLogger(__name__)
+
+
+class FormatError(ValueError):
+    pass
+
 
 class Pattern(object):
     """
@@ -61,7 +67,14 @@ class Pattern(object):
     {'id': 123}
     >>> r.format(id=456)
     '/0456'
-
+    
+    >>> r = Pattern('/{action:get}/{id:\d+}', _formatters=dict(id=int))
+    >>> r.match('/get/12')[0]
+    {'action': 'get', 'id': '12'}
+    >>> r.format(action='test', id=4)
+    Traceback (most recent call last):
+    ...
+    FormatError: cannot match against output
 
     """
 
@@ -140,22 +153,45 @@ class Pattern(object):
             if not key in result or not pattern.match(result[key]):
                 return None
 
-        for key, callback in self._parsers.items():
-            if key in result:
-                result[key] = callback(result[key])
+        self._parse_data(result)
 
         return result, value[m.end():]
-
-    def format(self, **kwargs):
-        data = self._constants.copy()
-        data.update(kwargs)
+    
+    def _parse_data(self, data):
+        for key, callback in self._parsers.items():
+            if key in data:
+                data[key] = callback(data[key])
+    
+    def _format_data(self, data):
         for key, formatter in self._formatters.items():
             if key in data:
                 if isinstance(formatter, basestring):
                     data[key] = formatter % data[key]
                 else:
                     data[key] = formatter(data[key])
-        return self._format % data
+
+    def format(self, **kwargs):
+        data = self._constants.copy()
+        data.update(kwargs)
+        self._format_data(data)
+          
+        out = self._format % data
+        
+        x = self.match(out)
+        if x is None:
+            raise FormatError('cannot match against output')
+        m, d = x
+        if d:
+            raise FormatError('did not match all output')
+            
+        self._parse_data(data)
+        
+        for k, v in m.iteritems():
+            if k in data and data[k] != v:
+                raise FormatError('got different value for %r: got %r, expected %r' % (k, v, data[k]))
+        
+        return out
+        
 
 
 class Match(collections.Mapping):
@@ -227,6 +263,8 @@ class ReRouter(tools.Router):
                 continue
             try:
                 return pattern.format(**data), app
+            except FormatError:
+                pass
             except KeyError:
                 pass
 

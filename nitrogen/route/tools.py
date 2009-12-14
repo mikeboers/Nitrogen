@@ -13,12 +13,17 @@ import collections
 from pprint import pprint
 import weakref
 import unittest
+import logging
 
 from webtest import TestApp as WebTester
 
 from ..uri import URI
 from ..uri.path import Path, encode, decode
 from ..http.status import HttpNotFound
+
+
+log = logging.getLogger(__name__)
+
 
 class Route(list):
     
@@ -55,6 +60,9 @@ class Route(list):
         for i, chunk in enumerate(self):
             if chunk.router is not None:
                 return Router.generate(chunk.router, data, self[i:])
+    
+    def __repr__(self):
+        return '<%s:%s>' % (self.__class__.__name__, list.__repr__(self))
         
 
 class RouteChunk(collections.Mapping):
@@ -84,12 +92,8 @@ class RouteChunk(collections.Mapping):
             self.data == other.data)
 
     def __repr__(self):
-        return '<%s.%s at 0x%x: %r by %r with %r>' % (__name__,
-            self.__class__.__name__, id(self), self.path, self.router,
-            dict(self.data))
-
-
-
+        return '%s(path=%r, router=%r, data=%r)' % (self.__class__.__name__, self.path,
+            self.router, self.data)
 
 
 def get_request_path(environ):
@@ -148,7 +152,6 @@ def get_route(environ):
     return Route.from_environ(environ)
 
 
-
 def simple_diff(before, after):
     """Return the prefix that was removed at step i, or None if it was not
     a simple refix removal.
@@ -165,6 +168,106 @@ def simple_diff(before, after):
     return before[:-len(after)] if after else before
 
 
+class Unroutable(ValueError):
+    def __str__(self):
+        return 'failed on route %r at %r with %r' % self.args
+
+
+class GenerationError(ValueError):
+    def __str__(self):
+        return 'stopped generating at %r by %r with %r' % self.args
+
+
+class Router(object):
+    
+    def __repr__(self):
+        return '<%s at 0x%x>' % (self.__class__.__name__, id(self))
+    
+    def route_step(self, path):
+        """Return (child, newpath, data) or None if it can't be routed."""
+        raise NotImplementedError()
+    
+    def generate_step(self, data):
+        raise NotImplementedError()
+    
+    def modify_path(self, path):
+        return path
+    
+    def route(self, path):
+        route = Route(path)
+        router = self
+        while hasattr(router, 'route_step'):
+            x = router.route_step(path)
+            if x is None:
+                raise Unroutable(route, router, path)
+            child, path, data = x
+            route.update(path, router, data)
+            router = child
+        return route, router, path
+    
+    def __call__(self, environ, start):
+        route = Route.from_environ(environ)
+        path = route.path
+        x = self.route_step(path)
+        if x is None:
+            try:
+                raise HttpNotFound('could not route %r with %r' % (path, self))
+            except HttpNotFound as e:
+                log.warning(e, exc_info=True)
+                raise
+        child, path, data = x
+        route.update(path, self, data)
+        log.debug(route[-1])
+        return child(environ, start)
+    
+    @staticmethod
+    def generate(node, new_data, route=None):
+        path = []
+        route_i = -1
+        route_data = {}
+        apply_route_data = route is not None
+        while node is not None and hasattr(node, 'generate_step'):
+            route_i += 1
+            if apply_route_data and (len(route) <= route_i or
+                route[route_i].router is not node):
+                apply_route_data = False
+            if apply_route_data:
+                route_data.update(route[route_i].data)
+            data = route_data.copy()
+            data.update(new_data)
+            x = node.generate_step(data)
+            if x is None:
+                raise GenerationError(path, node, data)
+            segment, node = x
+            path.append(segment)
+        return ''.join(path)
+    
+    def url_for(self, **data):
+        return Router.generate(self, data)
+
+
+
+        
+
+
+
+
+
+
+class TestApp(object):
+    
+    def __init__(self, output=None, start=True):
+        self.start = start
+        self.output = output
+    
+    def __call__(self, environ, start):
+        if self.start:
+            start('200 OK', [('Content-Type', 'text/plain')])
+        return [str(self.output)]
+    
+    def __repr__(self):
+        return 'TestApp(%r)' % self.output
+        
 
 def test_routing_path_setup():
 
@@ -224,129 +327,6 @@ def test_routing_path_setup():
     _assert_next_history_step(res,
             path='/two',
             router=_app), 'history is wrong'
-            
-            
-
-
-# def test_generate_from():
-# 
-#     environ = dict(REQUEST_URI='/a/b/c/d')
-#     route = get_route(environ)
-#     route.update('/b/c/d', 1)
-#     route.update('/c/d', 2)
-#     route.update('/d', 3)
-#     route.update('', 4)
-# 
-#     assert route[4].generate() == '/a/b/c/d', route[4].generate()
-#     assert route[3].generate() == '/a/b/c'
-#     assert route[2].generate() == '/a/b'
-#     assert route[1].generate() == '/a'
-# 
-#     assert route[3].generate('/new') == '/a/b/c/new', route[3].generate('/new')
-    
-    
-    
-    
-    
-     
-            
-# ===== NEW STUFF UNDER HERE
-
-class Unroutable(ValueError):
-    def __str__(self):
-        return 'failed on route %r at %r with %r' % self.args
-
-
-class GenerationError(ValueError):
-    def __str__(self):
-        return 'stopped generating at %r by %r with %r' % self.args
-
-
-class Router(object):
-    
-    def __repr__(self):
-        return '<%s.%s at 0x%x>' % (__name__, self.__class__.__name__,
-            id(self))
-    
-    def route_step(self, path):
-        """Return (child, newpath, data) or None if it can't be routed."""
-        raise NotImplementedError()
-    
-    def generate_step(self, data):
-        raise NotImplementedError()
-    
-    def modify_path(self, path):
-        return path
-    
-    def route(self, path):
-        route = Route(path)
-        router = self
-        while hasattr(router, 'route_step'):
-            x = router.route_step(path)
-            if x is None:
-                raise Unroutable(route, router, path)
-            child, path, data = x
-            route.update(path, router, data)
-            router = child
-        return route, router, path
-    
-    def __call__(self, environ, start):
-        route = Route.from_environ(environ)
-        path = route.path
-        x = self.route_step(path)
-        if x is None:
-            raise HttpNotFound('could not route %r with %r' % (path, self))
-        child, path, data = x
-        route.update(path, self, data)
-        return child(environ, start)
-    
-    @staticmethod
-    def generate(node, new_data, route=None):
-        path = []
-        route_i = -1
-        route_data = {}
-        apply_route_data = route is not None
-        while node is not None and hasattr(node, 'generate_step'):
-            route_i += 1
-            if apply_route_data and (len(route) <= route_i or
-                route[route_i].router is not node):
-                apply_route_data = False
-            if apply_route_data:
-                route_data.update(route[route_i].data)
-            data = route_data.copy()
-            data.update(new_data)
-            x = node.generate_step(data)
-            if x is None:
-                raise GenerationError(path, node, data)
-            segment, node = x
-            path.append(segment)
-        return ''.join(path)
-    
-    def url_for(self, **data):
-        return Router.generate(self, data)
-
-
-
-        
-
-
-
-
-
-
-class TestApp(object):
-    
-    def __init__(self, output=None, start=True):
-        self.start = start
-        self.output = output
-    
-    def __call__(self, environ, start):
-        if self.start:
-            start('200 OK', [('Content-Type', 'text/plain')])
-        return [str(self.output)]
-    
-    def __repr__(self):
-        return 'TestApp(%r)' % self.output
 
 
 
