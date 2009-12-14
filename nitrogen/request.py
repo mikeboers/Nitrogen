@@ -96,6 +96,10 @@ class Request(object):
     def route(self):
         return get_route(self.environ)
     
+    @property
+    def unrouted(self):
+        return get_route(self.environ).path
+    
     # These two are the same. I just like `etag` much more.
     if_none_match = _environ_getter('HTTP_IF_NONE_MATCH')
     etag = _environ_getter('HTTP_IF_NONE_MATCH')
