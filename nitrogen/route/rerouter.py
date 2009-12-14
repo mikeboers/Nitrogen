@@ -203,6 +203,9 @@ class Match(collections.Mapping):
 
     def __getitem__(self, key):
         return self.data[key]
+    
+    def __getattr__(self, name):
+        return getattr(self.data, name)
 
     def __iter__(self):
         return iter(self.data)

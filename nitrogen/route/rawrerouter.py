@@ -64,7 +64,7 @@ def extract_named_groups(match):
     return args, kwargs
 
 
-class RawReMatch(collections.Mapping):
+class Match(collections.Mapping):
 
     def __init__(self, m):
         self.m = m
@@ -76,6 +76,9 @@ class RawReMatch(collections.Mapping):
         if isinstance(key, basestring):
             return self.kwargs[key]
         raise TypeError('key must be int or str')
+    
+    def __getattr__(self, name):
+        return getattr(self.kwargs, name)
     
     def group(self, group):
         return self.m.group(group)
@@ -128,7 +131,7 @@ class RawReRouter(tools.Router):
             m = pattern.search(path)
             if m is not None:
                 path = path[m.end():]
-                return app, path, RawReMatch(m)
+                return app, path, Match(m)
 
 
 
