@@ -198,7 +198,7 @@ class Match(collections.Mapping):
         return self.format(**data) + unrouted
 
 
-class ReRouter(object):
+class ReRouter(tools.Router):
 
     def __init__(self):
         self._apps = []
@@ -228,21 +228,15 @@ class ReRouter(object):
             self.register(pattern, app, **kwargs)
             return app
         return ReRouter_register
-
-    def __call__(self, environ, start):
-        route = tools.get_route(environ)
-        path = route.path
-        # print repr(path)
+    
+    def route_step(self, path):        
         log.debug('matching on %r' % path)
         for pattern, app in self._apps:
             m = pattern.match(path)
             if m:
                 kwargs, path = m
                 match = Match(pattern, kwargs, path)
-                route.update(path=path, router=self, data=match)
-                return app(environ, start)
-
-        raise HttpNotFound()
+                return app, path, match
 
 
 
