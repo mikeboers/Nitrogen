@@ -1,15 +1,16 @@
 
 import unittest
+from pprint import pprint
 
 from webtest import TestApp as WebTester
 
-from .tools import Router, TestApp, RouteChunk, Unroutable
-
+from .tools import Router, TestApp, RouteChunk, Unroutable, GenerationError
+from ..http.status import HttpNotFound
 
 class PrefixRouter(Router, dict):
     
-    def __init__(self, route_key='prefix'):
-        self.route_key = route_key
+    def __init__(self, data_key='prefix'):
+        self.data_key = data_key
     
     def __repr__(self):
         return '<%s.%s:%r>' % (__name__, self.__class__.__name__,
@@ -31,16 +32,16 @@ class PrefixRouter(Router, dict):
     def route_step(self, path):
         for prefix, child in self.iteritems():
             if path == prefix or path.startswith(prefix) and path[len(prefix)] == '/':
-                return child, path[len(prefix):], {self.route_key:prefix}
+                return child, path[len(prefix):], {self.data_key:prefix}
     
     def generate_step(self, data):
-        prefix = data.get(self.route_key)
+        prefix = data.get(self.data_key)
         if prefix is None:
             return
         if not prefix.startswith('/'):
             prefix = '/' + prefix
         if prefix in self:
-            return prefix
+            return prefix, self[prefix]
 
 
 
@@ -54,9 +55,9 @@ class TestCase(unittest.TestCase):
         app2 = TestApp('two')
         app3 = TestApp('three')
     
-        router = PrefixRouter()
-        a = PrefixRouter()
-        b = PrefixRouter()
+        router = PrefixRouter('first')
+        a = PrefixRouter('second')
+        b = PrefixRouter('second')
 
         router.register('/a', a)
         router.register('b', b)
@@ -74,8 +75,8 @@ class TestCase(unittest.TestCase):
         # pprint(route)
         self.assertEqual(route, [
             RouteChunk('/a/1'),
-            RouteChunk('/1', router, dict(prefix='/a')),
-            RouteChunk('', a, dict(prefix='/1')),
+            RouteChunk('/1', router, dict(first='/a')),
+            RouteChunk('', a, dict(second='/1')),
         ])
         self.assertEqual(child, app1)
         self.assertEqual(path, '')
@@ -83,8 +84,8 @@ class TestCase(unittest.TestCase):
         route, child, path = router.route('/b/2/more')
         self.assertEqual(route, [
             RouteChunk('/b/2/more'),
-            RouteChunk('/2/more', router, dict(prefix='/b')),
-            RouteChunk('/more', b, dict(prefix='/2')),
+            RouteChunk('/2/more', router, dict(first='/b')),
+            RouteChunk('/more', b, dict(second='/2')),
         ])
         self.assertEqual(child, app2)
         self.assertEqual(path, '/more')
@@ -95,7 +96,7 @@ class TestCase(unittest.TestCase):
         except Unroutable as e:
             self.assertEqual(e.args, ([
                 RouteChunk('/a/extra'),
-                RouteChunk('/extra', router, dict(prefix='/a'))
+                RouteChunk('/extra', router, dict(first='/a'))
             ], a, '/extra'))
         
         app = WebTester(router)
@@ -107,8 +108,28 @@ class TestCase(unittest.TestCase):
         try:
             res = app.get('/b/4')
             self.fail()
-        except:
+        except HttpNotFound as e:
             pass
+        
+        
+        self.assertEquals('/a/1', router.url_for(**dict(first='a', second='1')))
+        self.assertEquals('/b/2', router.url_for(**dict(first='b', second='2')))
+        try:
+            router.url_for(**dict(first='a'))
+        except GenerationError as e:
+            self.assertEquals(e.args, ('/a', a, dict(first='a')))
+        
+        route, child, path = router.route('/a/1')
+        
+        self.assertEquals('/a/2', route.url_for(**dict(second='2')))
+        self.assertEquals('/a/1', route.url_for(**dict(first='a')))
+        self.assertEquals('/b/3', route.url_for(**dict(first='b', second='3')))
+        try:
+            x = route.url_for(**dict(first='b'))
+            self.fail(x)
+        except GenerationError as e:
+            self.assertEquals(e.args, ('/b', b, dict(first='b')))
+            
 
 
 

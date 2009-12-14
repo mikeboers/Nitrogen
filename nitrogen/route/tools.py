@@ -14,7 +14,7 @@ from pprint import pprint
 import weakref
 import unittest
 
-from webtest import TestApp
+from webtest import TestApp as WebTester
 
 from ..uri import URI
 from ..uri.path import Path, encode, decode
@@ -72,6 +72,11 @@ class Route(list):
         if not before.endswith(after):
             return None
         return before[:-len(after)] if after else before
+    
+    def url_for(self, **data):
+        for i, chunk in enumerate(self):
+            if chunk.router is not None:
+                return Router.generate(chunk.router, data, self[i:])
         
 
 class RouteChunk(collections.Mapping):
@@ -99,62 +104,14 @@ class RouteChunk(collections.Mapping):
         return (self.path == other.path and
             self.router == other.router and
             self.data == other.data)
-    
-    @property
-    def before(self):
-        if self.previous is None:
-            raise ValueError('first RouteChunk has no previously unrouted')
-        return self.previous.path
-    
-    @property
-    def after(self):
-        return self.path
 
     def __repr__(self):
         return '<%s.%s at 0x%x: %r by %r with %r>' % (__name__,
             self.__class__.__name__, id(self), self.path, self.router,
             dict(self.data))
-            
 
-    
-    
 
-    def generate(self, unrouted='', extra=None, one=False):
-        """Default generator function.
 
-        Requires the output of the router to be a suffix of the input.
-
-        Examples:
-            # >>> RouteChunk(RouteChunk(None,'/one/two'), '/two').generate('/new')
-            # '/one/new'
-            # >>> RouteChunk(RouteChunk(None, '/a/b/c'), '/c').generate('/d')
-            # '/a/b/d'
-            # >>> RouteChunk(RouteChunk(None, '/base'), '').generate('/unrouted')
-            # '/base/unrouted'
-
-        """
-        
-        data = {}
-        if self.data is not None:
-            data.update(self.data)
-        if extra is not None:
-            data.update(extra)
-        
-        if self.generator:
-            unrouted = self.generator(self, data, unrouted)
-            validate_path(unrouted)
-        else:
-            unrouted = self.simple_diff + unrouted
-
-        if not one and not self.is_first and not self.previous.is_first:
-            return self.previous.generate(unrouted, data, one)
-
-        return unrouted
-
-    def url_for(self, route_name=None, _use_unrouted=False, **kwargs):
-        if route_name is not None:
-            kwargs['route_name'] = route_name
-        return self.generate(self.unrouted if _use_unrouted else '', kwargs)
 
 
 def get_request_path(environ):
@@ -267,7 +224,7 @@ def test_routing_path_setup():
         yield 'hi'
 
 
-    app = TestApp(_app)
+    app = WebTester(_app)
 
     res = app.get('/one/two')
     # print get_route(res.environ)
@@ -303,7 +260,14 @@ def test_routing_path_setup():
 # ===== NEW STUFF UNDER HERE
 
 class Unroutable(ValueError):
-    pass
+    def __str__(self):
+        return 'failed on route %r at %r with %r' % self.args
+
+
+class GenerationError(ValueError):
+    def __str__(self):
+        return 'stopped generating at %r by %r with %r' % self.args
+
 
 class Router(object):
     
@@ -342,6 +306,31 @@ class Router(object):
         child, path, data = x
         route.update(path, self, data)
         return child(environ, start)
+    
+    @staticmethod
+    def generate(node, new_data, route=None):
+        path = ''
+        route_i = -1
+        route_data = {}
+        apply_route_data = route is not None
+        while node is not None and hasattr(node, 'generate_step'):
+            route_i += 1
+            if apply_route_data and (len(route) <= route_i or
+                route[route_i].router is not node):
+                apply_route_data = False
+            if apply_route_data:
+                route_data.update(route[route_i].data)
+            data = route_data.copy()
+            data.update(new_data)
+            x = node.generate_step(data)
+            if x is None:
+                raise GenerationError(path, node, data)
+            segment, node = x
+            path += segment
+        return path
+    
+    def url_for(self, **data):
+        return Router.generate(self, data)
 
 
 
