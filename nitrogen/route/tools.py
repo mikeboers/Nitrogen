@@ -12,6 +12,7 @@ import re
 import collections
 from pprint import pprint
 import weakref
+import unittest
 
 from webtest import TestApp
 
@@ -74,10 +75,10 @@ class Route(list):
 
 class RouteChunk(collections.Mapping):
 
-    def __init__(self, unrouted, router, data):
+    def __init__(self, unrouted, router=None, data=None):
         self.unrouted = unrouted
         self.router = router
-        self.data = data
+        self.data = data if data is not None else {}
     
     def __getitem__(self, key):
         return self.data[key]
@@ -90,6 +91,13 @@ class RouteChunk(collections.Mapping):
     
     def __len__(self):
         return len(self.data)
+    
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return (self.unrouted == other.unrouted and
+            self.router == other.router and
+            self.data == other.data)
     
     @property
     def before(self):
@@ -293,17 +301,23 @@ def test_routing_path_setup():
 # ===== NEW STUFF UNDER HERE
 
 
-class NoParent(Exception):
+class NoParent(ValueError):
     pass
 
-class Unroutable(Exception):
+
+class NoName(ValueError):
     pass
+
+
+class Unroutable(ValueError):
+    pass
+
 
 class RouterBase(object):
     
     def __init__(self):
-        self._names = []
         self._parents = []
+        self._names = []
         self._name_to_child = {}
     
     def __repr__(self):
@@ -315,49 +329,39 @@ class RouterBase(object):
     
     def register_child(self, child, name=None):
         if hasattr(child, 'register_parent'):
-            child.register_parent(self, by_name=name)
+            child.register_parent(self, via_name=name)
         if name is not None and name not in self._name_to_child:
             self._name_to_child[name] = child
     
-    def register_parent(self, parent, by_name):
+    def register_parent(self, parent, via_name):
         self._parents.append(weakref.ref(parent))
-        if by_name is not None:
-            self._names.append(by_name)
+        if via_name is not None:
+            self._names.append(via_name)
     
     @property
     def parents(self):
         return [x for x in (ref() for ref in self._parents) if x is not None]
     
     @property
-    def parent(self):
-        for ref in self._parents:
-            x = ref()
-            if x is not None:
-                return x
-        raise NoParent(self)
-    
-    @property
     def names(self):
         return list(self._names)
     
-    @property
-    def name(self):
-        return self._names[0] if self._names else None
-    
     def route_step(self, path):
+        """Return (child, newpath, data) or None if it can't be routed."""
         raise NotImplementedError()
     
     def route(self, path):
         # print 'RouterBase.route'
-        route = [self]
+        route = Route(path)
         router = self
-        while path:
+        while path and hasattr(router, 'route_step'):
             x = router.route_step(path)
             if x is None:
                 raise Unroutable(route, router, path)
-            router, path = x
-            route.append(router)
-        return route
+            child, path, data = x
+            route.update(path, router, data)
+            router = child
+        return route, router, path
     
     def modify_route(self, path):
         raise NotImplementedError
@@ -385,38 +389,63 @@ class PrefixRouter(RouterBase):
         return PrefixRouter_register
     
     def route_step(self, path):
-        for prefix, app in self.map.iteritems():
+        for prefix, child in self.map.iteritems():
             if path == prefix or path.startswith(prefix) and path[len(prefix)] == '/':
-                return app, path[len(prefix):]
+                return child, path[len(prefix):], {}
     
 
-def test_basic_routing():
+class TestCase(unittest.TestCase):
     
-    app1 = object()
-    app2 = object()
-    app3 = object()
+    def test_main(self):
     
-    router = PrefixRouter()
-    a = PrefixRouter()
-    b = PrefixRouter()
+        app1 = object()
+        app2 = object()
+        app3 = object()
+    
+        router = PrefixRouter()
+        a = PrefixRouter()
+        b = PrefixRouter()
 
-    router.register('a', '/a', a)
-    router.register('b', 'b', b)
+        router.register('a', '/a', a)
+        router.register('b', 'b', b)
     
-    a.register('1', '/1', app1)
-    a.register('2', '/2', app2)
-    b.register('2', '2', app2)
-    b.register('3', '3', app3)
+        a.register('1', '/1', app1)
+        a.register('2', '/2', app2)
+        b.register('2', '2', app2)
+        b.register('3', '3', app3)
     
-    x = router.route('/a/1')
-    assert x == [router, a, app1], x
-    x = router.route('/b/2')
-    assert x == [router, b, app2], x
-    try:
-        x = router.route('/a-extra')
-        assert False, x
-    except Unroutable:
-        pass
+        print router
+        print a
+        print b
+        
+        route, child, path = router.route('/a/1')
+        self.assertEqual(route, [
+            RouteChunk('/a/1'),
+            RouteChunk('/1', router),
+            RouteChunk('', a),
+        ])
+        self.assertEqual(child, app1)
+        self.assertEqual(path, '')
+        
+        route, child, path = router.route('/b/2/more')
+        self.assertEqual(route, [
+            RouteChunk('/b/2/more'),
+            RouteChunk('/2/more', router),
+            RouteChunk('/more', b),
+        ])
+        self.assertEqual(child, app2)
+        self.assertEqual(path, '/more')
+        
+        try:
+            router.route('/a/extra')
+            self.fail()
+        except Unroutable as e:
+            self.assertEqual(e.args, ([
+                RouteChunk('/a/extra'),
+                RouteChunk('/extra', router)
+            ], a, '/extra'))
+        
+        
 
 
 
