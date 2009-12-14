@@ -178,24 +178,6 @@ class Match(collections.Mapping):
         data = self.data.copy()
         data.update(kwargs)
         return self.pattern.format(**data)
-    
-    def generate(self, chunk, newdata, unrouted):
-        # print 'Match.generate', self, chunk, newdata, unrouted
-        data = self.data.copy()
-        data.update(newdata)
-        route_name = data.get('route_name')
-        route_pair = chunk.router._name_to_pair.get(route_name)
-        if route_pair:
-            return route_pair[0].format(**data) + unrouted
-        for pattern, app in chunk.router._apps:
-            try:
-                return pattern.format(**data) + unrouted
-            except KeyError:
-                pass
-        return self.pattern.format(**data) + unrouted
-    
-    def _generate(self, data, unrouted):
-        return self.format(**data) + unrouted
 
 
 class ReRouter(tools.Router):
@@ -237,6 +219,16 @@ class ReRouter(tools.Router):
                 kwargs, path = m
                 match = Match(pattern, kwargs, path)
                 return app, path, match
+        
+    def generate_step(self, data):
+        for pattern, app in self._apps:
+            if any(k in data and data[k] != v for k, v in
+                pattern._constants.iteritems()):
+                continue
+            try:
+                return pattern.format(**data), app
+            except KeyError:
+                pass
 
 
 
@@ -329,10 +321,13 @@ def test_route_building():
     res = app.get('/x-1')
     route = tools.get_route(res.environ)
     print repr(res.body)
+    print repr(route.url_for(num=2))
     
     res = app.get('/x-1/one/blah')
     route = tools.get_route(res.environ)
+    pprint(route)
     print repr(res.body)
+    print repr(route.url_for(word='two'))
 
 if __name__ == '__main__':
     import logging

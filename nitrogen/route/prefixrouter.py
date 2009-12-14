@@ -117,7 +117,7 @@ class TestCase(unittest.TestCase):
         try:
             router.url_for(**dict(first='a'))
         except GenerationError as e:
-            self.assertEquals(e.args, ('/a', a, dict(first='a')))
+            self.assertEquals(e.args, (['/a'], a, dict(first='a')))
         
         route, child, path = router.route('/a/1')
         
@@ -128,7 +128,7 @@ class TestCase(unittest.TestCase):
             x = route.url_for(**dict(first='b'))
             self.fail(x)
         except GenerationError as e:
-            self.assertEquals(e.args, ('/b', b, dict(first='b')))
+            self.assertEquals(e.args, (['/b'], b, dict(first='b')))
             
 
 

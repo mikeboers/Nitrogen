@@ -302,7 +302,7 @@ class Router(object):
     
     @staticmethod
     def generate(node, new_data, route=None):
-        path = ''
+        path = []
         route_i = -1
         route_data = {}
         apply_route_data = route is not None
@@ -319,8 +319,8 @@ class Router(object):
             if x is None:
                 raise GenerationError(path, node, data)
             segment, node = x
-            path += segment
-        return path
+            path.append(segment)
+        return ''.join(path)
     
     def url_for(self, **data):
         return Router.generate(self, data)
