@@ -260,5 +260,11 @@ interface:
 	.modify_path(path)
 		Optionally transform the unrouted path.
 
+def wrap_url_builder
+URLBuilder.from_route(route, prefix='', **kwargs)
+URLBuilder.from_router(router, prefix='', **kwargs)
+	kwargs go to a URI
+	return a callable that just takes kwargs and builds a url
+
 
 

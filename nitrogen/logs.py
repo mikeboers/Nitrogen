@@ -30,8 +30,6 @@ class ThreadLocalFormatter(logging.Formatter):
     def _build_lock():
         return threading.Lock()
     
-    lock_constructor = threading.Lock
-    
     def __init__(self, *args, **kwargs):
         logging.Formatter.__init__(self, *args, **kwargs)
         
