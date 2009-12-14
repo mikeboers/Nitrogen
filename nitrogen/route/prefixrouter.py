@@ -9,8 +9,8 @@ from ..http.status import HttpNotFound
 
 class PrefixRouter(Router, dict):
     
-    def __init__(self, data_key='prefix'):
-        self.data_key = data_key
+    def __init__(self, route_key='prefix'):
+        self.route_key = route_key
     
     def __repr__(self):
         return '<%s.%s:%r>' % (__name__, self.__class__.__name__,
@@ -32,10 +32,10 @@ class PrefixRouter(Router, dict):
     def route_step(self, path):
         for prefix, child in self.iteritems():
             if path == prefix or path.startswith(prefix) and path[len(prefix)] == '/':
-                return child, path[len(prefix):], {self.data_key:prefix}
+                return child, path[len(prefix):], {self.route_key:prefix}
     
     def generate_step(self, data):
-        prefix = data.get(self.data_key)
+        prefix = data.get(self.route_key)
         if prefix is None:
             return
         if not prefix.startswith('/'):

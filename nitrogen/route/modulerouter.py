@@ -46,7 +46,7 @@ class Module(object):
         return self.app(environ, start)
 
 
-class ModuleRouter(object):
+class ModuleRouter(tools.Router):
     
     def __init__(self, app_key='app', package='', default='index',
         reload=False, route_key='controller'):
@@ -59,10 +59,11 @@ class ModuleRouter(object):
         
         self._modules = {}
     
-    def __call__(self, environ, start):
+    
+    def route_step(self, path):
         
-        unrouted = Path(tools.get_unrouted(environ))
-        segment = unrouted[0] if unrouted else self.default
+        path = Path(path)
+        segment = path[0] if path else self.default
         segment = re.sub(r'[^a-zA-Z0-9_]+', '_', segment)
         name = '.'.join(filter(None, self.package.split('.') + [segment]))
         
@@ -73,30 +74,31 @@ class ModuleRouter(object):
                 # This is my ugly attempt to only throw a 404 if this import
                 # fails, and not some import that this impor triggers.
                 if e.args[0] == 'No module named %s' % segment:
-                    raise HttpNotFound('could not import controller module %r: %r' % (name, e))
+                    log.warning('could not import controller module %r: %r' % (name, e))
+                    return
                 else:
                     raise
             self._modules[name] = Module(router=self, module=raw_module)
         
         module = self._modules[name]
         
-        if unrouted:
-            unrouted.pop(0)
-            unrouted = str(unrouted)
+        if path:
+            path.pop(0)
+            path = str(path)
         else:
-            unrouted = ''
-        tools.update_route(environ, unrouted=unrouted, router=self, data={
-            self.route_key: segment}, generator=self.build_generator(segment))
+            path = ''
         
-        return module(environ, start)
+        return module, path, {self.route_key: segment}
     
-    def build_generator(self, segment):
-        def ModuleRouter_generator(chunk, data, unrouted):
-            name = data.get(self.route_key)
-            if name is not None:
-                return '/' + name + unrouted
-            return '/' + segment + unrouted
-        return ModuleRouter_generator
+    def generate_step(self, data):
+        print 'ModuleRouter.generate_step', self, data
+        if self.route_key not in data:
+            return
+        segment = data.get(self.route_key)
+        x = self.route_step(segment)
+        if not x:
+            return
+        return '/' + segment, x[0]
 
 
 
@@ -142,17 +144,15 @@ def test_routing_path_setup():
     res = app.get('/test_one/extra')
     assert res.body == 'ONE'
     
-    route = tools.get_route(res.environ)
-    pprint(route)
-    print repr(route.url_for(controller='something', _use_unrouted=True))
-    print repr(route.generate(extra=dict(controller='new')))
-    
-    # pprint(tools.get_history(res.environ))
     tools._assert_next_history_step(res,
-            before='/test_one/extra',
-            after='/extra',
+            path='/extra',
             router=router
     )
+    
+    route = tools.get_route(res.environ)
+    pprint(route)
+    print repr(route.url_for(controller='test_one'))
+    
 
     try:
         app.get('/-does/not/exist')
