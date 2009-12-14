@@ -241,7 +241,7 @@ class ReRouter(tools.Router):
         if app:
             pair = (Pattern(pattern, **kwargs), app)
             self._apps.append(pair)
-            return
+            return app
 
         # We are not being used directly, so return a decorator to do the
         # work later.
