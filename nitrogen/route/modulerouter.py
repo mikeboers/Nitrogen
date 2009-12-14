@@ -1,12 +1,13 @@
 
-
+from pprint import pprint
+from webtest import TestApp
+import logging
 import os
 import re
-import logging
 
-from ..uri.path import Path
-from ..http.status import HttpNotFound
 from . import tools
+from ..http.status import HttpNotFound
+from ..uri.path import Path
 
 
 log = logging.getLogger(__name__)
@@ -162,6 +163,4 @@ def test_routing_path_setup():
 
 if __name__ == '__main__':
     from .. import test
-    from webtest import TestApp
-    from pprint import pprint
     test.run()

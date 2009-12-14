@@ -25,7 +25,7 @@ class Pattern(object):
     """
     >>> r = Pattern(r'/{controller}/{action}/{id:\d+}')
     >>> r
-    <__main__.Pattern:r'/{controller}/{action}/{id:\d+}'>
+    <Pattern:r'/{controller}/{action}/{id:\d+}'>
 
     >>> r.match('/gallery/photo/12')[0]
     {'action': 'photo', 'controller': 'gallery', 'id': '12'}
@@ -105,7 +105,7 @@ class Pattern(object):
 
 
     def __repr__(self):
-        return '<%s.%s:r%s>' % (__name__, self.__class__.__name__,
+        return '<%s:r%s>' % (self.__class__.__name__,
             repr(self._raw).replace('\\\\', '\\'))
 
     def _compile(self):

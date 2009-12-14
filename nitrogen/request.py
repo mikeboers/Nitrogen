@@ -98,7 +98,7 @@ class Request(object):
     
     @property
     def route(self):
-        return get_route(self.environ).view
+        return get_route(self.environ).data
     
     @property
     def unrouted(self):
@@ -355,7 +355,7 @@ class Response(object):
 def as_request(app):
     """WSGI middleware to adapt WSGI style requests to a single Request object."""
     
-    def inner(self, environ, start=None):
+    def as_request_app(self, environ, start=None):
         if start is None:
             self, environ, start = start, self, environ
         request = Request(environ)
@@ -363,7 +363,8 @@ def as_request(app):
         if self:
             return app(self, request, response)
         return app(request, response)
-    return inner
+    
+    return as_request_app
 
 
 

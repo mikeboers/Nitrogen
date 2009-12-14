@@ -1,7 +1,7 @@
 
 from pprint import pprint
 
-from webtest import TestApp
+from webtest import TestApp as WebTester
 
 from . import *
 from .tools import *
@@ -12,20 +12,20 @@ from .. import test
 
 
 controller_router = ModuleRouter(package=__name__)
-app = TestApp(controller_router)
+app = WebTester(controller_router)
 
 
 rerouter = ReRouter()
 FakeModule('%s.rerouter' % __name__, app=rerouter)
 
 
-@rerouter.register('get', '/get/{id:\d+}', action='get', _parsers=dict(id=int))
+@rerouter.register('/get/{id:\d+}', action='get', _parsers=dict(id=int))
 @as_request
 def rerouter_get(req, res):
     res.start()
-    yield 'rerouter: get %d' % req.route.data['id']
+    yield 'rerouter: get %d' % req.route['id']
 
-@rerouter.register('list', '/list')
+@rerouter.register('/list')
 @as_request
 def rerouter_list(req, res):
     res.start()
@@ -47,8 +47,7 @@ def test_rerouter_get():
     assert res.body == 'rerouter: get 12'
     
     route = tools.get_route(res.environ)
-    print route.url_for('get', id=24)
-    print route.previous.url_for(controller='controller')
+    print route.url_for(id=24)
 
 
 

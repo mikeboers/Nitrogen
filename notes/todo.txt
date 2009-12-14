@@ -198,3 +198,9 @@ script to auto-set the proper permissions for suexec on our server
 beta. and stage. should have a whitelist to allow entry. that whitelist should
 be able to be added to from the web with a password or by visiting some signed URL
 
+go through route notes
+make sure all tests pass
+decide if I want the route object to have item access to the data, or if that
+is on route.data
+	if the second, does the request object .route refer to the route, or the data
+	is the data a dict, or a multimap?

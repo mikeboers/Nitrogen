@@ -30,20 +30,20 @@ class SelfRouter(tools.Router):
 
 
 
-def test_main():
-    
-    class TestRouter(SelfRouter):
-        def do_index(self, environ, start):
-            start('200 OK', [])
-            yield 'index'
-    
-    router = TestRouter()
-    
-    print router.route('')
-    
-    app = WebTester(router)
-    res = app.get('')
-    print repr(res.body)
+# def test_main():
+#     
+#     class TestRouter(SelfRouter):
+#         def do_index(self, environ, start):
+#             start('200 OK', [])
+#             yield 'index'
+#     
+#     router = TestRouter()
+#     
+#     print router.route('')
+#     
+#     app = WebTester(router)
+#     res = app.get('')
+#     print repr(res.body)
     
 
 if __name__ == '__main__':
