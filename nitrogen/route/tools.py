@@ -50,28 +50,6 @@ class Route(list):
         validate_path(path)
         self.append(RouteChunk(path, router, data if data is not None else
             {}))
-
-    def simple_diff(self, i):
-        """Return the prefix that was removed at step i, or None if it was not
-        a simple refix removal.
-        
-        Examples:
-            >>> r = Route('/one/two')
-            >>> r.update('/two')
-            >>> r.simple_diff(1)
-            '/one'
-            
-            >>> r = Route('/one/two')
-            >>> r.update('/three')
-            >>> r.simple_diff(1)
-        
-        """
-        if len(self) < 2:
-            return None
-        before, after = self[-2].path, self[-1].path
-        if not before.endswith(after):
-            return None
-        return before[:-len(after)] if after else before
     
     def url_for(self, **data):
         for i, chunk in enumerate(self):
@@ -170,6 +148,21 @@ def get_route(environ):
     return Route.from_environ(environ)
 
 
+
+def simple_diff(before, after):
+    """Return the prefix that was removed at step i, or None if it was not
+    a simple refix removal.
+    
+    Examples:
+        >>> simple_diff('/one/two', '/two')
+        '/one'
+        
+        >>> simple_diff('/one/two', '/three')
+    
+    """
+    if not before.endswith(after):
+        return None
+    return before[:-len(after)] if after else before
 
 
 

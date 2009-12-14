@@ -200,12 +200,10 @@ class Match(collections.Mapping):
 
 class ReRouter(object):
 
-    def __init__(self, default=None):
+    def __init__(self):
         self._apps = []
-        self._name_to_pair = {}
-        self.default = default
 
-    def register(self, name, pattern=None, app=None, **kwargs):
+    def register(self, pattern, app=None, **kwargs):
         """Register directly, or use as a decorator.
 
         Params:
@@ -218,45 +216,31 @@ class ReRouter(object):
 
         """
 
-        if pattern is None and app is None:
-            pattern = name
-            name = None
-
         # We are being used directly here.
         if app:
             pair = (Pattern(pattern, **kwargs), app)
-            if name is not None:
-                self._name_to_pair[name] = pair
             self._apps.append(pair)
             return
 
         # We are not being used directly, so return a decorator to do the
         # work later.
-        def decorator(app):
-            self.register(name, pattern, app, **kwargs)
+        def ReRouter_register(app):
+            self.register(pattern, app, **kwargs)
             return app
-        return decorator
+        return ReRouter_register
 
     def __call__(self, environ, start):
-        path = tools.get_unrouted(environ)
+        route = tools.get_route(environ)
+        path = route.path
         # print repr(path)
         log.debug('matching on %r' % path)
         for pattern, app in self._apps:
             m = pattern.match(path)
             if m:
-                kwargs, unmatched = m
-                match = Match(pattern, kwargs, unmatched)
-                tools.update_route(environ,
-                    unrouted=unmatched,
-                    router=self,
-                    data=match,
-                    generator=match.generate
-                )
-
+                kwargs, path = m
+                match = Match(pattern, kwargs, path)
+                route.update(path=path, router=self, data=match)
                 return app(environ, start)
-
-        if self.default:
-            return self.default(environ, start)
 
         raise HttpNotFound()
 
@@ -293,8 +277,7 @@ def test_routing_path_setup():
     assert res.body == 'one'
     # pprint(tools.get_history(res.environ))
     tools._assert_next_history_step(res,
-            before='/one/two',
-            after='/two',
+            path='/two',
             router=router
     )
 
@@ -303,13 +286,13 @@ def test_routing_path_setup():
     assert res.body == '04\n03\n02\none'
     # pprint(tools.get_history(res.environ))
     tools._assert_next_history_step(res,
-        before='/x-4/x-3/x-2/one', after='/x-3/x-2/one', router=router, _data={'num': 4})
+        path='/x-3/x-2/one', router=router, _data={'num': 4})
     tools._assert_next_history_step(res,
-        before='/x-3/x-2/one', after='/x-2/one', router=router, _data={'num': 3})
+        path='/x-2/one', router=router, _data={'num': 3})
     tools._assert_next_history_step(res,
-        before='/x-2/one', after='/one', router=router, _data={'num': 2})
+        path='/one', router=router, _data={'num': 2})
     tools._assert_next_history_step(res,
-        before='/one', after='', router=router, _data={'word': 'one'})
+        path='', router=router, _data={'word': 'one'})
 
     try:
         app.get('/-does/not/exist')
@@ -331,18 +314,18 @@ def test_route_building():
 
     router = ReRouter()
 
-    @router.register('word', r'/{word:one|two|three}')
+    @router.register(r'/{word:one|two|three}')
     def one(environ, start):
         start('200 OK', [('Content-Type', 'text-plain')])
         yield tools.get_route(environ)[-1]['word']
 
-    @router.register('num', r'/x-{num:\d+}', _parsers=dict(num=int))
+    @router.register(r'/x-{num:\d+}', _parsers=dict(num=int))
     def two(environ, start):
         kwargs = tools.get_route(environ)[-1]
         start('200 OK', [('Content-Type', 'text-plain')])
         yield '%02d' % kwargs['num']
 
-    @router.register('empty', '')
+    @router.register('')
     def three(environ, start):
         start('200 OK', [('Content-Type', 'text/plain')])
         yield 'empty'
@@ -351,14 +334,11 @@ def test_route_building():
 
     res = app.get('/x-1')
     route = tools.get_route(res.environ)
-    
     print repr(res.body)
-    print repr(route.url_for(num=3))
     
     res = app.get('/x-1/one/blah')
     route = tools.get_route(res.environ)
     print repr(res.body)
-    print repr(route.url_for('num', num=4, word='new'))
 
 if __name__ == '__main__':
     import logging
