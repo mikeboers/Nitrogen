@@ -87,11 +87,10 @@ class RawReMatch(collections.Mapping):
         return len(self.kwargs)
     
     
-class RawReRouter(object):
+class RawReRouter(tools.Router):
     
-    def __init__(self, default=None):
+    def __init__(self):
         self._apps = []
-        self.default = default
         
     def register(self, pattern, app=None, lock_front=True, snap_back=True):
         """Register directly, or use as a decorator.
@@ -124,25 +123,13 @@ class RawReRouter(object):
             return app
         return decorator
     
-    def __call__(self, environ, start):
-        route = tools.get_route(environ)
-        path = route.path
+    def route_step(self, path):
         log.debug('matching on %r' % path)
         for pattern, app in self._apps:
             m = pattern.search(path)
             if m is not None:
                 path = path[m.end():]
-                route.update(
-                    path=path,
-                    router=self,
-                    data=RawReMatch(m)
-                )
-                return app(environ, start)
-            
-        if self.default:
-            return self.default(environ, start)
-        
-        raise HttpNotFound()
+                return app, path, RawReMatch(m)
 
 
 
