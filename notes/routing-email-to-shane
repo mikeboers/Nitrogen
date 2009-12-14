@@ -1,0 +1,31 @@
+It uses the data that was generated as the request was originally routed as a base.
+
+For example, we request "/products/apple"
+
+First it goes to the dispatcher (which uses a ModuleRouter) which pulls off "/products", gives us the data {'controller': 'products'} and directs us to the app.controller.products module.
+
+Then, that is a ReRouter. It matches '/{brand}' against '/apple', which gives us the data {'brand': 'apple'} and directs us to the final function which handles that view.
+
+The route is tracked as a sequence of routing steps. Each step tells us what was unrouted at that point, what router is responsible for setting that path, and what data is left. The entire route at this point looks something like:
+
+[
+	RouteChunk(path='/products/apple'), # The initial request
+	RouteChunk(path='/apple', router=ModuleRouter(...), data={'controller': 'products'}),
+	RouteChunk(path='', router=ReRouter(...), data={'brand': 'apple'})
+]
+
+The url_for function is actually a method of the final route object. So it know where we have come from. So if we call url_for(id=25), it will start at the first router, and ask it what it can do with the data it originally provided, and the new stuff. Ie, the ModuleRouter will be asked what is can do with:
+	{'controller': 'products', 'id':25}
+
+It only knows about the controller key, so it says that it would route '/products' to the app.controller.products module.
+
+Then we ask that router (the ReRouter) what it could do with the data we have from the dispatcher, what the rerouter gave us initially, and the new data, ie:
+	{'controller': 'products', 'brand': 'apple', 'id':25}
+
+It goes through each of the patterns it has, and returns the first one that it has enough data for. We have put the '/{brand}/{id}' pattern before '/{brand}', so that will match first, and it will give us '/apple/25'
+
+Now, it only reuses the data from the initial routing iff it is routing through to the same router on the same step. So if I ask for url_for(controller='news', id=25):
+
+1. The controller will get {'controller':'news', 'id':25}, and give us '/news' and pass us along to the app.controllers.news module
+
+2. The news router will only get {'controller': 'news', 'id': 25} it does NOT get the data collected by the products router. So if the news router will respond to only an id, then it will build a route, otherwise explode.

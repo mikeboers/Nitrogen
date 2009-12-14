@@ -93,8 +93,12 @@ class Request(object):
     session = _environ_getter('beaker.session')
     
     @property
-    def route(self):
+    def fullroute(self):
         return get_route(self.environ)
+    
+    @property
+    def route(self):
+        return get_route(self.environ).view
     
     @property
     def unrouted(self):

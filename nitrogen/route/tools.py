@@ -38,6 +38,10 @@ class Route(list):
     def __init__(self, path=None):
         if path:
             self.update(path)
+        self._all_data = {}
+    
+    def all_data(self):
+        return all_data.copy()
     
     def __getattr__(self, name):
         """Proxy attribute requests to the last chunk."""
@@ -55,6 +59,7 @@ class Route(list):
         validate_path(path)
         self.append(RouteChunk(path, router, data if data is not None else
             {}))
+        self._all_data.update(self[-1].data)
     
     def url_for(self, **data):
         for i, chunk in enumerate(self):
