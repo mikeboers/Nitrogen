@@ -125,14 +125,15 @@ class RawReRouter(object):
         return decorator
     
     def __call__(self, environ, start):
-        path = tools.get_unrouted(environ)
+        route = tools.get_route(environ)
+        path = route.path
         log.debug('matching on %r' % path)
         for pattern, app in self._apps:
             m = pattern.search(path)
             if m is not None:
-                unrouted = path[m.end():]
-                tools.update_route(environ,
-                    unrouted=unrouted,
+                path = path[m.end():]
+                route.update(
+                    path=path,
                     router=self,
                     data=RawReMatch(m)
                 )
@@ -174,8 +175,7 @@ def test_routing_path_setup():
     res = app.get('/one/two')
     # pprint(tools.get_history(res.environ))
     tools._assert_next_history_step(res,
-        before='/one/two',
-        after='/two',
+        path='/two',
         router=router)
     
     res = app.get('/x-four/x-three/x-two/one')
@@ -183,13 +183,13 @@ def test_routing_path_setup():
     assert res.body == 'four\nthree\ntwo\none'
     # pprint(tools.get_history(res.environ))
     tools._assert_next_history_step(res,
-        before='/x-four/x-three/x-two/one', after='/x-three/x-two/one', router=router, _data={'var': 'four'})
+        path='/x-three/x-two/one', router=router, _data={'var': 'four'})
     tools._assert_next_history_step(res,
-        before='/x-three/x-two/one', after='/x-two/one', router=router)
+        path='/x-two/one', router=router)
     tools._assert_next_history_step(res,
-        before='/x-two/one', after='/one', router=router)
+        path='/one', router=router)
     tools._assert_next_history_step(res,
-        before='/one', after='', router=router)
+        path='', router=router)
     
         
     try:
