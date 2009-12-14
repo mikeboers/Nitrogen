@@ -18,6 +18,7 @@ from webtest import TestApp
 
 from ..uri import URI
 from ..uri.path import Path, encode, decode
+from ..http.status import HttpNotFound
 
 class Route(list):
     
@@ -343,94 +344,27 @@ class Router(object):
         return child(environ, start)
 
 
-class PrefixRouter(Router, dict):
+
+        
+
+
+
+
+
+
+class TestApp(object):
     
-    def __init__(self, route_key=None):
-        self.route_key = route_key
+    def __init__(self, output=None, start=True):
+        self.start = start
+        self.output = output
+    
+    def __call__(self, environ, start):
+        if self.start:
+            start('200 OK', [('Content-Type', 'text/plain')])
+        return [str(self.output)]
     
     def __repr__(self):
-        return '<%s.%s:%r>' % (__name__, self.__class__.__name__,
-            sorted(self.keys()))
-    
-    def register(self, prefix, child=None):
-        prefix = str(prefix)
-        if not prefix.startswith('/'):
-            prefix = '/' + prefix
-        if child is not None:
-            dict.__setitem__(self, prefix, child)
-            return child
-        def PrefixRouter_register(child):
-            self.register(prefix, child)
-        return PrefixRouter_register
-    
-    __setitem__ = register
-    
-    def route_step(self, path):
-        for prefix, child in self.iteritems():
-            if path == prefix or path.startswith(prefix) and path[len(prefix)] == '/':
-                return child, path[len(prefix):], {}
-    
-
-class TestCase(unittest.TestCase):
-    
-    def test_main(self):
-    
-        app1 = object()
-        app2 = object()
-        app3 = object()
-    
-        router = PrefixRouter()
-        a = PrefixRouter()
-        b = PrefixRouter()
-
-        router.register('/a', a)
-        router.register('b', b)
-    
-        a.register('/1', app1)
-        a.register('/2', app2)
-        b.register('2', app2)
-        b.register('3', app3)
-    
-        # print router
-        # print a
-        # print b
-        
-        route, child, path = router.route('/a/1')
-        # pprint(route)
-        self.assertEqual(route, [
-            RouteChunk('/a/1'),
-            RouteChunk('/1', router),
-            RouteChunk('', a),
-        ])
-        self.assertEqual(child, app1)
-        self.assertEqual(path, '')
-        
-        route, child, path = router.route('/b/2/more')
-        self.assertEqual(route, [
-            RouteChunk('/b/2/more'),
-            RouteChunk('/2/more', router),
-            RouteChunk('/more', b),
-        ])
-        self.assertEqual(child, app2)
-        self.assertEqual(path, '/more')
-        
-        try:
-            router.route('/a/extra')
-            self.fail()
-        except Unroutable as e:
-            self.assertEqual(e.args, ([
-                RouteChunk('/a/extra'),
-                RouteChunk('/extra', router)
-            ], a, '/extra'))
-        
-        
-
-
-
-
-
-
-
+        return 'TestApp(%r)' % self.output
 
 
 
