@@ -23,7 +23,11 @@ def run():
     import logging
     
     logging.getLogger('nose').setLevel(1000)
-    
+    root = logging.getLogger()
+    root.setLevel(0)
+    stderr = logging.StreamHandler()
+    root.addHandler(stderr)
+    stderr.setFormatter(logging.Formatter("%(name)s.%(levelname)s - %(message)s"))
     sys.path.append(os.path.abspath(__file__ + '/../../lib'))
     import nose.loader
     
