@@ -12,21 +12,19 @@ from . import tools
 log = logging.getLogger(__name__)
 
 
-class Module(object):
+class Module(tools.Router):
     
     def __init__(self, router, module):
         self.router = router
         self.module = module
         self.app = None
         self.last_mtime = self.getmtime()
-        
-        self.reload()
     
     def getmtime(self):
         return os.path.getmtime(self.module.__file__)
     
-    def reload(self, force=False):
-        if force or self.router.reload:
+    def route_step(self, path):
+        if self.router.reload:
             mtime = self.getmtime()
             if self.last_mtime != mtime:
                 self.last_mtime = mtime
@@ -39,11 +37,11 @@ class Module(object):
                 msg = 'could not find app %r on controller module %r' % (
                     self.app_key, self.module.__name__)
                 log.debug(msg)
-                raise HttpNotFound(msg)
+                return
+        return self.app, path, {}
     
-    def __call__(self, environ, start):
-        self.reload()
-        return self.app(environ, start)
+    def generate_step(self, data):
+        return '', self.app
 
 
 class ModuleRouter(tools.Router):

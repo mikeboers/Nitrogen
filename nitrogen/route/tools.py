@@ -240,6 +240,7 @@ class Router(object):
             x = node.generate_step(data)
             if x is None:
                 raise GenerationError(path, node, data)
+            # log.debug((node, data) + x)
             segment, node = x
             path.append(segment)
         
