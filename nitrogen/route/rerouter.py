@@ -79,7 +79,8 @@ class Pattern(object):
 
         self._raw = raw
         self._constants = kwargs
-
+        self._keys = set()
+        
         self._requirements = kwargs.pop('_requirements', {})
         self._requirements = dict((k, re.compile(v + '$'))
             for k, v in self._requirements.items())
@@ -116,6 +117,7 @@ class Pattern(object):
 
     def _compile_sub(self, match):
         name = match.group(1)
+        self._keys.add(name)
         patt = match.group(2) or self.default_pattern
         hash = 'x%s' % hashlib.md5(name).hexdigest()
         self._hash_to_key[hash] = name

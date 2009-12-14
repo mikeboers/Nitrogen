@@ -83,3 +83,121 @@ url_for will have the signature:
 
 RouteChunk.generate(unrouted, data=None, one=False)
 
+
+The url_for I have implemented is a top down method, and it is only good for
+rewriting parameters within the same routes. it is useless for changing controllers, for example. A bottom up approach would start at the first router, ask it to build it's section, and to return the app which it would route to. that app then gets the opourtunity to dobuild the url as well.
+	each app would return it's part of the route, and the app it would route
+	to. then once we hit the end, we can go back down from the top and allow
+	the routers to do other transformations (encrypt or sign?)
+
+So we need a way that can change branches on the route tree.
+
+===== Routers to write ======
+
+Encryptor
+	- decrypts the unrouted
+	- encrypts whatever is to be built
+	- forwards to a single app
+
+Signer:
+	- verifies a signature on the unrouted
+	- signes routes as they are being built
+	- forwards to a single app
+
+===== ReRouter =====
+
+If multiple patterns can be generated with the same data, and they point at the same application, then choose the smaller of the two. Then if there are multiple different apps to choose from, pick the one which used the most number of keys in the data (from before the previous collapse)
+
+===== Ways to generate URLs =====
+
+1. Tip to root: This is what I am doing right now. It does not allow you to
+change branches on the tree.
+
+2. Root to tip, then modify: Start at the very root (whatever the first
+router is). Ask the router where it would route to, and what string would
+make it do so. Keep doing this with whatever they return until they don't have
+the interface anymore (some method). Then, starting at the tip that we have
+determined, allow the routers to modify the unrouted segment. We will have
+traversed from the root to the tip, and then back. We can still write route
+modifiers and we have a root to tip approach.
+
+This requires that we have a flat namespace/paramspace for routes. It also does not specify how finding a route by name would work because names may be very far into the tree on another branch, and we don't really want try every route. We could, but I am not sure that it is even possible to do that. I should think about it.
+
+3. Route by name, to tip, then modify. Go from tip to route seeing if we can get a template by name. If we can, then start the forward building from
+that router. Then move back up the chain. If we can't, explode.
+
+This still does not allow for routing by name into a different branch.
+
+For the following, assume we have a structure like this:
+
+/ - A ModuleRouter
+	/news - A ReRouter
+		/ - "news_index"
+		/post/<id> - "news_post"
+		/archive - "news_archive"
+		/archive/<year>/<month>/<day> - "news_archive"
+	/gallery - A ReRouter
+		/ - "gallery_index"
+		/<set> - "gallery_set"
+		/<set>/<photo> - "gallery_photo"
+		/archive - "gallery_archive_index"
+		/archive/<year>/<month> - "gallery_archive"
+
+Some issues while I came up with this:
+	- we could have multiple routes that go in different directions have the
+	  same name, and only be differentiated by how much data they use
+	- would the data that is supplied by a router by used for the generation
+	  of urls in a different branch? If I am in /news/2009/08/04 and call for
+	  "gallery_archive", should I get "/gallery/archive" or
+	  "/gallery/archive/2009/08"?
+	- seems like data should be availible for everything under the router
+	  which generated it, but not above or beside.
+	- should all of the data passed to url_for be consumed?
+
+If I wan't to build a link to the news from the gallery, either the names will
+have to be registered for everything, or it be done like:
+	url_for(controller="news", action="archive", year=2008)
+  instead of:
+	url_for("news_archive", year=2008)
+
+	If the names have to registered for everything before hand, it seems that
+	the list of routers to get to that name also has to be registered with it
+	so that it can be built properly. Then we would have to have a definative
+	path to every endpoint, and every router would need to be able to see
+	every other router in the tree.
+	
+	Also, what if we are using a ModuleRouter and would like to build a url
+	via a name that is defined in a module that is not loaded yet. Is this
+	even possible? Is this even a concern?
+
+It is also possible that the url_for can be passed a list of routers to base
+the route upon. Then it could be:
+	url_for("news_archive", _routers=[controller, news], year=2008)
+	
+	This would work, but we would need a list of routers.
+
+Instead of the news app supplying "news_archive" to other parts of the site to build urls with, it could supply dict(_name="archive", _root_url='/news' _root_router=router). Then the whole algo runs with the router as the absolute root of the chain.
+
+	This means that the base would be absolutely static, and no modifiers
+	could run to affect it.
+
+
+Perhaps there should be a BaseRouter from which all routers inherit. It would define the primary interface, and it would wrap everything that interacts with the actual route object. Then we can ask the routers where they would go, instead of actually going there. We could also have a function that sees if any of them responds to any route names. We would need to accept that the module router would need to load all of the controllers with names before trying this. It would also allow for children to automatically know where their parent(s) is(are). The parents would be weakrefs.
+
+	What do we do if a router can be reached by two paths? Should it have two
+	parents and default to using the first?
+
+
+So far, the only thing which will absolutely work is specifying all of the parameters and not using names:
+	url_for(controller="news", action="archive", year=2009, month=8, day=4)
+
+Then, be able to supply a _root_url and a _root_router which will just modify
+the algo to start at that router and prefix the result with that url.
+
+Then, a _name will trigger a tip-to-root search for that name along the route as taken, then start building up from there, and then run the modifiers all the way down.
+
+
+
+
+
+
