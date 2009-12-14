@@ -206,33 +206,30 @@ The paremeters could concievably be namespaced as well, but that seems like the 
 
 What is the full interface that is required on routers?
 
-	self.register_child(self, child)
-		does whatever it needs to in order to register the child for how this
-		router works. also must register the parent on the child.
+	Route.update(path, router, data)
+	
+	self.register_child(child, name)
+		Register a child as a route that can be taken.
 		
-	self.register_parent(self, parent)
-		sets self._parents to a list of weakref proxys to the parents
+	Child.route_step(path):
+		Route a single step. Return (child, newpath, data) or None if it can't
+		do the routing.
 	
-	Child.route_step(self, path):
-		route a single step. returns a RouteChunk or None if it can't be done
-	
-	Base.route(self, path):
-		return a list of route chunks for the path and a string of what
-		remains, or throws an Unroutable with the route so far, the router
-		that failed, and what it choked on.
-			raise Unroutable(route, router, path)
+	Base.route(path):
+		Return (route, child, path)
+			route - The full route
+			child - What we stopped on
+			path - Whatever remains on the path.
+		If it can't be routed:
+			raise Unroutable(route, router_that_failed, path)
 	
 	Base.__call__(self, environ, start)
-	
-	self.route(self, unrouted)
-		return where it would route to, and what would be unrouted after
 	
 	self.find_by_name(self, name)
 		takes a list specifying a name, and finds the route which has it. this
 		would likely only be on the base
-		
-	self.list_children(self)
-		a list of all direct children
+	
+	
 		
 	self.find_children_with_name(self, name, depth=None, ignore=set(...))
 		returns a list of all children (in order of preference) who respond to
@@ -244,7 +241,15 @@ What is the full interface that is required on routers?
 	
 		
 
+===== BLARGH! =====
 
+I'm going to abandon routing by name for now. I can certainly perform a seach that will give me a list of routes that satisfy a heirarchical name, but then generating a path from that which will agree with the data parameters passed will be tricky. The names will have to take precidence. And then we can't really assert that it will again be routed that way.
+
+I think the thing to do is to just route by parameters. Router.route_step will
+work exactly as it already does. Router.generate_step will return a chunk of the path, and who to go to next. To generate the whole thing you start at the
+root and keep going until they don't support the protocol anymore.
+
+To generate from an existing route, each step of the process is aided by whatever data was produced at or before that step in the route, minus whatever data is added to lower stages.
 
 
 

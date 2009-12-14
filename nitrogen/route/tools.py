@@ -29,15 +29,15 @@ class Route(list):
             environ[cls.environ_key] = cls(get_request_path(environ))
         return environ[cls.environ_key]
     
-    def __init__(self, unrouted=None):
-        if unrouted:
-            self.update(unrouted)
+    def __init__(self, path=None):
+        if path:
+            self.update(path)
     
     def __getattr__(self, name):
         """Proxy attribute requests to the last chunk."""
         return getattr(self[-1], name)
     
-    def update(self, unrouted, router=None, data=None):
+    def update(self, path, router=None, data=None):
         """Sets the current unrouted path and add to routing history.
         
         Params:
@@ -46,8 +46,8 @@ class Route(list):
             data -- A mapping of data extracted from the route for this chunk.
 
         """
-        validate_path(unrouted)
-        self.append(RouteChunk(unrouted, router, data if data is not None else
+        validate_path(path)
+        self.append(RouteChunk(path, router, data if data is not None else
             {}))
 
     def simple_diff(self, i):
@@ -67,7 +67,7 @@ class Route(list):
         """
         if len(self) < 2:
             return None
-        before, after = self[-2].unrouted, self[-1].unrouted
+        before, after = self[-2].path, self[-1].path
         if not before.endswith(after):
             return None
         return before[:-len(after)] if after else before
@@ -75,8 +75,8 @@ class Route(list):
 
 class RouteChunk(collections.Mapping):
 
-    def __init__(self, unrouted, router=None, data=None):
-        self.unrouted = unrouted
+    def __init__(self, path, router=None, data=None):
+        self.path = path
         self.router = router
         self.data = data if data is not None else {}
     
@@ -95,7 +95,7 @@ class RouteChunk(collections.Mapping):
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
-        return (self.unrouted == other.unrouted and
+        return (self.path == other.path and
             self.router == other.router and
             self.data == other.data)
     
@@ -103,15 +103,16 @@ class RouteChunk(collections.Mapping):
     def before(self):
         if self.previous is None:
             raise ValueError('first RouteChunk has no previously unrouted')
-        return self.previous.unrouted
+        return self.previous.path
     
     @property
     def after(self):
-        return self.unrouted
+        return self.path
 
     def __repr__(self):
-        return '<%s.%s object at 0x%x: %r by %r>' % (__name__,
-            self.__class__.__name__, id(self), self.unrouted, self.router)
+        return '<%s.%s at 0x%x: %r by %r with %r>' % (__name__,
+            self.__class__.__name__, id(self), self.path, self.router,
+            dict(self.data))
             
 
     
@@ -258,9 +259,9 @@ def test_routing_path_setup():
 
         start('200 OK', [('Content-Type', 'text-plain')])
         route = get_route(environ)
-        path = Path(route.unrouted)
+        path = Path(route.path)
         segment = path.pop(0)
-        route.update(unrouted=str(path), router=_app)
+        route.update(path=str(path), router=_app)
 
         yield 'hi'
 
@@ -270,7 +271,7 @@ def test_routing_path_setup():
     res = app.get('/one/two')
     # print get_route(res.environ)
     _assert_next_history_step(res,
-            unrouted='/two',
+            path='/two',
             router=_app), 'history is wrong'
             
             
@@ -316,45 +317,91 @@ class Unroutable(ValueError):
 class RouterBase(object):
     
     def __init__(self):
-        self._parents = []
-        self._names = []
+        # self._parent = None
+        self._children = []
         self._name_to_child = {}
     
     def __repr__(self):
-        return '<%s.%s:%r>' % (__name__, self.__class__.__name__,
-            tuple(self.names))
+        return '<%s.%s at 0x%x>' % (__name__, self.__class__.__name__,
+            id(self))
     
     def __hash__(self):
         return id(self)
     
     def register_child(self, child, name=None):
-        if hasattr(child, 'register_parent'):
-            child.register_parent(self, via_name=name)
-        if name is not None and name not in self._name_to_child:
+        self._children.append(child)
+        if name is not None:
             self._name_to_child[name] = child
+        # if hasattr(child, 'register_parent_router'):
+        #     child.register_parent_router(self)
     
-    def register_parent(self, parent, via_name):
-        self._parents.append(weakref.ref(parent))
-        if via_name is not None:
-            self._names.append(via_name)
+    # def register_parent_router(self, parent):
+    #     if self._parent is None:
+    #         self._parent = weakref.ref(parent)
     
-    @property
-    def parents(self):
-        return [x for x in (ref() for ref in self._parents) if x is not None]
-    
-    @property
-    def names(self):
-        return list(self._names)
+    # @property
+    # def parent(self):
+    #     return self._parent() if self._parent is not None else None
     
     def route_step(self, path):
         """Return (child, newpath, data) or None if it can't be routed."""
         raise NotImplementedError()
     
+    @staticmethod
+    def get_children(router):
+        if hasattr(router, '_children'):
+            return router._children
+        return []
+    
+    @staticmethod
+    def get_name_to_child_map(router):
+        if hasattr(router, '_name_to_child'):
+            return router._name_to_child
+        return {}
+    
+    def find_routes_by_name(self, name, ignore=None):
+        if isinstance(name, basestring):
+            name = name.strip('/').split('/')
+        if not len(name):
+            raise ValueError('empty name')
+        
+        routes = [(self, )]
+        ignore = set()
+        
+        while len(name):
+            namechunk = name.pop(0)
+            newroutes = []
+            for route in routes:
+                node = route[-1]
+                ignore.add(id(node))
+            for route in routes:
+                node = route[-1]
+                for child in self._find(namechunk, node, ignore):
+                    newroutes.append(route + (child, ))
+            routes = newroutes
+        
+        return routes
+                
+    
+    
+    @classmethod
+    def _find(cls, name, node, ignore):
+        ignore = ignore.copy()
+        map = cls.get_name_to_child_map(node)
+        if name in map:
+            yield map[name]
+        for child in cls.get_children(node):
+            if id(child) in ignore:
+                continue
+            ignore.add(id(child))
+            for x in cls._find(name, child, ignore):
+                yield x
+        
+    
     def route(self, path):
-        # print 'RouterBase.route'
         route = Route(path)
         router = self
-        while path and hasattr(router, 'route_step'):
+        while hasattr(router, 'route_step'):
             x = router.route_step(path)
             if x is None:
                 raise Unroutable(route, router, path)
@@ -363,8 +410,18 @@ class RouterBase(object):
             router = child
         return route, router, path
     
+    def __call__(self, environ, start):
+        route = Route.from_environ(environ)
+        path = route.path
+        x = self.route_step(path)
+        if x is None:
+            raise HttpNotFound('could not route %r with %r' % (path, self))
+        child, path, data = x
+        route.update(path, self, data)
+        return child(environ, start)
+    
     def modify_route(self, path):
-        raise NotImplementedError
+        return path
 
 
 class PrefixRouter(RouterBase):
@@ -374,6 +431,10 @@ class PrefixRouter(RouterBase):
         self.map = {}
         for prefix, app in kwargs.iteritems():
             self.register(None, prefix, app)
+    
+    def __repr__(self):
+        return '<%s.%s:%r>' % (__name__, self.__class__.__name__,
+            sorted(self.map.keys()))
     
     def register(self, name, prefix=None, app=None):
         if prefix is None:
@@ -414,11 +475,12 @@ class TestCase(unittest.TestCase):
         b.register('2', '2', app2)
         b.register('3', '3', app3)
     
-        print router
-        print a
-        print b
+        # print router
+        # print a
+        # print b
         
         route, child, path = router.route('/a/1')
+        # pprint(route)
         self.assertEqual(route, [
             RouteChunk('/a/1'),
             RouteChunk('/1', router),
@@ -445,6 +507,7 @@ class TestCase(unittest.TestCase):
                 RouteChunk('/extra', router)
             ], a, '/extra'))
         
+        pprint(router.find_routes_by_name('a/1'))
         
 
 
