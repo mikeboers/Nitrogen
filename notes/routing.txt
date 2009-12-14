@@ -251,5 +251,14 @@ root and keep going until they don't support the protocol anymore.
 
 To generate from an existing route, each step of the process is aided by whatever data was produced at or before that step in the route, minus whatever data is added to lower stages.
 
+interface:
+	.route_step(path)
+		Return (child, newpath, data), or None if it can't do the routing.
+	.generate_step(data)
+		Return the path segment best represented by data, or None if it can't
+		do the generation.
+	.modify_path(path)
+		Optionally transform the unrouted path.
+
 
 

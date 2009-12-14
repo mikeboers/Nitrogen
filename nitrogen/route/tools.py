@@ -301,102 +301,24 @@ def test_routing_path_setup():
             
 # ===== NEW STUFF UNDER HERE
 
-
-class NoParent(ValueError):
-    pass
-
-
-class NoName(ValueError):
-    pass
-
-
 class Unroutable(ValueError):
     pass
 
-
-class RouterBase(object):
-    
-    def __init__(self):
-        # self._parent = None
-        self._children = []
-        self._name_to_child = {}
+class Router(object):
     
     def __repr__(self):
         return '<%s.%s at 0x%x>' % (__name__, self.__class__.__name__,
             id(self))
     
-    def __hash__(self):
-        return id(self)
-    
-    def register_child(self, child, name=None):
-        self._children.append(child)
-        if name is not None:
-            self._name_to_child[name] = child
-        # if hasattr(child, 'register_parent_router'):
-        #     child.register_parent_router(self)
-    
-    # def register_parent_router(self, parent):
-    #     if self._parent is None:
-    #         self._parent = weakref.ref(parent)
-    
-    # @property
-    # def parent(self):
-    #     return self._parent() if self._parent is not None else None
-    
     def route_step(self, path):
         """Return (child, newpath, data) or None if it can't be routed."""
         raise NotImplementedError()
     
-    @staticmethod
-    def get_children(router):
-        if hasattr(router, '_children'):
-            return router._children
-        return []
+    def generate_step(self, data):
+        raise NotImplementedError()
     
-    @staticmethod
-    def get_name_to_child_map(router):
-        if hasattr(router, '_name_to_child'):
-            return router._name_to_child
-        return {}
-    
-    def find_routes_by_name(self, name, ignore=None):
-        if isinstance(name, basestring):
-            name = name.strip('/').split('/')
-        if not len(name):
-            raise ValueError('empty name')
-        
-        routes = [(self, )]
-        ignore = set()
-        
-        while len(name):
-            namechunk = name.pop(0)
-            newroutes = []
-            for route in routes:
-                node = route[-1]
-                ignore.add(id(node))
-            for route in routes:
-                node = route[-1]
-                for child in self._find(namechunk, node, ignore):
-                    newroutes.append(route + (child, ))
-            routes = newroutes
-        
-        return routes
-                
-    
-    
-    @classmethod
-    def _find(cls, name, node, ignore):
-        ignore = ignore.copy()
-        map = cls.get_name_to_child_map(node)
-        if name in map:
-            yield map[name]
-        for child in cls.get_children(node):
-            if id(child) in ignore:
-                continue
-            ignore.add(id(child))
-            for x in cls._find(name, child, ignore):
-                yield x
-        
+    def modify_path(self, path):
+        return path
     
     def route(self, path):
         route = Route(path)
@@ -419,38 +341,32 @@ class RouterBase(object):
         child, path, data = x
         route.update(path, self, data)
         return child(environ, start)
-    
-    def modify_route(self, path):
-        return path
 
 
-class PrefixRouter(RouterBase):
+class PrefixRouter(Router, dict):
     
-    def __init__(self, **kwargs):
-        super(PrefixRouter, self).__init__()
-        self.map = {}
-        for prefix, app in kwargs.iteritems():
-            self.register(None, prefix, app)
+    def __init__(self, route_key=None):
+        self.route_key = route_key
     
     def __repr__(self):
         return '<%s.%s:%r>' % (__name__, self.__class__.__name__,
-            sorted(self.map.keys()))
+            sorted(self.keys()))
     
-    def register(self, name, prefix=None, app=None):
-        if prefix is None:
-            name, prefix = None, name
+    def register(self, prefix, child=None):
+        prefix = str(prefix)
         if not prefix.startswith('/'):
             prefix = '/' + prefix
-        if app:
-            self.map[prefix] = app
-            self.register_child(app, name=name)
-            return app
-        def PrefixRouter_register(app):
-            self.register(name, prefix, app)
+        if child is not None:
+            dict.__setitem__(self, prefix, child)
+            return child
+        def PrefixRouter_register(child):
+            self.register(prefix, child)
         return PrefixRouter_register
     
+    __setitem__ = register
+    
     def route_step(self, path):
-        for prefix, child in self.map.iteritems():
+        for prefix, child in self.iteritems():
             if path == prefix or path.startswith(prefix) and path[len(prefix)] == '/':
                 return child, path[len(prefix):], {}
     
@@ -467,13 +383,13 @@ class TestCase(unittest.TestCase):
         a = PrefixRouter()
         b = PrefixRouter()
 
-        router.register('a', '/a', a)
-        router.register('b', 'b', b)
+        router.register('/a', a)
+        router.register('b', b)
     
-        a.register('1', '/1', app1)
-        a.register('2', '/2', app2)
-        b.register('2', '2', app2)
-        b.register('3', '3', app3)
+        a.register('/1', app1)
+        a.register('/2', app2)
+        b.register('2', app2)
+        b.register('3', app3)
     
         # print router
         # print a
@@ -507,7 +423,6 @@ class TestCase(unittest.TestCase):
                 RouteChunk('/extra', router)
             ], a, '/extra'))
         
-        pprint(router.find_routes_by_name('a/1'))
         
 
 
