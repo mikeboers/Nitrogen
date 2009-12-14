@@ -9,7 +9,7 @@ from ..http.status import HttpNotFound
 
 class MapRouter(Router, dict):
     
-    def __init__(self, route_key='prefix'):
+    def __init__(self, route_key='map_key'):
         self.route_key = route_key
     
     def __repr__(self):
