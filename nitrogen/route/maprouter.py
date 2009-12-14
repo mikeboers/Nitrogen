@@ -7,7 +7,7 @@ from webtest import TestApp as WebTester
 from .tools import Router, TestApp, RouteChunk, Unroutable, GenerationError
 from ..http.status import HttpNotFound
 
-class PrefixRouter(Router, dict):
+class MapRouter(Router, dict):
     
     def __init__(self, route_key='prefix'):
         self.route_key = route_key
@@ -23,11 +23,16 @@ class PrefixRouter(Router, dict):
         if child is not None:
             dict.__setitem__(self, prefix, child)
             return child
-        def PrefixRouter_register(child):
+        def MapRouter_register(child):
             self.register(prefix, child)
-        return PrefixRouter_register
+        return MapRouter_register
     
     __setitem__ = register
+
+    def update(self, *args):
+        for arg in args:
+            for k, v in arg.iteritems():
+                self.register(k, v)
     
     def route_step(self, path):
         for prefix, child in self.iteritems():
@@ -55,9 +60,9 @@ class TestCase(unittest.TestCase):
         app2 = TestApp('two')
         app3 = TestApp('three')
     
-        router = PrefixRouter('first')
-        a = PrefixRouter('second')
-        b = PrefixRouter('second')
+        router = MapRouter('first')
+        a = MapRouter('second')
+        b = MapRouter('second')
 
         router.register('/a', a)
         router.register('b', b)
