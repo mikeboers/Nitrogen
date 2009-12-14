@@ -17,7 +17,7 @@ import multiprocessing
 import time
 
 
-base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(request_index)d ip:%(remote_addr)s -- %(name)s: %(message)s"
+base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(request_index)d ip:%(remote_addr)s %(name)s - %(message)s"
 
 
 class ThreadLocalFormatter(logging.Formatter):
