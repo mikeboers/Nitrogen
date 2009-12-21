@@ -2,8 +2,9 @@
 - It might be a idea to convert to ascii with xml references at the end,
   instead of actual unicode. Need to look into this.
   
-- route.Mapper could be a really simple dict-based router going off of the
-  first segment.
+  My feelings are that this is really a waste of bandwidth. Everything should
+  actually understand UTF-8 in a raw form.
+
 
 - URIs:
   	- take a look here: http://bugs.python.org/issue1462525
@@ -20,4 +21,6 @@
 - copy what paste.fileapp is doing (or just use it =P)
 
 - route adapter for normal wsgi apps (so that their changes to PATH_INFO get
-  recorded in history)
+  recorded in history). These should setup the SCRIPT_NAME and PATH_INFO to
+  something reasonabe before calling the "normal" app, and then update the
+  route to sync the data.

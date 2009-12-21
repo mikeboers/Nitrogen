@@ -1,11 +1,12 @@
 '''Crypto module.'''
 
+from subprocess import Popen, PIPE
 import base64
 import hashlib
-from subprocess import Popen, PIPE
+import os
 import StringIO
 import time
-import os
+
 
 def base64_encode(data, urlsafe=False):
     return base64.b64encode(data, '-_' if urlsafe else None)

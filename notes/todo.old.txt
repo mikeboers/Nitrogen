@@ -1,17 +1,13 @@
 
 /general
     - build help widgets
-	- "today" will be put to 12:00:00 am, which next time will go to 12:00:00 pm. Fix this.
     - editables need to catch api errors and remove the UI block
 	- Make flash messages able to persist a number of requests.
 		This will require user state.
-	- Not found error should have the routing info
-	- Add to _500.tpl
 	- login email should be case insenitive match
 	- some way to log everything that a user does, and have this be accessible to higher tiered admins.
 	- not found errors should also log the referer... if it comes from us then that is bad
 	- minification
-	- etags on everything public side
 	- gzip/deflate on js and css files
 	- cache and expires headers on all the js and css
 	- use google jQuery

@@ -109,9 +109,6 @@ my own minifier, which sounds like a bad idea).
 	rebuild_route builds the full route back to the beginning... or from one
 	router to another
 
-- all the wsgi inner functions should be named such as:
-	ModelEnviron__clear_after_request__wsgi_app with the classname and method and everything
-
 - pull out a bunch of todo itesm from http://www.catonmat.net/blog/50-ideas-for-the-new-catonmat-website/?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+catonmat+%28good+coders+code%2C+great+reuse%29&utm_content=Google+Reader 
   as it has some good ideas
 
@@ -132,10 +129,181 @@ my own minifier, which sounds like a bad idea).
 	- permissions should be heirarchical split with /. maybe so something with
 	  absolute vs relative ones
 
+	- groups
+		- can contain users, or other groups
+		- can have permissions
+	
+	django user model:
+		- is_staff: the user can access the admin site
+		- is_active: all has_perm(...) calls will return False, no matter the
+		  permissions
+		- is_superuser: all has_perm(...) calls will return True, no matter the
+		  permissions
+		- last_login: last time they logged in
+		- date_created: datetime when they were created
+		- is_anonymous(): always returns false for users. They seem to put in
+		  a dummy AnonymousUser if someone is not logged in
+		- is_authenticated(): has the user authenticated (in this session)? In
+		  django this will always return True.
+		- set_password(...)
+		- check_password(...)
+		- get_group_permissions(): a list of permissions obtained through membership
+		- get_all_permissions(): a list of all permissions
+		- has_perm(...): Do they have the permissions? For django they are
+		  of the format "<app label>.<permission codename>".
+		- has_perms(...): Do they have all the specified permissions?
+		- get_profile(): Returns the site-sepcific profile... Whatever that means.
+	
+	django user management:
+		- create_user(username, email, password=None)
+		- make_random_password(length=10, charset='...')
+		- login_required(app): a decorator which forwards you to the login page
+		  it takes a "redirect_field_name" parameter which determines the get
+		  key for where to redirect after login
+		- the login page is "/accounts/login" by default
+	
+	ideas of mine while reading django stuff
+		- sendmail(...): Send them an email.
+		- is_in_group(<groupname>): is_staff() is really just is_in_group('/staff')
+		- trigger_password_reset(): Send an email with a password reset link.
+		- Manager.authenticate(username, password): returns a user if it was
+		  valid. more likely this would also take: yubicode, ppp_token, ...
+		  This does NOT login the user; just authenticates them
+		- User.login() does the actual login using whatever persistance method
+		  has been chosed by the manager. It may take the request/response as
+		  an argument.
+		- User.logout(). It may take request/response as arguement. Should
+		  completely destroy any session that was setup for the user.
+		- the password hash
+			- parts can be hexencoded, and split with $ (kinda like crypt):
+			  type$version$hashtype$salt$hash
+			- could also be a url query:
+			  salt=1234567890abcdef&iter=1024&hash=1234567890abcdef1234567890abcdef
+			- could also be stored across several attributes...
+			- needs to be forward thinking, and deal with changing the algo
+			  later on
+		- should an anonymous user be an object, or None?
+			- with an object, we only have to do one test (has_perm) instead
+			  of two (user and user.has_perm). it seems like if we design the
+			  apps securely, we will always be checking permissions anyways
+			- with an object, if the user is not in the view context it is an
+			  error. with None, you never really know for sure. It is one less
+			  point of failure to expect it to be an object
+		- perhaps a manage.py script which is hooked into the app configuration
+		  is a good idea. it can be what sets permissions, adds superusers,
+		  edits config files, etc
+		- need not have admin subdomain. one can just go to /admin, and if you
+		  are in "admin mode" or not is just a flag in your session.
+		- if we keep using the same admin_gateway middleware (which enforces a
+		  login on all admin subdomain pages), then some other middleware could
+		  make an app not require that gateway to run. maybe. this would likely
+		  require all middleware to use a @middleware decorator which does some
+		  magic with metadata and such, and I don't really want to do that.
+		- @user_needs_perm('permission') requires a user to have a permission
+		  before they can go on. or @perm_required('perm')
+		- the resolution order of groups should be similar to the MRO for classes.
+		  because we expect to have a multiple inheritance structure, this is
+		  required
+		- it would be nice if the permissions we tested for were actual objects.
+		  then it would be relatively easy to go about populating a view with
+		  ALL of the possible permissions.
+	
+	- other django stuff:
+		- user is always an object in the view context
+		- perms is an object for testing for permission by proxying to the user
+		  ie perms.admin would be True if they had '/admin', perms.admin.whatever
+		  would be true for /admin/whatever'. make it callable for checking
+		  patterns: perms('/admin/*/something?k=v')
+
+
+	- cookies should be read-only on the request, and read-write on the response
+		But does this REALLY make a whole lot of sense? They could be read-write
+		on BOTH (the same object, actually).
+	
+	- change the url parameter on the login page that redirects to "next":
+		/login/?next=whereveryouwere . It also need not be url encoded. The query
+		should know that it does not need to encode slashes (by default); only
+		# and ?.
+	
+	- @as_request can allow you to return HTTP status exceptions and it would
+	  throw them for you. But why bother?
+	
+	- can formalchemy set 'enctype="multipart/form-data"' on the form?
+	
+	- can we get access to the reported content_type of the file that is being
+	  posted? perhaps the charset as well?
+	
+	- maybe extend the file upload protocol so that there is a function for
+	  write, and a function for the upload being done, and maybe the constructor
+	  gets the expected length and content type and so forth as well.
+	  http://docs.djangoproject.com/en/1.1/topics/http/file-uploads/#topics-http-file-uploads
+		
+- MapRouter should sort keys by length before trying to match.
+- ModuleMapRouter could map prefixes to module names to import: "app.controller.news.main"
+  could run "main" of "app.controller.news". This just seems kinda lazy on my
+  part though
+
+- consider having the 3 routing protocol methods return dicts instead of tuples.
+  it would make the code easier to read:
+	return dict(path=newpath, child=app, data={})
+
 - redirectors
 	mappings of paths (or path regexes) to map from/to with a http status code
 	(301?) and a location header
 
+- the App object can have mail_admins(...) that proxies sendmail to whomever
+  are specified as admins for the app (either in the config or the database?)
+
+	- mail_managers(...) or mail_group(groupname, ...)
+	- the From address should be automatically added. no-reply@domain.com
+	- the subject could have a prefix attached
+	- they could take only a subject and a message:
+		app.mail_admins('Help!', 'Something has exploded!')
+
+- the django mailers only check for newlines '\r' or '\n' in addresses, not for
+  something that completely parses properly.
+
+- django conditional view processing is pretty neat. a condition(etag_func=None, last_modified_func=None)
+  returns a decorator that will use the passed functions (which are given only
+  the request object) to see if the etag matches or the last_modified matches.
+  then it can send whatever headers it wants or calls the app. this is only
+  suggested (by me) if these calculations are very lightweight.
+
+	- @check_etag and @check_last_modified would both be for just one of the two
+	- you dont want to chain them though, as perhaps one would be true and the
+	  other false, and you want them BOTH to be true...
+
+- django has an intersting idea with a set_test_cookie() on the session. it
+  sets a test cookie. you can check for it with test_cookie_worked() and del
+  with delete_test_cookie(). You set the test cookie when displaying a login
+  form, and check for it when someone posts credentials back. you reject them
+  if they have not set cookies yet.
+  http://docs.djangoproject.com/en/1.1/topics/http/sessions/#module-django.contrib.sessions
+
+- django has a "sites" framework, to allow it to power more than one site with
+  the same code. I should try to make my App (or Site) class work in a way so
+  that several of them can play nicely beside each other. can import a site
+  config out of a configs folder (example_com.py or admin_example_com.py), or
+  perhaps run the domain through a mapping to determin which config to use
+  (so that admin.example.com uses the same config as example.com).
+
+- We no longer have a need for the admin sub-domain. Simply track if they are
+  logged in via the session. can even add a login link into the footer for the
+  client to use
+
+- get a lorem-ipsum generator into the main template context
+
+
+
+- read about the Atom publishing protocol, and the set of REST URLs that go with it
+  it seems the Pylons uses that setup a bunch (for resources in the route mapper
+  http://pylonshq.com/docs/en/0.9.7/thirdparty/routes/#routes.base.Mapper.resource )
+
+- Response.matches() and Response.not_modified() would call start with the right
+  headers
+
+- FieldSet class should be called FieldSet, not Form. form module should be at
+  nitrogen.form, not nitrogen.model.form
 
 - consider breaking various parts of nitrogen into different packages.
 	- they would assemble into the same namespace using what magic module does that...
@@ -148,59 +316,76 @@ my own minifier, which sounds like a bad idea).
 	- research other usability issues
 	- http://www.digital-web.com/articles/usability_for_rich_internet_applications/
 
-- some sort of SASS like meta language for specifying attributes of markup?
-	You have one layer of HAML for the markup itself, another layer for adding
-	classes and names and attributes to the markup itself, and another layer
-	of the css.
-	
-	Have it have python-like indentation, be haml like, and use markdown type
-	syntax for inline stuff.
-	
-	call it pyml (PYthon Markup Language)
-		#id
-			%p{'key': 'value', **attributes, (k, v) for something in data}
-				This is some content.
-				%strong
-					with inline strength
-				and
-				%em
-					inline emphasis
-				.
-				
-				A full blank line specifies that it should be a seperate
-				paragraph, but only if it is in a p block.
-			%
-				! if test():
-					some stuff in the test. you break out again by dropping out
-					of the if. the only nasty part is that we couldn't start
-					a tag in one block and finish it in another.
-				! endif
-				! for key in data:
-					## do something with key in here
-				! endfor
-				$ 'an expression'.title()
-				Or perhaps an ${'inline'.upper()} expression?				
-				## comment
-				
-				%img{'src':'/whatever.jpg'}
 
 
-script to auto-set the proper permissions for suexec on our server
-	looks in the conf/httpd.include for the
-	"SuexecUserGroup         mikeboers psacln" line to tell it what user/group
-	we need to run as
-	
-	check `id -Gn apache` to see if psasrv is there... then we know we are on
-	the vps
-	
-	or check the hostname...
 
-beta. and stage. should have a whitelist to allow entry. that whitelist should
+
+
+beta and stage should have a whitelist to allow entry. that whitelist should
 be able to be added to from the web with a password or by visiting some signed URL
+	
+	whitelist
+	checkpoint
+	sentinel
+	guard
+	gatekeeper
+	doorkeeper
+	monitor
+	sentry
+
+Figure out a better naming scheme for the functions that are WSGI middleware.
+The are called middleware by their function, but the function that does the
+actual wrapping is not middleware. Ideas:
+
+	- LogFormatter.wsgi_setup(app)
 
 go through route notes
-make sure all tests pass
 decide if I want the route object to have item access to the data, or if that
 is on route.data
 	if the second, does the request object .route refer to the route, or the data
 	is the data a dict, or a multimap?
+	
+	seems like the Request will be mainly using data, and nothing else will
+	the Request should build up a dictionary for it's own uses. the route need
+	not do it
+
+get new permissions script in place
+
+view render function should take a path to search before the configed one
+be able to build new render functions which have a set of default parameters
+and a default path extension
+
+FieldSet._render should take a multipart=True param which allows for file uploads.
+	that should be passed into the viewenviron.render call, and the template
+	set enctype="multipart/form-data"
+
+some class/function to manage request throttling. once configured, calling the
+function will simply delay for a certain amount of time. should be able to be
+tied to both the IP, and all activity in general.
+
+start designing an App class which loads a config, sets up a model/view/
+textblob environ, and generally manages the interactions bettween all the
+parts of a site. This should be a part of nitrogen.
+
+standardize on a primary middleware wrapping function which does all the
+wrapping. Several wrappers will handle discrete types: one for error logging
+and reporting, one for managing http (encoding, etagging), one to put them
+all together
+
+Decide if I really want to use my custom password hashing scheme, or if I
+should find some industry standard way.
+	
+	PBKDF2 is a "modern password-based key derivation function"
+	
+	In reading the docs for the above, they don't seem to mind just repeatedly
+	hashing some text with no other transformations to it. So we could just
+		password + salt, and hash it 1000 times.
+	
+	Consider making a eksblowfish module. It is designed to combat being sped
+	up in hardware =P
+
+
+
+
+
+

@@ -7,3 +7,41 @@ Dollar delimeted variables ala Mako: %a{'href': item.link} ${item.title}
 
 Another option entirely is to write this as a small wrapper around Mako
 myself. It really wouldn't be all that bad.
+
+
+
+- some sort of SASS like meta language for specifying attributes of markup?
+	You have one layer of HAML for the markup itself, another layer for adding
+	classes and names and attributes to the markup itself, and another layer
+	of the css.
+	
+	Have it have python-like indentation, be haml like, and use markdown type
+	syntax for inline stuff.
+	
+	call it pyml (PYthon Markup Language)
+		#id
+			%p{'key': 'value', **attributes, (k, v) for something in data}
+				This is some content.
+				%strong
+					with inline strength
+				and
+				%em
+					inline emphasis
+				.
+				
+				A full blank line specifies that it should be a seperate
+				paragraph, but only if it is in a p block.
+			%
+				! if test():
+					some stuff in the test. you break out again by dropping out
+					of the if. the only nasty part is that we couldn't start
+					a tag in one block and finish it in another.
+				! endif
+				! for key in data:
+					## do something with key in here
+				! endfor
+				$ 'an expression'.title()
+				Or perhaps an ${'inline'.upper()} expression?				
+				## comment
+				
+				%img{'src':'/whatever.jpg'}

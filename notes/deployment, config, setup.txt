@@ -1,30 +1,11 @@
-Consider using a Makefile for the main setup file
-
-Consider using virtualenv to manage packages and libraries and such. Can use
-distutils or what have you to make sure that all the dependencies are in
-place. This was we can move the app out of httpdocs and nitrogen out of the
-app.
-
-Consider putting the server under version control, with most of the server
-stuff added to gitignore. Need to be smart about how the databases are handled
-to make sure there are never any merge conflicts with them.
-
 
 Absolutely NOTHING should ever happen when you import nitrogen, or any of the
 modules therein. NOTHING. The setup/config should be done by some bootstrapper
 that is explicitly setup by the application. Explicit is better than implicit.
     - loggers can be setup by this bootstrapper, as driven by a installation
       specific config file.
-    - a config object can be injected into the environment
-
-There should be no need for a global threading.local() object. Everything can
-be done with the environment. There is one on the runners module as well.
-
-Runners should potentially be called wsgi. It is the very low level WSGI stuff
 
 Every module should be as seperate from each other as possible.
-
-The bootstrapper could potentially chdir into the directory above all the modules and httpdocs and logs and data
 
 ==============================================================================
 BOOTSTRAPPING and SETUP

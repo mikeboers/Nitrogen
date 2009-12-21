@@ -56,6 +56,8 @@ for dirpath, dirnames, filenames in os.walk(root):
             
             # Turn it into a module
             name = path[len(root_dir) + 1:-3].replace(os.path.sep, '.')
+            if name.endswith('.__init__'):
+                name = name[:-len('.__init__')]
             
             # Skip the library or "binaries".
             if '.lib.' in name or '.bin.' in name:

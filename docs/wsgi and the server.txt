@@ -8,3 +8,7 @@ is Set-Cookie, which is sent for every cookie.
 
 A good class for handling headers is the wsgiref.headers.Header class. It does
 everything that I need it to.
+
+Be careful when naming custom functions that are injected into the WSGI stack.
+Having a dozen "inner" functions or "inner_start" is incredibly unhelpful in
+a traceback.

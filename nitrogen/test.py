@@ -1,3 +1,11 @@
+"""
+
+>>> 1
+1
+
+
+"""
+
 import unittest
 import wsgiref.util
 from pprint import pprint
@@ -47,15 +55,6 @@ def run():
             print "Found %d doc test%s." % (doc_count, 's' if doc_count > 1 else '')
     except:
         doc_suite = None
-    
-    # Try to find coresponding test file.
-    test_path = m.__file__[:-3] + '.doctest'
-    if os.path.exists(test_path):
-        try:
-            suite.addTest(doctest.DocFileSuite(test_path, module_relative=False, encoding='utf8'))
-            print "Found doc test file."
-        except:
-            pass
     
     # Add the nose (and unittest) tests.
     nose_loader = nose.loader.TestLoader()
