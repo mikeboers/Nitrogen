@@ -56,10 +56,10 @@ def timed_hash(password, state=None):
     log.warning('timed_hash is depreciated')
     h = PasswordHash(state)
     if state is not None:
-        if h.check_password(password):
+        if h.check(password):
             return state
         return None
-    h.set_password(password)
+    h.set(password)
     return str(h)
     
 

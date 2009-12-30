@@ -21,38 +21,39 @@ class PasswordHash(object):
     basic example:
     
         >>> h = PasswordHash()
-        >>> h.set_password('password')
+        >>> h.set('password')
     
-        >>> h.check_password('password')
+        >>> h.check('password')
         True
-        >>> h.check_password('wrong')
+        >>> h.check('wrong')
         False
     
     unicode:
-        >>> h.set_password(u'password')
-        >>> h.check_password(u'password')
+        >>> h.set(u'password')
+        >>> h.check(u'password')
         True
-        >>> h.check_password(u'wrong')
+        >>> h.check(u'wrong')
         False
         
     verifying version 1.0:
         
-        >>> h = PasswordHash('v=1.0&type=sha256&iter=4716&salt=78101bf4c50e5c359282feadf4eac583bbdf100fcfff15a7760c307c791ea4be&hash=db1d24423c1af72a7df6b48fc91f65c95de968884cb6a812368436e31dd52ada')
-        >>> h.check_password('password')
+        >>> h = PasswordHash('v=1.0&num=4716&salt=78101bf4c50e5c359282feadf4eac583bbdf100fcfff15a7760c307c791ea4be&hash=db1d24423c1af72a7df6b48fc91f65c95de968884cb6a812368436e31dd52ada')
+        >>> h.check('password')
         True
-        >>> h.check_password('wrong')
+        >>> h.check('wrong')
         False
-        >>> h.should_regenerate()
+        >>> h.should_reset()
         False
         
-    
     """
-    def __init__(self, state=None, hash_name='sha256', min_time=0.01,
-        min_iter=1024):
+    
+    CURRENT_VERSION = '1.0'
+    MIN_VERSION = '1.0'
+    
+    def __init__(self, state=None, password=None, min_time=0.01, min_iter=1024):
         
         self.min_time = min_time
         self.min_iter = min_iter
-        self.hash_name = hash_name
         
         self.num_iter = None
         self.salt = None
@@ -60,8 +61,11 @@ class PasswordHash(object):
         self.version = None
         self.check_time = None
         
-        if state:
+        if state is not None:
             self.restore_state(state)
+        
+        if password is not None:
+            self.set(password)
         
     def restore_state(self, state):
         
@@ -69,59 +73,67 @@ class PasswordHash(object):
         # once the rebelhouse is up to date.
         if len(state) == 69 and ord(state[0]) == 1:
             self.version = '0.1'
-            self.hash_name = 'sha256'
             self.num_iter = int(state[-4:].encode('hex'), 16)
             self.salt = state[1:33]
             self.hash = state[33:65]
         else:
             query = Query(state)
             self.version = query['v']
-            self.hash_name = query['type']
-            self.num_iter = int(query['iter'])
+            self.num_iter = int(query['num'])
             self.salt = query['salt'].decode('hex')
             self.hash = query['hash'].decode('hex')
     
-    @property
-    def hasher(self):
-        return NAME_TO_HASH[self.hash_name]
+    def __str__(self):
+        return str(Query([('v', self.version), ('num', self.num_iter or 0),
+            ('salt', (self.salt or '').encode('hex')), ('hash', (self.hash or
+            '').encode('hex'))]))
+    
+    def __repr__(self):
+        return '%s(%r)' % (self.__class__.__name__, str(self))
     
     def resalt(self):
-        self.salt = self.hasher(os.urandom(8192)).digest()
+        self.salt = hashlib.sha256(os.urandom(8192)).digest()
     
-    def set_password(self, password, best_of=3):
+    def set(self, password, best_of=3):
         rounds = []
         for i in xrange(best_of):
-            self._set_password(password)
+            self._set(password)
             rounds.append((self.num_iter, str(self)))
         rounds.sort()
         self.restore_state(rounds[-1][1])
+        self.version = self.CURRENT_VERSION
         
-    def _set_password(self, password):
+    def _set(self, password):
         timer = time.time
-        hasher = self.hasher
+        hasher = hashlib.sha256
         
         self.resalt()
         num_iter = 0
         start_time = timer()
         
         blob = hmac.new(self.salt, password, hasher).digest()
-        while num_iter < self.min_iter or (timer() - start_time < self.min_time):
+        while num_iter < self.min_iter or (timer() - start_time <
+            self.min_time):
             num_iter += 1
             blob = hasher(blob).digest()
         
-        self.version = '1.0'
         self.num_iter = num_iter
         self.hash = blob
     
-    def check_password(self, password):
+    def check(self, password):
         return {
             '0.1': self._check_v0_1,
             '1.0': self._check_v1_0,
         }[self.version](password)
     
     def _check_v0_1(self, password):
-        """This is the old timed_hash."""
-        hasher = self.hasher
+        """This is the old timed_hash.
+        
+        The only place this is in use will be the beta and demo sites for
+        PixRay, RebelHouse, and Swisssol.
+        
+        """
+        hasher = hashlib.sha256
         salt = self.salt
         blob = password
         for i in xrange(self.num_iter):
@@ -130,7 +142,7 @@ class PasswordHash(object):
         
     def _check_v1_0(self, password):
         timer = time.time
-        hasher = self.hasher
+        hasher = hashlib.sha256
         
         start_time = timer()
         
@@ -141,23 +153,14 @@ class PasswordHash(object):
         self.check_time = timer() - start_time
         return blob == self.hash
     
-    def should_regenerate(self):
-        if self.version != '1.0':
+    def should_reset(self):
+        if self.version < self.MIN_VERSION:
             return True
         if self.num_iter < self.min_iter:
             return True
-        # Usually this ratio is about 0.79 for passwords just generated.
-        return self.check_time / self.min_time < 0.67
-    
-    def __str__(self):
-        return str(Query([('v', self.version), ('type', self.hash_name), ('iter', self.num_iter or 0),
-            ('salt', (self.salt or '').encode('hex')), ('hash', (self.hash or
-            '').encode('hex'))]))
-    
-    def __repr__(self):
-        return '%s(%r)' % (self.__class__.__name__, str(self))
-
-
+        if self.check_time is not None:    
+            # Usually this ratio is about 0.79 for passwords just generated.
+            return self.check_time / self.min_time < 0.67
 
 
 def test_timed_hash_compatibility():
@@ -169,9 +172,9 @@ def test_timed_hash_compatibility():
     for hash in hashes:
         hash = hash.decode('hex')
         h = PasswordHash(hash)
-        assert h.check_password('password')
-        assert not h.check_password('wrong')
-        assert h.should_regenerate()
+        assert h.check('password')
+        assert not h.check('wrong')
+        assert h.should_reset()
 
 
 if __name__ == '__main__':
