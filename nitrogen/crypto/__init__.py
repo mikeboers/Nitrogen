@@ -1,25 +1,18 @@
 '''Crypto module.'''
 
 from subprocess import Popen, PIPE
-import base64
-import hashlib
-import os
-import StringIO
-import time
+import logging
+
+from .password import PasswordHash
 
 
-def base64_encode(data, urlsafe=False):
-    return base64.b64encode(data, '-_' if urlsafe else None)
+log = logging.getLogger(__name__)
 
-def base64_decode(data):
-    return base64.b64decode(s.replace('-', '+').replace('_', '/'))
 
-base16_encode = base64.b16encode
-base16_decode = lambda data: base64.b16decode(data, True)
 
-# Setup the hash functions.
-for algo in 'md5 sha1 sha224 sha256 sha384 sha512'.split():
-    globals()[algo] = getattr(hashlib, algo)
+
+
+
 
 # Padding functions for compatibility with OpenSSL padding
 def pkcs5(string, blocksize):
@@ -29,8 +22,14 @@ def unpkcs5(string):
     pad = ord(string[-1])
     return string[:-pad]
 
-def timed_hash(input, to_check=None, min_time=0.033, _inner=False):
-    """Hashes the input with a random salt a number of times until enough
+
+def timed_hash(password, state=None):
+    """For backwards compatibility. Uses the new methods, but is able to check
+    against the old ones.
+    
+    Original docs as follows:
+    
+    Hashes the input with a random salt a number of times until enough
     time has elapsed.
     
     The result is of the form (68 bytes):
@@ -44,9 +43,6 @@ def timed_hash(input, to_check=None, min_time=0.033, _inner=False):
     Examples:
     
         >>> hash = timed_hash('password')
-        >>> hash.encode('hex')
-        >>> len(hash)
-        69
         >>> hash == timed_hash('password', hash)
         True
         >>> hash == timed_hash('different', hash)
@@ -57,78 +53,46 @@ def timed_hash(input, to_check=None, min_time=0.033, _inner=False):
         
     """
     
-    if isinstance(input, unicode):
-        input = input.encode('utf8')
+    log.warning('timed_hash is depreciated')
+    h = PasswordHash(state)
+    if state is not None:
+        if h.check_password(password):
+            return state
+        return None
+    h.set_password(password)
+    return str(h)
     
-    min_cycles=2**12
-    inner_trial_count=3
-    
-    cycle_count = None
-    if to_check and len(to_check) == 32 + 32 + 4 + 1:
-        version = ord(to_check[0])
-        assert version == 1
-        to_check = to_check[1:]
-        salt = to_check[0:32]
-        cycle_count = int(to_check[-4:].encode('hex'), 16)
-    else:
-        to_check = None
-        salt = sha256(os.urandom(512)).digest()
-    
-    # If we are building up a new hash...
-    if to_check is None and not _inner:
-        
-        # We need to run a couple trials
-        hashes = [timed_hash(
-            input=input,
-            min_time=min_time,
-            _inner=True) for x in range(inner_trial_count)]
-        
-        # Pull out the one with the most cycles.
-        count, salt, hash = list(reversed(sorted(hashes)))[0]
-        
-        return '%c%s%s%s' % (1, salt, hash, ('%08x' % count).decode('hex'))
-    
-    hash = input
-    start_time = time.time()
-    count = 0
-    while True:
-        
-        # Track the number of cycles if we are verifying.
-        if cycle_count is not None:
-            if not cycle_count:
-                break
-            cycle_count -= 1
-        
-        # Track the time and minimum number of cycles for generating.
-        elif count >= min_cycles and not count % 64 and (time.time() - start_time) >= min_time:
-            break
-        count += 1
-        
-        # Do the actual hash
-        hash = sha256(salt + hash).digest()
-    
-    # Return to ourself.
-    if _inner:    
-        # print 'inner', count
-        return (count, salt, hash)
-    
-    # print 'count', count
-    return '%c%s%s%s' % (1, salt, hash, ('%08x' % count).decode('hex'))
-
-
-
-
-
-
-
-
 
 class CryptoError(Exception):
     pass
 
+class OpenSSLError(CryptoError):
+    pass
+
+
 class AES(object):
+    """AES encryptor.
     
-    def __init__(self, key, iv=None, pad=True, salt=True, base64=False):
+    Example:
+    
+        >>> aes = AES('0123456789abcdef', pad=True, base64=True)
+        >>> aes.encrypt('Hello, world!')
+        'U35iwIjove8a5guo1sEjSg=='
+        >>> aes.decrypt('U35iwIjove8a5guo1sEjSg==')
+        'Hello, world!'
+        
+        >>> aes.decrypt('bad length')
+        Traceback (most recent call last):
+        ...
+        OpenSSLError: bad decrypt; 0606506D:digital envelope routines:EVP_DecryptFinal_ex:wrong final block length
+        
+        >>> aes.decrypt('U35iwIlove8a5guo1sEjSg==')
+        Traceback (most recent call last):
+        ...
+        OpenSSLError: bad decrypt; 06065064:digital envelope routines:EVP_DecryptFinal_ex:bad decrypt
+    
+    """
+    def __init__(self, key, iv=None, pad=False, salt=False, base64=False):
         self.key = key
         self.iv = str(iv) if iv else chr(0) * 16
         self.pad = pad
@@ -152,8 +116,8 @@ class AES(object):
     def _openssl_engine(self, encrypt, data):
         cmd = [
             'openssl', 'aes-%d-cbc' % self.keysize, '-e' if encrypt else '-d',
-            '-k', base16_encode(self.key),
-            '-iv', base16_encode(self.iv)
+            '-k', self.key.encode('hex'),
+            '-iv', self.iv.encode('hex')
         ]
         if not self.pad:
             cmd.append('-nopad')
@@ -169,8 +133,21 @@ class AES(object):
         else:
             out, err = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE).communicate(data)
             if err:
-                raise CryptoError('OpenSSL said %r' % err)
+                errors = []
+                for raw_error in err.strip().splitlines():
+                    error = raw_error.split(':')
+                    if len(error) >= 6 and error[1] == 'error':
+                        # error_id     = error[2] # Can lookup with `openssl errstr <id>`
+                        # error_module = error[3]
+                        # error_func   = error[4]
+                        # error_msg    = error[5]
+                        # errors.append('%s:%s:%s' % (error_id, error_module, error_msg))
+                        errors.append(':'.join(error[2:6]))
+                    else:
+                        errors.append(raw_error.strip())                 
+                raise OpenSSLError('; '.join(errors))
             return out
+
 
 if __name__ == '__main__':
     from ..test import run

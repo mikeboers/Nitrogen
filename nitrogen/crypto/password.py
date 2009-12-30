@@ -18,7 +18,7 @@ register_hash('sha256', hashlib.sha256)
 class PasswordHash(object):
     """
     
-    Example:
+    basic example:
     
         >>> h = PasswordHash()
         >>> h.set_password('password')
@@ -27,8 +27,15 @@ class PasswordHash(object):
         True
         >>> h.check_password('wrong')
         False
+    
+    unicode:
+        >>> h.set_password(u'password')
+        >>> h.check_password(u'password')
+        True
+        >>> h.check_password(u'wrong')
+        False
         
-        Verifying version 1.
+    verifying version 1.0:
         
         >>> h = PasswordHash('v=1.0&type=sha256&iter=4716&salt=78101bf4c50e5c359282feadf4eac583bbdf100fcfff15a7760c307c791ea4be&hash=db1d24423c1af72a7df6b48fc91f65c95de968884cb6a812368436e31dd52ada')
         >>> h.check_password('password')
