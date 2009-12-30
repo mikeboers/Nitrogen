@@ -44,6 +44,7 @@ def timed_hash(input, to_check=None, min_time=0.033, _inner=False):
     Examples:
     
         >>> hash = timed_hash('password')
+        >>> hash.encode('hex')
         >>> len(hash)
         69
         >>> hash == timed_hash('password', hash)
@@ -172,5 +173,5 @@ class AES(object):
             return out
 
 if __name__ == '__main__':
-    from test import run
+    from ..test import run
     run()
