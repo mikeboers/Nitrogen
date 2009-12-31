@@ -174,14 +174,7 @@ my own minifier, which sounds like a bad idea).
 		  an argument.
 		- User.logout(). It may take request/response as arguement. Should
 		  completely destroy any session that was setup for the user.
-		- the password hash
-			- parts can be hexencoded, and split with $ (kinda like crypt):
-			  type$version$hashtype$salt$hash
-			- could also be a url query:
-			  salt=1234567890abcdef&iter=1024&hash=1234567890abcdef1234567890abcdef
-			- could also be stored across several attributes...
-			- needs to be forward thinking, and deal with changing the algo
-			  later on
+
 		- should an anonymous user be an object, or None?
 			- with an object, we only have to do one test (has_perm) instead
 			  of two (user and user.has_perm). it seems like if we design the
@@ -371,6 +364,21 @@ standardize on a primary middleware wrapping function which does all the
 wrapping. Several wrappers will handle discrete types: one for error logging
 and reporting, one for managing http (encoding, etagging), one to put them
 all together
+
+
+
+
+- the password hash
+	- parts can be hexencoded, and split with $ (kinda like crypt):
+	  type$version$hashtype$salt$hash
+	- could also be a url query:
+	  salt=1234567890abcdef&iter=1024&hash=1234567890abcdef1234567890abcdef
+	- could also be stored across several attributes...
+	- needs to be forward thinking, and deal with changing the algo
+	  later on
+
+
+
 
 Decide if I really want to use my custom password hashing scheme, or if I
 should find some industry standard way.
