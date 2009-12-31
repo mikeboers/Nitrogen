@@ -41,9 +41,8 @@ log = logging.getLogger(__name__)
 
 
 class MaxLengthWrapper(object):
-    
-    """Wrapper around file-like objects to ensure that they only recieve as
-    much data as we have permitted them to.
+    """Wrapper around file-like objects to ensure that they recieve as much
+    data as we have permitted them to.
 
     """
     
@@ -56,16 +55,16 @@ class MaxLengthWrapper(object):
     def write(self, stuff):
         self.recieved += len(stuff)
         if self.max_length is not None and self.recieved > self.max_length:
-            raise ValueError("too much data recieved")
+            raise ValueError("too much data recieved; got %d" % self.recieved)
         return self.fh.write(stuff)
 
 
-def make_stringio(key, filename, length):
+def make_stringio(field):
     """Simple make_file which returns a StringIO."""
     return StringIO()
 
 
-def make_temp_file(key, filename, length):
+def make_temp_file(field):
     """Simple make_file which returns a temporary file.
     
     The underlaying file will be removed from the disk when this object is
@@ -110,20 +109,20 @@ def field_storage(environ, make_file, max_file_length):
         def __init__(self, *args, **kwargs):
             cgi.FieldStorage.__init__(self, *args, **kwargs)
             self.made_file = False
+        
+        @property
+        def key(self):
+            return self.name
             
         def make_file(self, binary=None):
             self.made_file = True
             if not make_file:
-                raise ValueError("not accepting posted files; "
-                    "no make_file set")
+                raise ValueError("no make_file set; "
+                    "not accepting posted files")
             if max_file_length is not None and self.length > max_file_length:
                 raise ValueError("reported file size is too big: %r > %r" % (
                     self.length, max_file_length))
-            return MaxLengthWrapper(make_file(
-                self.name,
-                self.filename,
-                self.length if self.length > 0 else 0
-            ), max_file_length)
+            return MaxLengthWrapper(make_file(self), max_file_length)
     
     class MasterFieldStorage(cgi.FieldStorage):
         
@@ -167,6 +166,9 @@ def field_storage(environ, make_file, max_file_length):
         
         # Pull the actual files out of the MaxLengthWrapper(s).
         if chunk.filename:
+            if chunk.length >= 0 and chunk.file.recieved != chunk.length:
+                raise ValueError("incorrect file length; got %d of %d" % (
+                    chunk.file.recieved, chunk.length))
             chunk.file = chunk.file.fh
     
     return fs
@@ -179,13 +181,13 @@ def get_parser(app, **kwargs):
     
     """
     
-    def webio__get_parser_app(environ, start):
+    def get_parser_app(environ, start):
         def gen():
             query = environ.get('QUERY_STRING', '')
             return Query(query).allitems()
         environ['nitrogen.get'] = DelayedMultiMap(gen)
         return app(environ, start)
-    return webio__get_parser_app    
+    return get_parser_app    
 
 
 def post_parser(app, make_file=None, max_file_length=None, environ=None, **kwargs):
@@ -212,19 +214,19 @@ def post_parser(app, make_file=None, max_file_length=None, environ=None, **kwarg
     
     """
     
-    def webio__post_parser_app(environ, start):
+    def post_parser_app(environ, start):
         
-        # Don't need to bother doing anything fancy if it isn't a POST.
-        if environ['REQUEST_METHOD'].lower() != 'post':
+        # Don't need to bother doing anything fancy if this is a GET
+        if environ['REQUEST_METHOD'].lower() == 'get':
             post  = MultiMap()
             files = MultiMap()
         
         else:
-            def map_supplier_builder(is_files):
-                def supplier():
-                    fs = map_supplier_builder.fs
+            def post_parser_supplier_builder(is_files):
+                def post_parser_supplier():
+                    fs = post_parser_supplier_builder.fs
                     if not fs:
-                        fs = map_supplier_builder.fs = field_storage(
+                        fs = post_parser_supplier_builder.fs = field_storage(
                             environ=environ,
                             make_file=files.make_file,
                             max_file_length=files.max_file_length
@@ -237,11 +239,11 @@ def post_parser(app, make_file=None, max_file_length=None, environ=None, **kwarg
                         # Send to post object?
                         elif not chunk.filename and not is_files:
                             yield (chunk.name.decode(charset, 'error'), chunk.value.decode(charset, 'error'))
-                return supplier
-            map_supplier_builder.fs = None
+                return post_parser_supplier
+            post_parser_supplier_builder.fs = None
             
-            post  = DelayedMultiMap(map_supplier_builder(is_files=False))
-            files = DelayedMultiMap(map_supplier_builder(is_files=True))
+            post  = DelayedMultiMap(post_parser_supplier_builder(is_files=False))
+            files = DelayedMultiMap(post_parser_supplier_builder(is_files=True))
             
         files.make_file = make_file
         files.max_file_length = max_file_length
@@ -250,7 +252,7 @@ def post_parser(app, make_file=None, max_file_length=None, environ=None, **kwarg
         environ['nitrogen.files'] = files
         return app(environ, start)
     
-    return webio__post_parser_app
+    return post_parser_app
         
 
 def cookie_parser(app, hmac_key=None, **kwargs):
@@ -264,10 +266,10 @@ def cookie_parser(app, hmac_key=None, **kwargs):
     """
     
     class_ = cookie.make_signed_container(hmac_key) if hmac_key else cookie.Container
-    def webio__cookie_parser_app(environ, start):
+    def cookie_parser_app(environ, start):
         environ['nitrogen.cookies'] = class_(environ.get('HTTP_COOKIE', ''))
         return app(environ, start)    
-    return webio__cookie_parser_app
+    return cookie_parser_app
 
 
 def cookie_builder(app, **kwargs):
@@ -277,13 +279,13 @@ def cookie_builder(app, **kwargs):
     
     This tends to be used along with the cookie_parser.
     """
-    def webio__cookie_builder_app(environ, start):
-        def webio__cookie_builder_start(status, headers, exc_info=None):
+    def cookie_builder_app(environ, start):
+        def cookie_builder_start(status, headers, exc_info=None):
             cookies = environ['nitrogen.cookies']
             headers.extend(cookies.build_headers())
             start(status, headers)
-        return app(environ, webio__cookie_builder_start)
-    return webio__cookie_builder_app
+        return app(environ, cookie_builder_start)
+    return cookie_builder_app
 
 
 def uri_parser(app, **kwargs):
@@ -293,22 +295,22 @@ def uri_parser(app, **kwargs):
     
     """
     
-    def webio__uri_parser_app(environ, start):
+    def uri_parser_app(environ, start):
         environ['nitrogen.uri'] = URI('http://' + environ['SERVER_NAME'] + environ.get('REQUEST_URI', ''))
         return app(environ, start)
-    return webio__uri_parser_app
+    return uri_parser_app
 
 
 def header_parser(app, **kwargs):
     """WSGI middleware which adds a header mapping to the environment."""
-    def webio__header_parser_app(environ, start):
+    def header_parser_app(environ, start):
         def gen():
             for k, v in environ.items():
                 if k.startswith('HTTP_'):
                     yield k[5:], v
         environ['nitrogen.headers'] = DelayedHeaders(gen)
         return app(environ, start)
-    return webio__header_parser_app
+    return header_parser_app
     
 
 def request_params(app, parse_headers=True, parse_uri=True, parse_get=True, parse_post=True,
