@@ -7,14 +7,6 @@ import time
 from ..uri.query import Query
 
 
-NAME_TO_HASH = {}
-def register_hash(name, hash):
-    NAME_TO_HASH[name] = hash
-
-register_hash('md5', hashlib.md5)
-register_hash('sha256', hashlib.sha256)
-
-
 class PasswordHash(object):
     """
     
@@ -49,11 +41,13 @@ class PasswordHash(object):
     
     CURRENT_VERSION = '1.0'
     MIN_VERSION = '1.0'
+    MIN_TIME = 0.01
+    MIN_ITER = 2**10
     
-    def __init__(self, state=None, password=None, min_time=0.01, min_iter=1024):
+    def __init__(self, state=None, password=None, min_time=None, min_iter=None):
         
-        self.min_time = min_time
-        self.min_iter = min_iter
+        self.min_time = min_time or self.MIN_TIME
+        self.min_iter = min_iter or self.MIN_ITER
         
         self.num_iter = None
         self.salt = None
@@ -94,7 +88,8 @@ class PasswordHash(object):
     def resalt(self):
         self.salt = hashlib.sha256(os.urandom(8192)).digest()
     
-    def set(self, password, best_of=3):
+    def set(self, password, best_of=1):    
+        self.resalt()
         rounds = []
         for i in xrange(best_of):
             self._set(password)
@@ -107,13 +102,11 @@ class PasswordHash(object):
         timer = time.time
         hasher = hashlib.sha256
         
-        self.resalt()
         num_iter = 0
-        start_time = timer()
+        end_time = timer() + self.min_time
         
         blob = hmac.new(self.salt, password, hasher).digest()
-        while num_iter < self.min_iter or (timer() - start_time <
-            self.min_time):
+        while num_iter < self.min_iter or timer() < end_time:
             num_iter += 1
             blob = hasher(blob).digest()
         
@@ -121,10 +114,13 @@ class PasswordHash(object):
         self.hash = blob
     
     def check(self, password):
-        return {
+        start_time = time.time()
+        out = {
             '0.1': self._check_v0_1,
             '1.0': self._check_v1_0,
         }[self.version](password)
+        self.check_time = time.time() - start_time
+        return out
     
     def _check_v0_1(self, password):
         """This is the old timed_hash.
@@ -141,16 +137,10 @@ class PasswordHash(object):
         return blob == self.hash
         
     def _check_v1_0(self, password):
-        timer = time.time
         hasher = hashlib.sha256
-        
-        start_time = timer()
-        
         blob = hmac.new(self.salt, password, hasher).digest()
         for i in xrange(self.num_iter):
             blob = hasher(blob).digest()
-        
-        self.check_time = timer() - start_time
         return blob == self.hash
     
     def should_reset(self):
@@ -159,7 +149,8 @@ class PasswordHash(object):
         if self.num_iter < self.min_iter:
             return True
         if self.check_time is not None:    
-            # Usually this ratio is about 0.79 for passwords just generated.
+            # Usually this ratio is about 0.80 for passwords just generated.
+            # print self.check_time / self.min_time
             return self.check_time / self.min_time < 0.67
 
 
