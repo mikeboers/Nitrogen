@@ -368,32 +368,5 @@ all together
 
 
 
-- the password hash
-	- parts can be hexencoded, and split with $ (kinda like crypt):
-	  type$version$hashtype$salt$hash
-	- could also be a url query:
-	  salt=1234567890abcdef&iter=1024&hash=1234567890abcdef1234567890abcdef
-	- could also be stored across several attributes...
-	- needs to be forward thinking, and deal with changing the algo
-	  later on
-
-
-
-
-Decide if I really want to use my custom password hashing scheme, or if I
-should find some industry standard way.
-	
-	PBKDF2 is a "modern password-based key derivation function"
-	
-	In reading the docs for the above, they don't seem to mind just repeatedly
-	hashing some text with no other transformations to it. So we could just
-		password + salt, and hash it 1000 times.
-	
-	Consider making a eksblowfish module. It is designed to combat being sped
-	up in hardware =P
-
-
-
-
 
 
