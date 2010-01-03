@@ -1,9 +1,9 @@
 
 
 from nitrogen.route.rerouter import ReRouter
-from .environ import UserEnviron
-from ..model.environ import ModelEnviron
-from ..view.environ import ViewEnviron
+from .environ import UserContext
+from ..model.environ import ModelContext
+from ..view.environ import ViewContext
 
 class UserController(object):
     
@@ -23,9 +23,9 @@ class UserController(object):
 
 
 def test_main():
-    model_environ = ModelEnviron('sqlite://')
-    user_environ = UserEnviron('main-', model_environ)
-    view_environ = ViewEnviron()
+    model_environ = ModelContext('sqlite://')
+    user_environ = UserContext('main-', model_environ)
+    view_environ = ViewContext()
     user_controller = UserController(user_environ, view_environ)
 
 if __name__ == '__main__':

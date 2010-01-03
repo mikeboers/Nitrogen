@@ -112,7 +112,7 @@ my own minifier, which sounds like a bad idea).
 - pull out a bunch of todo itesm from http://www.catonmat.net/blog/50-ideas-for-the-new-catonmat-website/?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+catonmat+%28good+coders+code%2C+great+reuse%29&utm_content=Google+Reader 
   as it has some good ideas
 
-- user environ
+- user.context
 	- allow username, realname, or email to be used as password
 	- many different ways to authenticate: password, PPP, yubikey, email token
 	  prowl token, sms, openid, etc
@@ -296,7 +296,7 @@ my own minifier, which sounds like a bad idea).
   headers
 
 - FieldSet class should be called FieldSet, not Form. form module should be at
-  nitrogen.form, not nitrogen.model.form
+  nitrogen.form, not nitrogen.form
 
 - consider breaking various parts of nitrogen into different packages.
 	- they would assemble into the same namespace using what magic module does that...
@@ -367,7 +367,7 @@ all together
 
 
 - What should I name all these environs?
-	- model_environ
+	- model.context
 	- model_module
 	- model_setup
 	- model_config

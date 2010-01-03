@@ -1,4 +1,4 @@
-"""Module for the ModelEnviron class."""
+"""Module for the ModelContext class."""
 
 import logging
 import threading
@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 
 from .base import build_declarative_base
 
-class ModelEnviron(object):
+class ModelContext(object):
     """A helper to contain the basic parts of a database connections.
     
     Attrs:
@@ -70,9 +70,9 @@ class ModelEnviron(object):
     
     def wsgi_reset(self, app):
         """Reset all the thread-local sessions generated."""
-        def ModelEnviron_wsgi_reset_app(environ, start):
+        def ModelContext_wsgi_reset_app(environ, start):
             for x in app(environ, start):
                 yield x
             for s in self._local_sessions:
                 s.close()
-        return ModelEnviron_wsgi_reset_app
+        return ModelContext_wsgi_reset_app

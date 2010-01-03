@@ -5,7 +5,7 @@ import datetime
 from sqlalchemy import *
 
 from ..editable import Editable
-from ..model.form import MarkdownRenderer
+from ..form import MarkdownRenderer
 
 def build_textblob_functions(engine, session, Form, Base, render):
     

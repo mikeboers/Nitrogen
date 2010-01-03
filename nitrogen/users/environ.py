@@ -11,7 +11,7 @@ from sqlalchemy.types import MutableType, TypeDecorator
 
 from nitrogen.crypto.password import PasswordHash
 from nitrogen.uri import Query
-from nitrogen.model.environ import ModelEnviron
+from nitrogen.model.environ import ModelContext
 from nitrogen.route.rerouter import ReRouter
 
 from . import *
@@ -104,7 +104,7 @@ def build_User(name, model_environ):
     return User
     
     
-class UserEnviron(object):
+class UserContext(object):
     
     def __init__(self, name, model_environ):
         self.name = str(name)
@@ -154,8 +154,8 @@ class UserEnviron(object):
         
     
 def test_stuff():
-    model_environ = ModelEnviron('sqlite:///:memory:')
-    user_environ = UserEnviron('main', model_environ)
+    model_environ = ModelContext('sqlite:///:memory:')
+    user_environ = UserContext('main', model_environ)
     
     model_environ.create_tables()
     

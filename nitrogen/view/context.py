@@ -10,7 +10,7 @@ import mako.lookup
 from defaults import context
 
 
-class ViewEnviron(object):
+class ViewContext(object):
     """Environment for working with views/templates.
     
     Attributes:
