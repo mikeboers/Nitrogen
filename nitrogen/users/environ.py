@@ -6,9 +6,14 @@ import hashlib
 import datetime
 
 from sqlalchemy import *
+from sqlalchemy.orm import mapper
+from sqlalchemy.types import MutableType, TypeDecorator
 
 from nitrogen.crypto import timed_hash
+from nitrogen.crypto.password import PasswordHash
 from nitrogen.uri import Query
+from nitrogen.model.environ import ModelEnviron
+from nitrogen.route.rerouter import ReRouter
 
 from . import *
    
@@ -24,14 +29,25 @@ from . import *
 #         return value[:]
 
 
-class Password(object):
-    def __init__(self, user):
-        self.user = user
-    def __eq__(self, password):
-        hash = str(self.user._password_hash).decode('hex')
-        return hash == timed_hash(password, hash)
-    def __repr__(self):
-        return '<Password:%s>' % self.user._password_hash
+class PasswordType(TypeDecorator):
+    
+    impl = String
+    
+    def process_bind_param(self, value, dialect):
+        return str(value)
+
+    def process_result_value(self, value, dialect):
+        return PasswordHash(value) if value else PasswordHash()
+    
+    def copy(self):
+        return PasswordType()
+    
+    def copy_value(self, value):
+        return PasswordHash(str(value or ''))
+    
+    def is_mutable(self):
+        return True
+    
 
 
 def build_User(name, model_environ):
@@ -40,16 +56,10 @@ def build_User(name, model_environ):
 
         id = Column(Integer, primary_key=True)
         
-        name = Column(Unicode, unique=True)
-        real_name = Column(Unicode)
-        
         email = Column(Unicode, unique=True)
         email_is_verified = Column(Boolean, default=False)
         
         password_hash = Column(String)
-        
-        date_created = Column(DateTime, default=datetime.datetime.now)
-        last_login = Column(DateTime)
         
         is_superuser = Column(Boolean, default=False)
         is_active = Column(Boolean, default=True)
@@ -63,17 +73,9 @@ def build_User(name, model_environ):
             self.is_authenticated = False
         
         def __repr__(self):
-            return '<User:%r:%r>' % (self.name, self.email)
+            return '<User:%r>' % (self.email)
 
-        def set_password(self, password):
-            self._password_hash = timed_hash(password).encode('hex')
 
-        def check_password(self, password):
-            try:
-                hash = str(self._password_hash).decode('hex')
-            except:
-                hash = ''
-            return hash == timed_hash(password, hash)
 
         @staticmethod
         def get_user_from_password_token(token):
@@ -105,16 +107,76 @@ def build_User(name, model_environ):
     
 class UserEnviron(object):
     
-    def __init__(self, name, model_environ):
+    def __init__(self, name, model_environ, view_environ=None):
         self.name = str(name)
         self.model_environ = model_environ
+        self.view_environ = view_environ
+        self.session = self.model_environ.local_session()
+        self._build_user_table()
+        self._build_user_model()
+        self._setup_user_mapping()
+        self._setup_router()
+    
+    def _build_user_table(self):
+        self.user_table = Table('%s-users' % self.name, self.model_environ.metadata,
+            Column('id', Integer, primary_key=True),
+            Column('email', Unicode, unique=True),
+            Column('email_is_verified', Boolean, default=False),
+            Column('password_hash', PasswordType),
+            Column('is_superuser', Boolean, default=False),
+            Column('is_active', Boolean, default=True),
+        )
+    
+    def _build_user_model(self):
+        class User(object):
+            
+            def __init__(self, email, password=None):
+                self.email = email
+                self._password_hash = PasswordHash()
+                if password is not None:
+                    self.password.set(password)
+                
+            def __repr__(self):
+                return '<%s:%r>' % (self.__class__.__name__, self.email)
+            
+            @property
+            def password(self):
+                return self._password_hash
+
+        self.User = User
         
-        self.User = build_User(name, model_environ)
-
-
+    def _setup_user_mapping(self):
+        mapper(self.User, self.user_table, properties={
+            '_password_hash': self.user_table.c.password_hash
+        })
+    
+    def _setup_router(self):
+        self.router = ReRouter()
+    
+    def __call__(self, *args, **kwargs):
+        return self.router(*args, **kwargs)
         
     
-
+def test_stuff():
+    model_environ = ModelEnviron('sqlite:///:memory:')
+    user_environ = UserEnviron('main', model_environ)
+    
+    model_environ.create_tables()
+    
+    print user_environ
+    print user_environ.user_table
+    print user_environ.User
+    
+    mike = user_environ.User(email='test@example.com')
+    tanya = user_environ.User(email='test@tanyastemberger.com')
+    
+    s = user_environ.session
+    s.add(mike)
+    s.add(tanya)
+    s.commit()
+    
+    print s.query(user_environ.User).all()
+    
 if __name__ == '__main__':
     
     
