@@ -66,6 +66,7 @@ class ModelEnviron(object):
         
         s = scoped_session(self.Session)
         self._local_sessions.append(s)
+        return s
     
     def wsgi_reset(self, app):
         """Reset all the thread-local sessions generated."""
