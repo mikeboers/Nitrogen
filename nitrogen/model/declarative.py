@@ -2,7 +2,7 @@
 
 
 import sqlalchemy.orm as orm
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative import declarative_base as _declarative_base
 
 @property
 def _Base_session(self):
@@ -13,13 +13,16 @@ def _Base_delete(self):
 
 def _Base_mark_dirty(self):
     self.session.dirty.add(self)
-    # instance_state(self).modified = True
+
+def _Base_expunge(self):
+    self.session.expunge(self)
 
 def build_declarative_base(metadata=None):
-    Base = declarative_base(metadata=metadata)
+    Base = _declarative_base(metadata=metadata)
     Base.session = _Base_session
     Base.delete = _Base_delete
     Base.mark_dirty = _Base_mark_dirty
+    Base.expunge = _Base_expunge
     return Base
 
 

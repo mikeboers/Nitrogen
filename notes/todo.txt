@@ -352,6 +352,8 @@ FieldSet._render should take a multipart=True param which allows for file upload
 	that should be passed into the viewenviron.render call, and the template
 	set enctype="multipart/form-data"
 
+Consider renaming nitrogen.form.Form to nitrogen.form.FieldSet
+
 some class/function to manage request throttling. once configured, calling the
 function will simply delay for a certain amount of time. should be able to be
 tied to both the IP, and all activity in general.
@@ -367,12 +369,21 @@ all together
 
 
 - What should I name all these environs?
-	- model.context
-	- model_module
-	- model_setup
-	- model_config
-	- model_context
-	- model_domain
+	- "model_environ":
+		+ makes sense
+		- hard to type
+		. "model_env" short form
+	- "model_context":
+		+ pretty easy to type
+		. "model_ctx" short form
+	- "model_domain":
+		+ really easy to type
+		- no good short form
+	
+	context: the set of circumstances or facts that surround a particular
+		event, situation, etc.
+	environ: the aggregate of surrounding things, conditions, or influences
+	domain: a realm or range of personal knowledge, responsibility, etc.
 
 
 

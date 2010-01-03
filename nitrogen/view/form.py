@@ -1,5 +1,6 @@
 """Extending a couple formalchemy renderers."""
 
+
 import datetime
 
 import formalchemy
@@ -40,14 +41,14 @@ class MarkdownRenderer(formalchemy.fields.FieldRenderer):
         return formalchemy.helpers.text_area(self.name, content=self._value, class_="markdown", **kwargs)
 
 
-def build_form_class(render):
-    class Form(formalchemy.FieldSet):
+def build_fieldset_class(render):
+    class FieldSet(formalchemy.FieldSet):
         def _render(self, fieldset, **kwargs):
             return render('_formalchemy.tpl', fieldset=fieldset, **kwargs)
 
-    Form.default_renderers[formalchemy.types.DateTime] = DateTimeRenderer
-    Form.default_renderers[formalchemy.types.String] = TextFieldRenderer
-    Form.default_renderers[formalchemy.types.Float] = FloatFieldRenderer
-    Form.default_renderers[formalchemy.types.Numeric] = FloatFieldRenderer
+    FieldSet.default_renderers[formalchemy.types.DateTime] = DateTimeRenderer
+    FieldSet.default_renderers[formalchemy.types.String] = TextFieldRenderer
+    FieldSet.default_renderers[formalchemy.types.Float] = FloatFieldRenderer
+    FieldSet.default_renderers[formalchemy.types.Numeric] = FloatFieldRenderer
     
-    return Form
+    return FieldSet

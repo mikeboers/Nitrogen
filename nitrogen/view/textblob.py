@@ -5,9 +5,9 @@ import datetime
 from sqlalchemy import *
 
 from ..editable import Editable
-from ..form import MarkdownRenderer
+from .form import MarkdownRenderer
 
-def build_textblob_functions(engine, session, Form, Base, render):
+def build_textblob_functions(engine, session, FieldSet, Base, render):
     
     class TextBlob(Base):
         __tablename__ = 'textblobs'
@@ -26,12 +26,12 @@ def build_textblob_functions(engine, session, Form, Base, render):
     TextBlob.__table__.create(engine, checkfirst=True)
     MarkdownBlob.__table__.create(engine, checkfirst=True)
 
-    textblob_fieldset = Form(TextBlob)
+    textblob_fieldset = FieldSet(TextBlob)
     textblob_fieldset.configure(include=[textblob_fieldset.value], options=[
         # textblob_fieldset.value.with_renderer(formalchemy.fields.TextAreaFieldRenderer)
     ])
 
-    markdownblob_fieldset = Form(MarkdownBlob)
+    markdownblob_fieldset = FieldSet(MarkdownBlob)
     markdownblob_fieldset.configure(include=[
         markdownblob_fieldset.value
     ], options=[

@@ -6,7 +6,7 @@ import threading
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
-from .base import build_declarative_base
+from .declarative import build_declarative_base
 
 class ModelContext(object):
     """A helper to contain the basic parts of a database connections.

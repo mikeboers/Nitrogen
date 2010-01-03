@@ -1,32 +1,40 @@
 
+from ..request import as_request
+from ..model.context import ModelContext
+from ..route.rerouter import ReRouter
+from ..view.context import ViewContext
+from .context import UserContext
 
-from nitrogen.route.rerouter import ReRouter
-from .environ import UserContext
-from ..model.environ import ModelContext
-from ..view.environ import ViewContext
+
 
 class UserController(object):
     
-    def __init__(self, user_environ, view_environ):
-        self.user_environ = user_environ
-        self.view_environ = view_environ
+    def __init__(self, user_context, view_context):
+        self.user_context = user_context
+        self.view_context = view_context
         self._setup_router()
     
     def __getattr__(self, name):
-        for x in (self.user_environ, self.view_environ):
+        for x in (self.user_context, self.view_context):
             if hasattr(x, name):
                 return getattr(x, name)
         raise AttributeError(name)
     
     def _setup_router(self):
         self.router = ReRouter()
+        self.router.register('', self.do_index)
+    
+    @as_request
+    def do_index(self, req, res):
+        res.start()
+        yield 'user index'
 
 
 def test_main():
-    model_environ = ModelContext('sqlite://')
-    user_environ = UserContext('main-', model_environ)
-    view_environ = ViewContext()
-    user_controller = UserController(user_environ, view_environ)
+    model_context = ModelContext('sqlite://')
+    user_context = UserContext('main-', model_context)
+    view_context = ViewContext()
+    user_controller = UserController(user_context, view_context)
 
 if __name__ == '__main__':
     from ..test import run
