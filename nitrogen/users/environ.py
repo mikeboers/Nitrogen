@@ -9,7 +9,6 @@ from sqlalchemy import *
 from sqlalchemy.orm import mapper
 from sqlalchemy.types import MutableType, TypeDecorator
 
-from nitrogen.crypto import timed_hash
 from nitrogen.crypto.password import PasswordHash
 from nitrogen.uri import Query
 from nitrogen.model.environ import ModelEnviron
@@ -43,7 +42,7 @@ class PasswordType(TypeDecorator):
         return PasswordType()
     
     def copy_value(self, value):
-        return PasswordHash(str(value or ''))
+        return PasswordHash(str(value) if value is not None else None)
     
     def is_mutable(self):
         return True
@@ -107,15 +106,18 @@ def build_User(name, model_environ):
     
 class UserEnviron(object):
     
-    def __init__(self, name, model_environ, view_environ=None):
+    def __init__(self, name, model_environ):
         self.name = str(name)
         self.model_environ = model_environ
-        self.view_environ = view_environ
         self.session = self.model_environ.local_session()
         self._build_user_table()
         self._build_user_model()
         self._setup_user_mapping()
-        self._setup_router()
+    
+    def __getattr__(self, name):
+        if hasattr(self.model_environ, name):
+            return getattr(self.model_environ, name)
+        raise AttributeError(name)
     
     def _build_user_table(self):
         self.user_table = Table('%s-users' % self.name, self.model_environ.metadata,
@@ -149,12 +151,6 @@ class UserEnviron(object):
         mapper(self.User, self.user_table, properties={
             '_password_hash': self.user_table.c.password_hash
         })
-    
-    def _setup_router(self):
-        self.router = ReRouter()
-    
-    def __call__(self, *args, **kwargs):
-        return self.router(*args, **kwargs)
         
     
 def test_stuff():
@@ -177,32 +173,8 @@ def test_stuff():
     
     print s.query(user_environ.User).all()
     
+    
 if __name__ == '__main__':
-    
-    
-    import sys
-    sys.path.insert(0, '..')
-    from nitrogen.test import run
+    from ..test import run
     run()
-    
-    exit()
-    
-    for user in session.query(User):
-        user.delete()
-    session.commit()
-    
-    for email, password, perms, tier in [
-        ('dev@example.com', 'password', ['*'], 0),
-        ('sh@nemart.in', 'password', ['*'], 0),
-    ]:
-        
-        user = User(email=email, password=password if password is not None else os.urandom(100), tier=tier, verified=password is not None)
-        user._permissions = perms
-        session.add(user)
-    
-    session.commit()
-    
-    query = user.build_password_token()
-    print query, user.check_password_token(query)
-    
     

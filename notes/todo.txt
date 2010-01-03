@@ -366,6 +366,13 @@ and reporting, one for managing http (encoding, etagging), one to put them
 all together
 
 
+- What should I name all these environs?
+	- model_environ
+	- model_module
+	- model_setup
+	- model_config
+	- model_context
+	- model_domain
 
 
 
