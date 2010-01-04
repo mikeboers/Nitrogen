@@ -1,0 +1,7 @@
+
+
+UserContext manages the users themselves
+UserController manages interaction with the web, such as putting users into
+the environment at the right places, login, ect.
+    has_perm middlewear goes here
+    do_login wsgi app

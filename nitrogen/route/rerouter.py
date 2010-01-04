@@ -60,14 +60,14 @@ class Pattern(object):
     {'method': 'GET'}
     >>> r.format(method='post')
     '/POST'
-    
+
     >>> r = Pattern('/{id:\d+}', _parsers=dict(id=int),
     ...     _formatters=dict(id='%04d'))
     >>> r.match('/123')[0]
     {'id': 123}
     >>> r.format(id=456)
     '/0456'
-    
+
     >>> r = Pattern('/{action:get}/{id:\d+}', _formatters=dict(id=int))
     >>> r.match('/get/12')[0]
     {'action': 'get', 'id': '12'}
@@ -93,7 +93,7 @@ class Pattern(object):
         self._raw = raw
         self._constants = kwargs
         self._keys = set()
-        
+
         self._requirements = kwargs.pop('_requirements', {})
         self._requirements = dict((k, re.compile(v + '$'))
             for k, v in self._requirements.items())
@@ -156,12 +156,12 @@ class Pattern(object):
         self._parse_data(result)
 
         return result, value[m.end():]
-    
+
     def _parse_data(self, data):
         for key, callback in self._parsers.items():
             if key in data:
                 data[key] = callback(data[key])
-    
+
     def _format_data(self, data):
         for key, formatter in self._formatters.items():
             if key in data:
@@ -174,24 +174,24 @@ class Pattern(object):
         data = self._constants.copy()
         data.update(kwargs)
         self._format_data(data)
-          
+
         out = self._format % data
-        
+
         x = self.match(out)
         if x is None:
             raise FormatError('cannot match against output')
         m, d = x
         if d:
             raise FormatError('did not match all output')
-            
+
         self._parse_data(data)
-        
+
         for k, v in m.iteritems():
             if k in data and data[k] != v:
                 raise FormatError('got different value for %r: got %r, expected %r' % (k, v, data[k]))
-        
+
         return out
-        
+
 
 
 class Match(collections.Mapping):
@@ -203,7 +203,7 @@ class Match(collections.Mapping):
 
     def __getitem__(self, key):
         return self.data[key]
-    
+
     def __getattr__(self, name):
         return getattr(self.data, name)
 
@@ -213,7 +213,7 @@ class Match(collections.Mapping):
     def __len__(self):
         return len(self.data)
 
-    def format(self, **kwargs):    
+    def format(self, **kwargs):
         data = self.data.copy()
         data.update(kwargs)
         return self.pattern.format(**data)
@@ -228,7 +228,7 @@ class ReRouter(tools.Router):
         """Register directly, or use as a decorator.
 
         Params:
-            pattern -- The pattern to match with.
+            pattern -- The pattern to match with. Should start with a '/'.
             app -- The app to register. If not provided this method returns
                 a decorator which can be used to register with.
             lock_front -- The pattern should match only to the front.
@@ -249,16 +249,15 @@ class ReRouter(tools.Router):
             self.register(pattern, app, **kwargs)
             return app
         return ReRouter_register
-    
-    def route_step(self, path):        
-        log.debug('matching on %r' % path)
+
+    def route_step(self, path):
         for pattern, app in self._apps:
             m = pattern.match(path)
             if m:
                 kwargs, path = m
                 match = Match(pattern, kwargs, path)
                 return app, path, match
-        
+
     def generate_step(self, data):
         for pattern, app in self._apps:
             if any(k in data and data[k] != v for k, v in
@@ -363,7 +362,7 @@ def test_route_building():
     route = tools.get_route(res.environ)
     print repr(res.body)
     print repr(route.url_for(num=2))
-    
+
     res = app.get('/x-1/one/blah')
     route = tools.get_route(res.environ)
     pprint(route)

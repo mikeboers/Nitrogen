@@ -318,7 +318,8 @@ class Response(object):
     # def basic_realm(self, value):
     #     self.headers['WWW-Authenticate'] = 'Basic realm="%s"' % value    
     
-    def start(self, status=None, headers=None, plain=None, html=None, **kwargs):
+    def start(self, status=None, headers=None, exc_info=None, plain=None,
+        html=None, **kwargs):
         """Start the wsgi return sequence.
 
         If called with status, that status is resolved. If status is None, we
@@ -357,10 +358,10 @@ def as_request(app):
     
     def as_request_app(self, environ, start=None):
         if start is None:
-            self, environ, start = start, self, environ
+            self, environ, start = None, self, environ
         request = Request(environ)
         response = Response(start)
-        if self:
+        if self is not None:
             return app(self, request, response)
         return app(request, response)
     

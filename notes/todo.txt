@@ -36,7 +36,9 @@ my own minifier, which sounds like a bad idea).
     - Shane said to look at sprockets (it is in ruby)
 
 - as_request should be a class with __get__ so that it knows when to inject a
-    self at the front
+  self at the front. Also because the current method of detecting if it is
+  a method will fail if exc_info is passed in as well (just looking for 3
+  positional arguments).
 
 - decide if the cookie container should default to the path being '/'
 
@@ -367,6 +369,9 @@ wrapping. Several wrappers will handle discrete types: one for error logging
 and reporting, one for managing http (encoding, etagging), one to put them
 all together
 
+- the various contexts should not bother with having their own log and name
+  unless they absolutely need it
+- the UserContext should have a table_prefix, instead of "name"
 
 - What should I name all these environs?
 	- "model_environ":

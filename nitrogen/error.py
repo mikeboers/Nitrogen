@@ -224,10 +224,12 @@ def error_notifier(app, render=None, traceback=False, template='_500.tpl'):
                 
                 if render:
                     try:
-                        yield render(template, **(dict(
-                            text_report=text_report,
-                            html_report=html_report
-                            ) if traceback else {})).encode('utf8')
+                        yield render(template, html_report=html_report if
+                            traceback else None).encode('utf8')
+                        if traceback:
+                            yield '\n<!--\n\n'
+                            yield text_report
+                            yield '\n-->\n'
                         return
                     except Exception as e:
                         log.error('error while rendering error view', exc_info=sys.exc_info())
