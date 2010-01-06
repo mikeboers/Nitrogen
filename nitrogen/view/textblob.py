@@ -56,7 +56,7 @@ def build_textblob_functions(engine, session, FieldSet, Base, render):
         partial_key='blob'
     )
     
-    def textblob(key):
+    def textblob(key, permission=None):
         blob = session.query(TextBlob).filter_by(key=key).first()
         if not blob:
             blob = TextBlob(key=key, value='JUST CREATED. Add some content!')
@@ -64,7 +64,7 @@ def build_textblob_functions(engine, session, FieldSet, Base, render):
             session.commit()
         return render('_textblob.tpl', blob=blob)
 
-    def markdownblob(key):
+    def markdownblob(key, permission=None):
         blob = session.query(MarkdownBlob).filter_by(key=key).first()
         if not blob:
             blob = MarkdownBlob(key=key, value='**JUST CREATED.** *Add some content!*')
