@@ -7,7 +7,7 @@ from BeautifulSoup import BeautifulSoup
 
 def clean_html(html):
     """Asserts the "cleanliness" of html. Closes tags, indents, etc."""
-    return BeautifulSoup(html).prettify()
+    return BeautifulSoup(html).prettify().decode('utf8')
 
 
 def urlify_name(name):
