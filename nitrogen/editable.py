@@ -104,11 +104,13 @@ class Editable(object):
             res['form'] = form.render()
         else:
             form.sync()
-            if not model:
+            is_new = not model
+            if is_new:
                 model = form.model
-                self.session.add(model)
             if self.before_save:
                 self.before_save(req, model)
+            if is_new:    
+                self.session.add(model)
             self.session.commit()
 
             res['id'] = model.id
