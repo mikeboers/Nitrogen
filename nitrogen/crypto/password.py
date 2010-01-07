@@ -91,6 +91,7 @@ class PasswordHash(object):
     def set(self, password, best_of=1):    
         self.resalt()
         rounds = []
+        password = password.encode('utf8')
         for i in xrange(best_of):
             self._set(password)
             rounds.append((self.num_iter, str(self)))
@@ -118,7 +119,7 @@ class PasswordHash(object):
         out = {
             '0.1': self._check_v0_1,
             '1.0': self._check_v1_0,
-        }[self.version](password)
+        }[self.version](password.encode('utf8'))
         self.check_time = time.time() - start_time
         return out
     
