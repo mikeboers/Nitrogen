@@ -390,6 +390,23 @@ all together
 	environ: the aggregate of surrounding things, conditions, or influences
 	domain: a realm or range of personal knowledge, responsibility, etc.
 
+- ViewContent
+	render should take pre_path and post_path to search before and after the
+	main path. should be able to make a new render function which remembers
+	these things
+	
+- Crud
+	manage both the api side of the crud operations (like the editables now)
+	and provide standard web based stuff. lists of objects, getting objects,
+	updating and deleting, ect.
+	
+	permission_base gets appended to to figure out all the permissions
 
+- locals
+	make a local object factory which keeps a reference to the __dict__ so that
+	it can be cleared out on every request by some middleware
 
+- flash_messages
+	be able to persist them so that we can specify a flash message to show up
+	in the next response
 
