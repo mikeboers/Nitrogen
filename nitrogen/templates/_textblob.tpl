@@ -1,4 +1,4 @@
-% if is_admin_area:
+% if is_admin_area and (permission is None or user.has_permission(permission)):
 <script type="text/javascript">jQuery(function($){
 	$("#textblob-${blob.key|h}").editable({
 		id: ${blob.id|json},

@@ -62,7 +62,7 @@ def build_textblob_functions(engine, session, FieldSet, Base, render):
             blob = TextBlob(key=key, value='JUST CREATED. Add some content!')
             session.add(blob)
             session.commit()
-        return render('_textblob.tpl', blob=blob)
+        return render('_textblob.tpl', blob=blob, permission=permission)
 
     def markdownblob(key, permission=None):
         blob = session.query(MarkdownBlob).filter_by(key=key).first()
@@ -70,6 +70,6 @@ def build_textblob_functions(engine, session, FieldSet, Base, render):
             blob = MarkdownBlob(key=key, value='**JUST CREATED.** *Add some content!*')
             session.add(blob)
             session.commit()
-        return render('_textblob_md.tpl', blob=blob)
+        return render('_textblob_md.tpl', blob=blob, permission=permission)
     
     return textblob, textblob_editable, markdownblob, markdownblob_editable
