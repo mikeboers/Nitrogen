@@ -84,10 +84,13 @@ class Match(collections.Mapping):
         return self.m.group(group)
     
     def __iter__(self):
-        return iter(self.kwargs)
+        for i in xrange(len(self.args)):
+            yield i
+        for k in self.kwargs:
+            yield k
     
     def __len__(self):
-        return len(self.kwargs)
+        return len(self.args) + len(self.kwargs)
     
     
 class RawReRouter(tools.Router):
@@ -172,7 +175,7 @@ def test_routing_path_setup():
     assert res.body == 'four\nthree\ntwo\none'
     # pprint(tools.get_history(res.environ))
     tools._assert_next_history_step(res,
-        path='/x-three/x-two/one', router=router, _data={'var': 'four'})
+        path='/x-three/x-two/one', router=router, _data={0: '/x-four', 'var': 'four'})
     tools._assert_next_history_step(res,
         path='/x-two/one', router=router)
     tools._assert_next_history_step(res,
