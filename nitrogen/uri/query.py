@@ -189,7 +189,7 @@ Easy signatures!
     >>> query[u'nonce'] = '12345'
     >>> query.sign('this is the key', add_nonce=False, add_time=False)
     >>> str(query)
-    'v=value&nonce=12345&s=vDNuaJjAEWVg7Q3atnC_nA'
+    'v=value&nonce=12345&_s=vDNuaJjAEWVg7Q3atnC_nA'
 
     >>> query.verify('this is the key')
     True
@@ -199,7 +199,7 @@ Easy signatures!
     >>> query = Query('v=somevalue')
     >>> query.sign('another_key')
     >>> str(query) # doctest:+ELLIPSIS
-    'v=somevalue&t=...&n=...&s=...'
+    'v=somevalue&_t=...&_n=...&_s=...'
     >>> query.verify('another_key')
     True
     >>> query.verify('bad key')
@@ -212,10 +212,10 @@ Easy signatures!
     ValueError: signature is too old
 
     >>> query = Query(v='value')
-    >>> query['n'] = '123abc'
+    >>> query['_n'] = '123abc'
     >>> query.sign('key', max_age=60, add_time=True, add_nonce=False)
     >>> str(query) # doctest: +ELLIPSIS
-    'v=value&n=123abc&t=...&x=...&s=...'
+    'v=value&_n=123abc&_t=...&_x=...&_s=...'
     >>> query.verify('key')
     True
     >>> query.verify('not the key')
@@ -374,10 +374,10 @@ class Query(MutableMultiMap):
         return struct.unpack('>I', base64.urlsafe_b64decode(value))[0]
     
     TIME_BASE = 1262698296
-    TIME_KEY = 't'
-    SIG_KEY = 's'
-    NONCE_KEY = 'n'
-    EXPIRY_KEY = 'x'
+    TIME_KEY = '_t'
+    SIG_KEY = '_s'
+    NONCE_KEY = '_n'
+    EXPIRY_KEY = '_x'
     
     def sign(self, key, hasher=None, max_age=None, add_time=None, add_nonce=True,
         nonce_bits=128, time_key=TIME_KEY, sig_key=SIG_KEY, nonce_key=NONCE_KEY,
