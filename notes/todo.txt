@@ -405,4 +405,9 @@ all together
 - flash_messages
 	be able to persist them so that we can specify a flash message to show up
 	in the next response
+	
+- users
+	- should not be able to verify an email if you are already logged in
+	- should automatically login when a password is set for the first time
+
 
