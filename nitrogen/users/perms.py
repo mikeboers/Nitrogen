@@ -40,9 +40,6 @@ def basic_match(pattern, perm):
     pattern = pattern.split('.')
     patterns = ['.'.join(pattern[:i]) for i in range(1, 1 + len(pattern))]
     
-    logging.debug(patterns)
-    logging.debug(perm)
-    
     if any(fnmatch(pattern, perm) for pattern in patterns):
         return True
     return False
