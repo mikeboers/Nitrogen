@@ -1,13 +1,21 @@
 #!/usr/bin/env python2.6
 # encoding: utf8
-"""Script for running all of the tests in the nitrogen package.
 
-Imports ALL of the modules (except those in lib), looks for unittest stuff
-in them, and looks for doctests.
+"""USAGE: %s path
 
-Runs all of the files that are of the form *.test as doctests.
+Script for discovering and running all of the tests in a given package.
 
+Imports all of the modules that are accessable, and looks for anything that
+could be a test:
+    - doctests
+    - unittest classes
+    - functions whose name matches test* (ie. nose tests)
+
+Requirements:
+    - nose
+    
 """
+
 
 import os
 import sys
@@ -16,29 +24,34 @@ import doctest
 import logging
 import traceback
 
-# usage = """USAGE: %s path
-# 
-# nitrogen test runner. Runs tests in the module at path, or in all of the
-# reachable modules under path.""" % sys.argv[0]
-# 
-if len(sys.argv) > 1:
-    root = os.path.abspath(sys.argv[1])
-else:
-    root = os.path.abspath(__file__ + '/../../../nitrogen')
+
+usage = __doc__.rstrip() % sys.argv[0]
+
+if len(sys.argv) < 2:
+    print usage
+    exit(1)
+
+root = os.path.abspath(sys.argv[1])
 
 root_dir = os.path.dirname(root)
 root_name = os.path.basename(root)
 
 print 'Finding tests in %r package rooted at %r.' % (root_name, root_dir)
 
+logging.basicConfig(level=logging.INFO)
+
 # Turn off nose logging.
 logger = logging.getLogger('nose')
 logger.setLevel(1000)
 
-
-sys.path.append(os.path.abspath(__file__ + '/../../lib'))
-import nose.loader
-nose_loader = nose.loader.TestLoader()
+try:
+    import nose.loader
+    nose_loader = nose.loader.TestLoader()
+except ImportError:
+    nose_loader = None
+    print 'ERROR: could not import nose'
+    print usage
+    exit(1)
 
 sys.path.append(os.path.dirname(root))
 suites = []
@@ -65,7 +78,7 @@ for dirpath, dirnames, filenames in os.walk(root):
                 
             # Make sure we can even get to it.
             if not os.path.exists(os.path.join(os.path.dirname(path), '__init__.py')):
-                print '\t%s is unreachable' % name
+                # print '\t%s is unreachable' % name
                 continue
             
             try:
@@ -79,7 +92,8 @@ for dirpath, dirnames, filenames in os.walk(root):
             else:
                 
                 # Nose and unit tests
-                nose_suite = nose_loader.loadTestsFromModule(m)
+                if nose_loader:
+                    nose_suite = nose_loader.loadTestsFromModule(m)
                 
                 # Doc tests
                 try:
@@ -100,7 +114,8 @@ for dirpath, dirnames, filenames in os.walk(root):
                 # print "\t\tFound %d doc test%s." % (doc_count, 's' if doc_count > 1 else '')
             
             if not (nose_count or doc_count):
-                print '\t%s has no tests' % name
+                # print '\t%s has no tests' % name
+                pass
                 
             
         elif name.endswith('.doctest'):
