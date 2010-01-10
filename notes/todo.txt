@@ -346,15 +346,11 @@ is on route.data
 
 get new permissions script in place
 
-view render function should take a path to search before the configed one
-be able to build new render functions which have a set of default parameters
-and a default path extension
 
 FieldSet._render should take a multipart=True param which allows for file uploads.
 	that should be passed into the viewenviron.render call, and the template
 	set enctype="multipart/form-data"
 
-Consider renaming nitrogen.form.Form to nitrogen.form.FieldSet
 
 some class/function to manage request throttling. once configured, calling the
 function will simply delay for a certain amount of time. should be able to be
