@@ -1,6 +1,15 @@
 # coding: UTF-8
 u"""
 
+TODO:
+    - Devise a new encoding, primarily for internal use as it is not standard,
+      that gracefully handles unicode. Bytes would go to %HH, and unicode would
+      go to %uHHHH or %UHHHHHHHH. This (according to Wikipedia) has been
+      rejected by the W3C.
+    - Make a set of encode/decode functions which are lower level, where you
+      specify precisely the syntax to use and which characters are safe. It will
+      default to "%" for escaping, and letters + numbers being safe.
+
 Encoding and decoding:
 
     >>> encode("This is a string.")

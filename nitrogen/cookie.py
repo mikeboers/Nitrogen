@@ -1,18 +1,54 @@
 # coding: UTF-8
 ur"""Mike's bastardization of the Python library Cookie module.
 
-I found the Cookie module painfully inadequete, so I copied it here and stared
+I found the Cookie module painfully inadequete, so I copied it here and started
 tearing it apart.
 
+The cookie RFCs are:
+    RFC2068 - Hypertext Transfer Protocol
+    RFC2109 - HTTP State Management Mechanism
+
 TODO:
-    - determine how this all works with unicode
+    - Determine how this all works with unicode.
+    - Decide if we should default to path="/".
+    - One function should build the headers Another function should build the
+      headers that express the difference from another set of cookies. This is
+      what build_cookies already does, and I believe that it should be made more
+      explicit.
+    - Use a different quoting function. Escape non-printables as \\xhh and UTF-8
+      as \\uhhhh or \\Uhhhhhhhh. (Escaping here for doctest's sake.) May be able
+      to simply use s.encode('unicode-escape') for the most part. The ast module
+      may provide a function to load the returned stuff as a literal. Could also
+      potentially use straight URL encoding.
+        - The backslash might get destroyed by browsers. Do query encoding, but
+          with a different symbol. "#" or "$"? Want to use a different symbol
+          because it is likely I will store a query string in there. Make sure
+          that all the base64 characters (or the URL safe ones) are okay. This
+          allows the encrypted cookies to work out well as well.
+    - None of the cookie metadata (max_age) should be accesable via item access.
+      This will allow us to make a dict-cookie class which stores data in query
+      form: "key=value" or "key:value|two:2" (if the second makes sense with encoding
+      rules). This could even extend the uri.query.Query object and pick up the
+      signing methods. Awesome.
+    - Make sure that names can't start with '$' as per the spec.
+    - Maybe seperate this all out into two classes. One which handles the
+      parsing and one which handles the generating. Then a wrapper which binds
+      them together into the class that we have now.
+    - Consider implementing one of the various caching mechanisms in the RFC.
+    - Add "expires" property to cookies that get/set a datetime based off of the
+      max-age. We should only be outputting the "Max-Age", but we should except
+      the "Expires" back.
+    - Note that setting max-age to 0 only kills cookies if the path and domain
+      precisely match (according to the spec). See if the path and such actually
+      are being sent back to us...
 
 NOTE on max_age
-    max_age is None -> Session cookie
-    max_age <=  0 -> Expired
+    max_age is None -> a session cookie
+    max_age <=  0   -> expired
 
 NOTE on all properties:
-    If you just change the value of a cookie and not say anything about path/domain/expiry, the path/domain/expiry all get reset ANYWAYS.
+    If you just change the value of a cookie and not say anything about
+    path/domain/expiry, the path/domain/expiry all get reset ANYWAYS.
 
 
 Sending very basic cookies to the client:
@@ -298,10 +334,6 @@ class Cookie(object):
     #
     # This is an extension from Microsoft:
     #   http_only
-    
-    # This dictionary provides a mapping from the lowercase
-    # variant on the left to the appropriate traditional
-    # formatting on the right.
     
     def __init__(self, value=None, **kwargs):
         

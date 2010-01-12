@@ -9,7 +9,9 @@ maintain the order of the multiple values.
 I need to decode + as a space, because that is what firefox does to me. I
 won't, however, re-encode it as a space. It feels wrong to me.
 
-TODO: make sure that is what jquery does.
+TODO:
+    - Figure out definitively if a space should be encoded to "+" or "%20".
+        - See what firefox does when I enter "+" vs " " vs "%20".
 
 Instantiate with a string:
 
