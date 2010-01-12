@@ -25,8 +25,6 @@
 
 
 
-- Api model editable access should be a WSGI app class. It will be acceable through
-  /news/model/add or what have you.
 
 - See about getting https working.
 
@@ -389,7 +387,7 @@ all together
 - ViewContent
 	render should take pre_path and post_path to search before and after the
 	main path. should be able to make a new render function which remembers
-	these things
+	these things. should be able to continuously wrap these things
 	
 - Crud
 	manage both the api side of the crud operations (like the editables now)
@@ -403,7 +401,7 @@ all together
 	it can be cleared out on every request by some middleware
 
 - flash_messages
-	be able to persist them so that we can specify a flash message to show up
+	- be able to persist them so that we can specify a flash message to show up
 	in the next response
 	
 - users
@@ -411,3 +409,12 @@ all together
 	- should automatically login when a password is set for the first time
 
 
+- nitrogen.app.Basic
+    - setup the basic stuff for running an app automagically
+        logs, routing, ect
+    - nitrogn.app.Basic.from_config(module=config)
+    - the server objects can be greatly simplified, or just replaced with a
+      hostname and install path ("//host/path")
+    - the config object can be an actual class that has every config option
+      as a property (or something). this could simply be the whole application
+      class.
