@@ -101,6 +101,10 @@ class Request(object):
         return get_route(self.environ).data
     
     @property
+    def url_for(self):
+        return get_route(self.environ).url_for
+    
+    @property
     def unrouted(self):
         return get_route(self.environ).path
     

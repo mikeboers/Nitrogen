@@ -21,8 +21,13 @@ filter itself.)
 
 """
 
+
+from __future__ import absolute_import
+
 import logging
 import hashlib, re
+
+from markdown import markdown as _markdown
 
 
 log = logging.getLogger(__name__)
@@ -66,6 +71,12 @@ def github_markdown(text):
     text = re.sub(pre_insert_re, pre_insert_callback, text)
 
     return text
+
+
+def markdown(text):
+    return _markdown(github_markdown(text))
+
+
 
 if __name__ == '__main__':
     print github_markdown('''hi\nthere
