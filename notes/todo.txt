@@ -418,3 +418,6 @@ all together
     - the config object can be an actual class that has every config option
       as a property (or something). this could simply be the whole application
       class.
+
+- password hashing
+    use either scrypt or PBKDF2 (http://www.daemonology.net/blog/2009-06-11-cryptographic-right-answers.html)
