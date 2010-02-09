@@ -421,3 +421,13 @@ all together
 
 - password hashing
     use either scrypt or PBKDF2 (http://www.daemonology.net/blog/2009-06-11-cryptographic-right-answers.html)
+
+- use this openid selector http://code.google.com/p/openid-selector/
+
+- use my own tomcrypt library
+	- password hashing
+	- encrypted cookies
+
+- make sure i'm not doing any of http://googletesting.blogspot.com/2008/07/how-to-write-3v1l-untestable-code.html
+
+- pull in http://www.mechanicalcat.net/richard/log/Python/Simple__elegant_HTML_generation
