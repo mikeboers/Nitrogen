@@ -17,8 +17,9 @@ import webhelpers.text
 import webhelpers.html
 from markdown import markdown
 
-from .tools import urlify_name, clean_html
+from .util import urlify_name, clean_html
 from ..markdown import github_markdown
+from .. import lipsum
 
 context = {}
 
@@ -42,6 +43,7 @@ context['html'] = webhelpers.html.HTML
 context['urlify_name'] = urlify_name
 context['clean_html'] = clean_html
 
+context['lipsum'] = lipsum
 
 def test_markdown():
     print 'Markdown of "**bold**":'
