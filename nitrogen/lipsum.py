@@ -3,7 +3,7 @@ from __future__ import absolute_import
 
 from lipsum import Generator
 
-g = Generator
+g = Generator()
 
 def sentence(start_with_lorem=False):
     return g.generate_sentence(start_with_lorem)
