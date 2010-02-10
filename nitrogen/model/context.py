@@ -5,8 +5,22 @@ import threading
 
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm.session import Session as _BaseSession
 
 from .declarative import build_declarative_base
+
+
+class _Session(_BaseSession):
+    
+    def lock(self, exclusive=False):
+        self.execute("BEGIN %S" % 'EXCLUSIVE' if exclusive else "IMMEDIATE")
+    
+    def write_lock(self):
+        self.lock(False)
+    
+    def read_lock(self):
+        self.lock(True)
+
 
 class ModelContext(object):
     """A helper to contain the basic parts of a database connections.
@@ -20,7 +34,7 @@ class ModelContext(object):
     
     """
     
-    def __init__(self, engine=None):
+    def __init__(self, engine=None, autocommit=False):
         """Initialize the environment.
         
         Args:
@@ -33,7 +47,7 @@ class ModelContext(object):
         self._local_sessions = []
         
         self.engine = None
-        self.Session = sessionmaker(autoflush=True)
+        self.Session = sessionmaker(class_=_BaseSession, autocommit=autocommit, autoflush=True)
         self.session = self.local_session()
         self.metadata = MetaData()
         self.Base = build_declarative_base(metadata=self.metadata)
@@ -46,6 +60,7 @@ class ModelContext(object):
         if isinstance(engine, basestring):
             engine = create_engine(engine)
         self.engine = engine
+        self.metadata.bind = engine
         self.Session.configure(bind=engine)
     
     def create_tables(self):
