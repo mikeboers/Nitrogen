@@ -2,6 +2,7 @@ beaker
 beautifulsoup
 flup
 formalchemy
+lorem-ipsum-generator
 mako
 markdown
 minimock
