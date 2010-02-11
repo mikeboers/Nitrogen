@@ -23,7 +23,9 @@
     - Make line breaks drop in <br />
 
 
-
+- would be swell if the route generation could be a little smarter. for the
+  swissol product pages I would like to only pass a product model, and i
+  would figure out that I want controller='products' and whatever the collection is.
 
 
 - See about getting https working.
