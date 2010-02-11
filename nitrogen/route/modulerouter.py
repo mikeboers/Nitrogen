@@ -90,7 +90,7 @@ class ModuleRouter(tools.Router):
         return module, path, {self.route_key: segment}
     
     def generate_step(self, data):
-        print 'ModuleRouter.generate_step', self, data
+        # print 'ModuleRouter.generate_step', self, data
         if self.route_key not in data:
             return
         segment = data.get(self.route_key)
