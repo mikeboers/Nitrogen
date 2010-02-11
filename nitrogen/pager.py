@@ -71,7 +71,7 @@ class Pager(object):
     
     HREF_FORMAT = '%d'
     
-    def __init__(self, data,
+    def __init__(self, data=None,
         page=1,
         count=None,
         per_page=10,
