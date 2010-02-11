@@ -20,6 +20,7 @@ from markdown import markdown
 from .util import urlify_name, clean_html
 from ..markdown import github_markdown
 from .. import lipsum
+from ..uri.query import encode as query_encode
 
 context = {}
 
@@ -44,6 +45,9 @@ context['urlify_name'] = urlify_name
 context['clean_html'] = clean_html
 
 context['lipsum'] = lipsum
+
+context['query_encode'] = query_encode
+
 
 def test_markdown():
     print 'Markdown of "**bold**":'
