@@ -118,6 +118,7 @@ class Request(object):
     if_modified_since = _environ_time_getter('HTTP_IF_MODIFIED_SINCE')
     referer = _environ_getter('HTTP_REFERER')
     user_agent = _environ_getter('HTTP_USER_AGENT')
+    remote_ip = _environ_getter('REMOTE_IP')
     
     # @property
     # def basic_username(self):
