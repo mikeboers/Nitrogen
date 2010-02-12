@@ -17,7 +17,7 @@ Examples:
     
     >>> pager = Pager(range(100))
     >>> pager.render()
-    u'<span class="pager"><span class="current">1</span><a href="2" title="go to page 2">2</a><a href="3" title="go to page 3">3</a><a href="4" title="go to page 4">4</a>..<a href="10" title="go to page 10">10</a><a class="next" href="2" title="go to page 2">next</a></span>'
+    u'<span class="pager"><span class="current">1</span><a href="2" title="Go to page 2">2</a><a href="3" title="Go to page 3">3</a><a href="4" title="Go to page 4">4</a>..<a href="10" title="Go to page 10">10</a><a class="next" href="2" title="Go to page 2">Next</a></span>'
     
     >>> pager.current_wrapper = '[%d]'
     >>> pager.rendertest()
@@ -25,26 +25,31 @@ Examples:
     
     >>> pager.page = 2
     >>> pager.rendertest()
-    u'prev 1 [2] 3 4 5 .. 10 Next'
+    u'Prev 1 [2] 3 4 5 .. 10 Next'
     
     >>> pager.page = 5
     >>> pager.rendertest()
-    u'prev 1 2 3 4 [5] 6 7 8 .. 10 Next'
+    u'Prev 1 2 3 4 [5] 6 7 8 .. 10 Next'
     
     >>> pager.render()
-    u'<span class="pager"><a class="prev" href="4" title="go to page 4">prev</a><a href="1" title="go to page 1">1</a><a href="2" title="go to page 2">2</a><a href="3" title="go to page 3">3</a><a href="4" title="go to page 4">4</a><span class="current">[5]</span><a href="6" title="go to page 6">6</a><a href="7" title="go to page 7">7</a><a href="8" title="go to page 8">8</a>..<a href="10" title="go to page 10">10</a><a class="next" href="6" title="go to page 6">next</a></span>'
+    u'<span class="pager"><a class="prev" href="4" title="Go to page 4">Prev</a><a href="1" title="Go to page 1">1</a><a href="2" title="Go to page 2">2</a><a href="3" title="Go to page 3">3</a><a href="4" title="Go to page 4">4</a><span class="current">[5]</span><a href="6" title="Go to page 6">6</a><a href="7" title="Go to page 7">7</a><a href="8" title="Go to page 8">8</a>..<a href="10" title="Go to page 10">10</a><a class="next" href="6" title="Go to page 6">Next</a></span>'
     
     >>> pager.page = 6
     >>> pager.rendertest()
-    u'prev 1 .. 3 4 5 [6] 7 8 9 10 Next'
+    u'Prev 1 .. 3 4 5 [6] 7 8 9 10 Next'
     
     >>> pager.page = 9
     >>> pager.rendertest()
-    u'prev 1 .. 6 7 8 [9] 10 Next'
+    u'Prev 1 .. 6 7 8 [9] 10 Next'
     
     >>> pager.page = 10
     >>> pager.rendertest()
-    u'prev 1 .. 7 8 9 [10]'
+    u'Prev 1 .. 7 8 9 [10]'
+    
+    >>> pager.page = 1
+    >>> pager.next_token = 'Next &laquo'
+    >>> pager.render()
+    u'<span class="pager"><span class="current">[1]</span><a href="2" title="Go to page 2">2</a><a href="3" title="Go to page 3">3</a><a href="4" title="Go to page 4">4</a>..<a href="10" title="Go to page 10">10</a><a class="next" href="2" title="Go to page 2">Next &laquo</a></span>'
     
 """
 
@@ -54,7 +59,7 @@ from __future__ import division
 import re
 from math import ceil
 
-from webhelpers.html import HTML
+from webhelpers.html import literal, HTML
 
 
 class Pager(object):
@@ -125,20 +130,20 @@ class Pager(object):
         
         def link(page):
             if page == self.page:
-                chunks.append(HTML.tag('span', self.current_wrapper % page, class_=self.current_class))
+                chunks.append(HTML.tag('span', literal(self.current_wrapper % page), class_=self.current_class))
             else:
                 chunks.append(HTML.tag('a', str(page), title=self.title_format % page, href=href(page)))
         
         # Previous page
         if self.page > 1:
-            chunks.append(HTML.tag('a', self.prev_token,  title=self.title_format % (self.page - 1), href=href(self.page - 1), class_=self.prev_class))
+            chunks.append(HTML.tag('a', literal(self.prev_token),  title=self.title_format % (self.page - 1), href=href(self.page - 1), class_=self.prev_class))
         
         # First one
         link(1)
         
         # The first seperator.
         if self.page - self.page_radius > 2:
-            chunks.append(self.seperator)
+            chunks.append(literal(self.seperator))
         
         # The middle ones.
         for i in range(
@@ -149,7 +154,7 @@ class Pager(object):
         
         # The end seperator
         if self.page_count - self.page > self.page_radius + 1:
-            chunks.append(self.seperator)
+            chunks.append(literal(self.seperator))
         
         # The last one.
         if self.page_count > 1:
@@ -157,7 +162,7 @@ class Pager(object):
         
         if self.page < self.page_count:
             # Next page
-            chunks.append(HTML.tag('a', self.next_token, title=self.title_format % (self.page + 1), href=href(self.page + 1), class_=self.next_class))
+            chunks.append(HTML.tag('a', literal(self.next_token), title=self.title_format % (self.page + 1), href=href(self.page + 1), class_=self.next_class))
         
         return unicode(HTML.tag('span', *chunks, class_=self.wrapper_class))
     
