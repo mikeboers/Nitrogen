@@ -12,7 +12,24 @@ setup(
     version = "0.1a.dev",
     packages = find_packages(),
     
-    install_requires=[],
+    install_requires='''
+        beaker
+        beautifulsoup
+        flup
+        formalchemy
+        lorem-ipsum-generator
+        mako
+        markdown
+        minimock
+        nose
+        paste
+        simplejson
+        sqlalchemy
+        webhelpers
+        webob
+        webtest
+        pil
+    ''',
     
     include_package_data=True,
         
