@@ -290,7 +290,7 @@ def test_routing_path_setup():
         start('200 OK', [('Content-Type', 'text-plain')])
         yield get_unrouted(environ)
 
-    app = TestApp(app)
+    app = WebTester(TestApp(app))
 
     res = app.get('/one/two')
     assert res.body == '/one/two'
@@ -359,5 +359,4 @@ def test_routing_path_setup():
 
 
 if __name__ == '__main__':
-    from .. import test
-    test.run()
+    import nose; nose.run(defaultTest=__name__)

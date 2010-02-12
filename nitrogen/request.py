@@ -438,5 +438,4 @@ def test_request_post_and_etag():
     assert res.headers['etag'] == 'new_etag'
     
 if __name__ == '__main__':
-    from . import test
-    test.run()
+    import nose; nose.run(defaultTest=__name__)

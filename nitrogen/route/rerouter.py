@@ -371,5 +371,4 @@ def test_route_building():
 
 if __name__ == '__main__':
     import logging
-    from .. import test
-    test.run()
+    import nose; nose.run(defaultTest=__name__)

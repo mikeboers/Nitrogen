@@ -56,5 +56,4 @@ def test_main():
     user_controller = UserController(user_context, view_context)
 
 if __name__ == '__main__':
-    from ..test import run
-    run()
+    import nose; nose.run(defaultTest=__name__)

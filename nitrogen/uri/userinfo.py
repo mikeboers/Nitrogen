@@ -89,5 +89,4 @@ class Userinfo(list):
         return '<uri.Userinfo:%s>' % list.__repr__(self)
 
 if __name__ == '__main__':
-    from ..test import run
-    run()
+    import nose; nose.run(defaultTest=__name__)

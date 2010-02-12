@@ -148,5 +148,4 @@ def test_status_resolver():
     assert res.status == '307 Temporary Redirect', 'Status did not get resolved.'
 
 if __name__ == '__main__':
-    from ..test import run
-    run()
+    import nose; nose.run(defaultTest=__name__)

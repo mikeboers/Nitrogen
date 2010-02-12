@@ -55,5 +55,4 @@ def test_hexer():
     # pprint(hexer.route('/a/whatever'))
 
 if __name__ == '__main__':
-    from ..test import run
-    run()
+    import nose; nose.run(defaultTest=__name__)

@@ -302,5 +302,4 @@ def test_compress_either():
 
 
 if __name__ == '__main__':
-    from test import run
-    run()
+    import nose; nose.run(defaultTest=__name__)

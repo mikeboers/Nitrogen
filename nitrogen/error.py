@@ -243,5 +243,4 @@ def error_notifier(app, render=None, traceback=False, template='_500.tpl'):
     return inner
 
 if __name__ == '__main__':
-    from . import test
-    test.run()
+    import nose; nose.run(defaultTest=__name__)

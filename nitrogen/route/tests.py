@@ -8,7 +8,6 @@ from .tools import *
 from .modulerouter import FakeModule
 from ..http.status import HttpNotFound
 from ..request import as_request
-from .. import test
 
 
 controller_router = ModuleRouter(package=__name__)
@@ -52,4 +51,4 @@ def test_rerouter_get():
 
 
 if __name__ == '__main__':
-    test.run()
+    import nose; nose.run(defaultTest=__name__)

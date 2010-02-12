@@ -48,7 +48,6 @@ def basic_match(pattern, perm):
 
 if __name__ == '__main__':
     
-    from ..test import run
-    run()
+    import nose; nose.run(defaultTest=__name__)
 
     
