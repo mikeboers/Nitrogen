@@ -15,3 +15,8 @@
 /build
 /dist
 /nitrogen.egg-info
+
+# distribute
+/distribute-*
+
+/pip-log.txt
