@@ -7,31 +7,31 @@ def basic_match(pattern, perm):
     
     Basic examples:
     
-        >>> basic_match('a', 'a')
+        >> basic_match('a', 'a')
         True
-        >>> basic_match('a', 'b')
+        >> basic_match('a', 'b')
         False
     
     Patterns:
     
-        >>> basic_match('a.*', 'a.a')
+        >> basic_match('a.*', 'a.a')
         True
-        >>> basic_match('a.*', 'b.b')
+        >> basic_match('a.*', 'b.b')
         False
     
     Catch all pass:
     
-        >>> basic_match('*', 'anything')
+        >> basic_match('*', 'anything')
         True
     
     Hierarchical:
     
-        >>> perms = ['a.one.two', '-a.one', 'a']
-        >>> basic_match(perms, 'a')
+        >> perms = ['a.one.two', '-a.one', 'a']
+        >> basic_match(perms, 'a')
         True
-        >>> basic_match(perms, 'a.one')
+        >> basic_match(perms, 'a.one')
         False
-        >>> basic_match(perms, 'a.one.two')
+        >> basic_match(perms, 'a.one.two')
         True
     
         

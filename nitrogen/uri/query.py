@@ -226,9 +226,6 @@ Easy signatures!
     Traceback (most recent call last):
     ...
     ValueError: bad signature
-    
-    >>> query.sign('awesome')
-    >>> str(query)
 
 """
 
