@@ -1,2 +1,12 @@
+
+# General
 *.pyc
 .DS_Store
+
+# Virtualenv
+/.Python
+/bin
+/include/python2.6
+/lib/python2.6
+/man
+/share
