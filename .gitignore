@@ -10,3 +10,8 @@
 /lib/python2.6
 /man
 /share
+
+# setup.py
+/build
+/dist
+/nitrogen.egg-info
