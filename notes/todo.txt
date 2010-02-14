@@ -7,6 +7,22 @@
 - paste webob.Request is completely malleable. this is so you can modify the
   request and pass it on to someone else. This seems like a Good Thing™.
 
+- route.Transformer could exist solely to manipulate the data that is getting
+  passed around. Then one can pass in a model and have the url generated for
+  it specifically
+
+
+- figure out which parts can be seperated out
+	- multimap
+		- "multimap" is NOT taken on pypi
+		- "MultiMaPy" on github
+	- flickr
+		- "milkr" is NOT taken on pypi
+	- uri
+		- "uri" is taken on pypi
+		- "uritools", "urilib
+		
+	
 - route.Chain should catch status exceptions and start_response(status, ...) as
   well.
     - status should have a function to throw a given status code. Do this by
@@ -124,7 +140,7 @@ my own minifier, which sounds like a bad idea).
 - user.context
 	- allow username, realname, or email to be used as password
 	- many different ways to authenticate: password, PPP, yubikey, email token
-	  prowl token, sms, openid, etc
+	  ' token, sms, openid, etc
 	- the login/authentication page should see that I am coming from 127.0.0.1
 	  and allow me to create a new user, or use a temporary superuser
 	- users should not need to be backed by the database, so that we can have
