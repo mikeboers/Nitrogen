@@ -1,4 +1,11 @@
 
+- need to either bulk up the encoder or replace it with something else.
+	- IE does not supply a Accept-Charset header, but it still does accept
+	  UTF-8.
+	- Should only be auto encoding stuff for text/* content types.
+
+- paste webob.Request is completely malleable. this is so you can modify the
+  request and pass it on to someone else. This seems like a Good Thing™.
 
 - route.Chain should catch status exceptions and start_response(status, ...) as
   well.

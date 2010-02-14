@@ -23,7 +23,10 @@ def utf8_encoder(app):
     def utf8_encoder_app(environ, start):
         if 'utf-8' not in environ.get('HTTP_ACCEPT_CHARSET', '').lower():
             for x in app(environ, start):
-                yield x.encode('ascii', 'xmlcharrefreplace')
+                if isinstance(x, unicode):
+                    yield x.encode('ascii', 'xmlcharrefreplace')
+                else:
+                    yield str(x)
             return
         def utf8_encoder_start(status, headers, exc_info=None):
             has_type = False
