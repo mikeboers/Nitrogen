@@ -75,18 +75,18 @@ be the ONLY string value for that key.
 
 Setting a list:
 
-    >>> query['key'] = 'a b c'.split()
+    >>> query.setall('key', 'a b c'.split())
     >>> query.getall('key')
     [u'a', u'b', u'c']
 
-You can provide a sequence that is not a tuple or list by using the setlist
+You can provide a sequence that is not a tuple or list by using the setall
 method. This will remove all existing pairs by key, and append the new ones
 on the end of the query.
 
     >>> def g():
     ...     for x in [1, 2, 3]:
     ...         yield x
-    >>> query.setlist('key', g())
+    >>> query.setall('key', g())
     >>> query.getall('key')
     [u'1', u'2', u'3']
 
@@ -120,7 +120,8 @@ will just cast the values to tuples and assert they have length 2.)
 You can update the query via dict.update:
 
     >>> query = Query()
-    >>> query.update({u'a': 1, u'b': [2, 3], u'c': u'4'})
+    >>> query.update({u'a': 1, u'b': 2, u'c': u'4'})
+    >>> query.append(('b', 3))
     >>> query.sort() # Because the dictionary does not come in order.
     >>> query.allitems()
     [(u'a', u'1'), (u'b', u'2'), (u'b', u'3'), (u'c', u'4')]
