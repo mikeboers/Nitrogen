@@ -126,7 +126,6 @@ You can update the query via dict.update:
     [(u'a', u'1'), (u'b', u'2'), (u'b', u'3'), (u'c', u'4')]
 
     >>> query.update({u'b': '2/3'})
-    >>> query.sort() # Dicts are not ordered!
     >>> query.allitems()
     [(u'a', u'1'), (u'b', u'2/3'), (u'c', u'4')]
 
@@ -397,7 +396,7 @@ class Query(MutableMultiMap):
                     :int(math.ceil(nonce_bits / 6))]
         
         copy = self.copy()
-        copy.remove(sig_key)
+        copy.discard(sig_key)
         copy.sort()
         self[sig_key] = copy._signature(key, hasher)
 
