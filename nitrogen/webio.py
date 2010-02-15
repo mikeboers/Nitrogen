@@ -30,10 +30,11 @@ import tempfile
 import logging
 from cStringIO import StringIO
 
+from multimap import MultiMap, DelayedMultiMap
+
 from . import cookie
 from .uri import URI
 from .uri.query import Query
-from .multimap import MultiMap, DelayedMultiMap
 from .headers import DelayedHeaders
 
 

@@ -48,7 +48,7 @@ Examples:
 
 import re
 
-from .multimap import MultiMap, MutableMultiMap, DelayedMultiMap
+from multimap import MultiMap, MutableMultiMap, DelayedMultiMap
         
 def conform_header_name(name, titlecase=True):
     """

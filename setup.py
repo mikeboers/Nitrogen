@@ -29,6 +29,10 @@ setup(
         webob
         webtest
         pil
+        
+        # These are mine.
+        multimap
+        
     ''',
     
     include_package_data=True,

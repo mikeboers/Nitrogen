@@ -240,7 +240,8 @@ import base64
 import math
 import struct
 
-from ..multimap import MutableMultiMap
+from multimap import MutableMultiMap
+
 from .transcode import unicoder, decode as _decode, encode as _encode
 
 def decode(x):

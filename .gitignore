@@ -14,9 +14,8 @@
 # setup.py
 /build
 /dist
-/nitrogen.egg-info
-
-# distribute
+/*.egg-info
+/*.egg
 /distribute-*
 
 /pip-log.txt
