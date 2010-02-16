@@ -92,4 +92,12 @@ class ViewContext(object):
     
     def add_flash_message(self, class_, message):
         self.flash_messages.append((class_, message))
+        
+    def wsgi_reset(self, app):
+        """Reset all the thread-local sessions generated."""
+        def ViewContext_wsgi_reset_app(environ, start):
+            for x in app(environ, start):
+                yield x
+            self._local.flash_messages = []
+        return ViewContext_wsgi_reset_app
 
