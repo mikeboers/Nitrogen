@@ -259,6 +259,7 @@ class ReRouter(tools.Router):
                 return app, path, match
 
     def generate_step(self, data):
+        log.debug('generate_step(%r, %r)' % (self, data))
         for pattern, app in self._apps:
             if any(k in data and data[k] != v for k, v in
                 pattern._constants.iteritems()):
@@ -266,9 +267,9 @@ class ReRouter(tools.Router):
             try:
                 return pattern.format(**data), app
             except FormatError:
-                pass
+                log.exception('FormatError while generating')
             except KeyError:
-                pass
+                log.exception('KeyError while generating')
 
 
 
