@@ -22,7 +22,8 @@
 		- "uri" is taken on pypi
 		- "uritools", "urilib
 		
-	
+- mailer does wierd things with unicode email addresses
+
 - route.Chain should catch status exceptions and start_response(status, ...) as
   well.
     - status should have a function to throw a given status code. Do this by
