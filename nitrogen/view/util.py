@@ -18,7 +18,6 @@ class Literal(unicode):
 original_html_escape = mako.filters.html_escape
 
 def smart_html_escape(x):
-    log.debug((type(x), x))
     if isinstance(x, Literal):
         return x
     return original_html_escape(x)
