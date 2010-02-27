@@ -267,9 +267,11 @@ class ReRouter(tools.Router):
             try:
                 return pattern.format(**data), app
             except FormatError:
-                log.exception('FormatError while generating')
+                pass
+                # log.exception('FormatError while generating')
             except KeyError:
-                log.exception('KeyError while generating')
+                pass
+                # log.exception('KeyError while generating')
 
 
 
