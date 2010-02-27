@@ -5,6 +5,14 @@ import re
 from BeautifulSoup import BeautifulSoup
 
 
+class Markup(unicode):
+    pass
+
+def html_escape(x):
+    if isinstance(x, Markup):
+        return x
+    return cgi.escape(x, True)
+
 def clean_html(html):
     """Asserts the "cleanliness" of html. Closes tags, indents, etc."""
     return BeautifulSoup(html).prettify().decode('utf8')
