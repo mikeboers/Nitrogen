@@ -1,17 +1,30 @@
 
-
+import logging
 import re
+import cgi
+
+import mako.filters
 
 from BeautifulSoup import BeautifulSoup
 
 
-class Markup(unicode):
-    pass
+log = logging.getLogger(__name__)
 
-def html_escape(x):
-    if isinstance(x, Markup):
+
+class Literal(unicode):
+    def __unicode__(self):
+        return self
+
+original_html_escape = mako.filters.html_escape
+
+def smart_html_escape(x):
+    log.debug((type(x), x))
+    if isinstance(x, Literal):
         return x
-    return cgi.escape(x, True)
+    return original_html_escape(x)
+
+# XXX: MONKEY PATCHING!!!!!
+mako.filters.html_escape = smart_html_escape
 
 def clean_html(html):
     """Asserts the "cleanliness" of html. Closes tags, indents, etc."""

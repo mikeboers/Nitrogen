@@ -17,7 +17,7 @@ import webhelpers.text
 import webhelpers.html
 from markdown import markdown
 
-from .util import urlify_name, clean_html, html_escape
+from .util import urlify_name, clean_html, smart_html_escape
 from ..markdown import github_markdown
 from .. import lipsum
 from ..uri.query import encode as query_encode
@@ -26,8 +26,8 @@ context = {}
 
 context['repr'] = repr
 context['sorted'] = sorted
-context['html_escape'] = html_escape
-context['h'] = html_escape
+context['html_escape'] = smart_html_escape
+context['h'] = smart_html_escape
 
 context['json'] = json.dumps
 context['markdown'] = lambda x: clean_html(markdown(github_markdown(x)))
