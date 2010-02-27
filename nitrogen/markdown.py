@@ -73,8 +73,10 @@ def github_markdown(text):
     return text
 
 
-def markdown(text):
-    return _markdown(github_markdown(text))
+def markdown(text, github=True):
+    if github:
+        return _markdown(github_markdown(text))
+    return _markdown(text)
 
 
 
