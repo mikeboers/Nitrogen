@@ -34,7 +34,7 @@ class ModelContext(object):
     
     """
     
-    def __init__(self, engine=None, autocommit=False):
+    def __init__(self, engine=None, autocommit=False, echo=False):
         """Initialize the environment.
         
         Args:
@@ -51,6 +51,7 @@ class ModelContext(object):
         self.session = self.local_session()
         self.metadata = MetaData()
         self.Base = build_declarative_base(metadata=self.metadata)
+        self.echo = echo
         
         if engine:
             self.bind(engine)
@@ -58,7 +59,7 @@ class ModelContext(object):
     def bind(self, engine):
         """Bind to an engine or string."""
         if isinstance(engine, basestring):
-            engine = create_engine(engine)
+            engine = create_engine(engine, echo=self.echo)
         self.engine = engine
         self.metadata.bind = engine
         self.Session.configure(bind=engine)
