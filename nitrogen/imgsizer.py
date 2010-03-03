@@ -42,21 +42,32 @@ class Request(dict):
     LONG_TO_SHORT = dict(ARGS)
     SHORT_TO_LONG = dict(list(reversed(x)) for x in ARGS)
     
-    def __init__(self, *args, **kwargs):
-        dict.__init__(self, *args, **kwargs)
+    def __init__(self, path, *args, **kwargs):
         
-        # Conform to the long version of all the options.
-        for k, v in self.items():
-            if k in self.SHORT_TO_LONG:
-                self[self.SHORT_TO_LONG[k]] = v
-                del self[k]
-            elif k not in self.LONG_TO_SHORT:
-                del self[k]
-        for k in 'width', 'height', 'quality':
-            pass
+        self.path = path
+        
+        raw = dict(*args, **kwargs)
+        
+        for k, v in raw.items():
+            k = self.SHORT_TO_LONG.get(k, k)
+            if k not in self.LONG_TO_SHORT:
+                continue
+            self[k] = v
+        
+        # Dimensions should be ints.
+        for k in 'width', 'height':
+            self[k] = int(self[k]) if k in self else None
+        
+        # Quality should always be an int, and default to 75.
+        self['quality'] = int(self.get('quality', 75))
+        
+        # Figure out a format default.
+        format = self.get('format') or os.path.splitext(path)[1][1:].lower()
+        format = {'jpg' : 'jpeg'}.get(format, format) or 'jpeg'
+        self['format'] = format.lower()
     
     def short_items(self):
-        return [(self.LONG_TO_SHORT[k], v) for k, v in self.items() if v is not None]
+        return [(self.LONG_TO_SHORT[k], v) for k, v in self.items()]
     
     def __getattr__(self, name):
         return self.get(name)
@@ -68,6 +79,10 @@ class Request(dict):
         for k, v in self.ARGS:
             if v is not None:
                 yield k
+    
+    @property
+    def cache_key(self):
+        return hashlib.md5(repr((self.path, ) + tuple(self.get(k) for k in self.ARGS))).hexdigest()
     
     @property
     def width(self):
@@ -101,7 +116,7 @@ class ImgSizer(object):
         self.max_age = max_age
     
     def build_url(self, local_path, **kwargs):
-        query = Query(Request(kwargs).short_items())
+        query = Query(Request(local_path, kwargs).short_items())
         if self.sig_key:
             query['path'] = local_path
             query.sign(self.sig_key, add_time=False, add_nonce=False)
@@ -191,27 +206,20 @@ class ImgSizer(object):
             res.start('not modified')
             return
         
-        img_req    = Request(req.get)
+        img_req    = Request(path, req.get)
         
         mode       = img_req.mode
         background = img_req.background
         width      = img_req.width
         height     = img_req.height
         quality    = img_req.quality
-        
         format     = img_req.format
-        format     = format or os.path.splitext(path)[1][1:].lower()
-        format     = {'jpg' : 'jpeg'}.get(format, format) or 'jpeg'
-        format     = format.lower()
 
         out = None
         cache_path = None
         
         if self.cache_root:
-            cache_key = hashlib.md5(repr((
-                path, mode, width, height, quality, format, background
-            ))).hexdigest()
-            cache_path = os.path.join(self.cache_root, cache_key + '.' + format)
+            cache_path = os.path.join(self.cache_root, img_req.cache_key + '.' + format)
             cache_mtime = os.path.getmtime(cache_path) if os.path.exists(cache_path) else None
             if cache_mtime is not None and cache_mtime >= raw_mtime:
                 # We have it cached here!
