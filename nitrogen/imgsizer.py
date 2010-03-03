@@ -20,12 +20,79 @@ log = logging.getLogger(__name__)
 # TODO:
 # - take max_age from config
 
+
+MODE_FIT = 'fit'
+MODE_CROP = 'crop'
+MODE_PAD = 'pad'
+MODES = (MODE_FIT, MODE_CROP, MODE_PAD)
+
+
+
+
+class Request(dict):
+    
+    ARGS = [
+        ('mode', 'm'),
+        ('width', 'w'),
+        ('height', 'h'),
+        ('background', 'bg'),
+        ('quality', 'q'),
+        ('format', 'f'),
+    ]
+    LONG_TO_SHORT = dict(ARGS)
+    SHORT_TO_LONG = dict(list(reversed(x)) for x in ARGS)
+    
+    def __init__(self, *args, **kwargs):
+        dict.__init__(self, *args, **kwargs)
+        
+        # Conform to the long version of all the options.
+        for k, v in self.items():
+            if k in self.SHORT_TO_LONG:
+                self[self.SHORT_TO_LONG[k]] = v
+                del self[k]
+            elif k not in self.LONG_TO_SHORT:
+                del self[k]
+        for k in 'width', 'height', 'quality':
+            pass
+    
+    def short_items(self):
+        return [(self.LONG_TO_SHORT[k], v) for k, v in self.items() if v is not None]
+    
+    def __getattr__(self, name):
+        return self.get(name)
+    
+    def __getitem__(self, name):
+        return self.get(name)
+    
+    def __iter__(self):
+        for k, v in self.ARGS:
+            if v is not None:
+                yield k
+    
+    @property
+    def width(self):
+        try:
+            return int(self['width'])
+        except:
+            return None
+    
+    @property
+    def height(self):
+        try:
+            return int(self['height'])
+        except:
+            return None
+    
+    @property
+    def quality(self):
+        try:
+            return int(self['quality'])
+        except:
+            return 85
+
+
 class ImgSizer(object):
     
-    MODE_FIT = 'fit'
-    MODE_CROP = 'crop'
-    MODE_PAD = 'pad'
-    MODES = (MODE_FIT, MODE_CROP, MODE_PAD)
     
     def __init__(self, path, cache_root=None, sig_key=None, max_age=3600):
         self.path = [os.path.abspath(x) for x in path]
@@ -34,17 +101,11 @@ class ImgSizer(object):
         self.max_age = max_age
     
     def build_url(self, local_path, **kwargs):
-        for key in 'width height quality format padding'.split():
-            if key in kwargs:
-                kwargs[key[0]] = kwargs[key]
-                del kwargs[key]
-        query = Query(kwargs)
-        query.sort()
+        query = Query(Request(kwargs).short_items())
         if self.sig_key:
             query['path'] = local_path
             query.sign(self.sig_key, add_time=False, add_nonce=False)
             del query['path']
-        
         return local_path + ('?' + str(query) if kwargs else '')
         
     def find_img(self, local_path):
@@ -71,10 +132,10 @@ class ImgSizer(object):
                 (orig_width * height // orig_height, height)
             ])
     
-            if mode == self.MODE_FIT or mode == self.MODE_PAD:
+            if mode == 'fit' or mode == 'pad':
                 img = img.resize(fit, image.ANTIALIAS)
                 
-                if mode == self.MODE_PAD:
+                if mode == 'pad':
                     pad_color = {'white': (255, 255, 255)}.get(str(background).lower(), 0)
                     back = image.new('RGBA', (width, height), pad_color)
                     back.paste(img, (
@@ -83,7 +144,7 @@ class ImgSizer(object):
                     ))
                     img = back
             
-            elif mode == self.MODE_CROP:
+            elif mode == 'crop':
                 dx = (crop[0] - width) // 2
                 dy = (crop[1] - height) // 2
                 img = img.resize(crop, image.ANTIALIAS).crop(
@@ -130,19 +191,19 @@ class ImgSizer(object):
             res.start('not modified')
             return
         
-        mode = req.get.get('mode') or req.get.get('m')
-        background = req.get.get('background') or req.get.get('b')
-        width = req.get.get('width') or req.get.get('w')
-        width = int(width) if width else None
-        height = req.get.get('height') or req.get.get('h')
-        height = int(height) if height else None
-        quality = req.get.get('quality') or req.get.get('q')
-        quality = int(quality) if quality else 75
-        format = req.get.get('format') or req.get.get('f')
-        format = format or os.path.splitext(path)[1][1:].lower()
-        format = {'jpg' : 'jpeg'}.get(format, format) or 'jpeg'
-        format = format.lower()
+        img_req    = Request(req.get)
         
+        mode       = img_req.mode
+        background = img_req.background
+        width      = img_req.width
+        height     = img_req.height
+        quality    = img_req.quality
+        
+        format     = img_req.format
+        format     = format or os.path.splitext(path)[1][1:].lower()
+        format     = {'jpg' : 'jpeg'}.get(format, format) or 'jpeg'
+        format     = format.lower()
+
         out = None
         cache_path = None
         
