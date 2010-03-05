@@ -1,11 +1,12 @@
 
 
-import re
-import logging
-import hashlib
-import base64
+from bisect import insort
 from pprint import pprint
+import base64
 import collections
+import hashlib
+import logging
+import re
 
 from webtest import TestApp
 
@@ -231,16 +232,17 @@ class ReRouter(tools.Router):
             pattern -- The pattern to match with. Should start with a '/'.
             app -- The app to register. If not provided this method returns
                 a decorator which can be used to register with.
-            lock_front -- The pattern should match only to the front.
-            snap_back -- Require the pattern to match at the end of the URI
-                or at the end of a path segment.
 
         """
 
         # We are being used directly here.
         if app:
-            pair = (Pattern(pattern, **kwargs), app)
-            self._apps.append(pair)
+            # We are creating a key here that will first respect the requested
+            # priority of apps relative to each other, but in the case of
+            # multiple apps at the same priority, respect the registration
+            # order.
+            priority = (-kwargs.pop('_priority', 0), len(self._apps))
+            insort(self._apps, (priority, Pattern(pattern, **kwargs), app))
             return app
 
         # We are not being used directly, so return a decorator to do the
@@ -251,7 +253,7 @@ class ReRouter(tools.Router):
         return ReRouter_register
 
     def route_step(self, path):
-        for pattern, app in self._apps:
+        for _, pattern, app in self._apps:
             m = pattern.match(path)
             if m:
                 kwargs, path = m
@@ -260,7 +262,7 @@ class ReRouter(tools.Router):
 
     def generate_step(self, data):
         log.debug('generate_step(%r, %r)' % (self, data))
-        for pattern, app in self._apps:
+        for _, pattern, app in self._apps:
             if any(k in data and data[k] != v for k, v in
                 pattern._constants.iteritems()):
                 continue
