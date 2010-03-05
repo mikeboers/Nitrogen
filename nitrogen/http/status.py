@@ -60,7 +60,7 @@ def canonicalize_message(msg):
     return code_to_message(message_to_code(msg))
 
 
-def resolve_status(status):
+def resolve_status(status, canonicalize=False, strict=False):
     """Resolve a given object into the status that it should represent.
     
     Tries to anticipate what you are thinking. If you pass an int, it returns
@@ -94,8 +94,17 @@ def resolve_status(status):
         
         >>> resolve_status('999 Not in List')
         '999 Not in List'
+        >>> resolve_status('999 Not in List', strict=True)
+        Traceback (most recent call last):
+        ...
+        ValueError: can't resolve status '999 Not in List'
+        >>> resolve_status('200 OK', strict=True)
+        '200 OK'
+        
         >>> resolve_status('200 Custom Message')
         '200 Custom Message'
+        >>> resolve_status('200 Custom Message', canonicalize=True)
+        '200 OK'
         
         >>> resolve_status('200')
         '200 OK'
@@ -110,7 +119,10 @@ def resolve_status(status):
     try:
         status = int(status)
     except ValueError:
-        pass
+        if canonicalize:
+            m = re.match(r'^(\d+)(\s|$)', str(status))
+            if m:
+                status = int(m.group(1))
     
     # Convert it to a code if we can.
     try:
@@ -124,11 +136,18 @@ def resolve_status(status):
     except ValueError:
         pass
     
-    # Can't find it... just hand it back.
+    # Can't find it...
+    if strict:
+        code, msg = None, None
+        m = re.match(r'^(\d+) (.+)$', status)
+        if m:
+            code, msg = m.groups()
+        if not code or not msg or _code_to_message.get(int(code)) != msg:
+            raise ValueError('can\'t resolve status %r' % status)
     return status
 
 
-def status_resolver(app):
+def status_resolver(app, canonicalize=False, strict=False):
     """WSGI middleware which attempts to resolve whatever is sent as the
     status object into a proper HTTP status.
     
@@ -136,7 +155,7 @@ def status_resolver(app):
     
     def status_resolver_app(environ, start):
         def status_resolver_start(status, headers, exc_info=None):
-            start(resolve_status(status), headers)
+            start(resolve_status(status, canonicalize=canonicalize, strict=strict), headers)
         return app(environ, status_resolver_start)
     return status_resolver_app
 
