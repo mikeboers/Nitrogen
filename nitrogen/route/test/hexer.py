@@ -1,6 +1,7 @@
 
 from . import EchoApp
 from ..maprouter import MapRouter
+from ..hexer import Hexer
 
 def test_hexer():
     

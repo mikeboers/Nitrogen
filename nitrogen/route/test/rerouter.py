@@ -1,19 +1,19 @@
   
 from pprint import pprint
 
-from webtest import TestApp as WebTester
+import webtest
 
+from . import EchoApp
 from .. import *
 from ...http.status import HttpNotFound
 from ...request import as_request
 from ..base import *
+from .. import base
 from .modulerouter import FakeModule
-
-
 
     
 controller_router = ModuleRouter(package=__name__)
-app = WebTester(controller_router)
+app = webtest.TestApp(controller_router)
 
 
 rerouter = ReRouter()
@@ -47,7 +47,7 @@ def test_rerouter_get():
     res = app.get('/rerouter/get/12')
     assert res.body == 'rerouter: get 12'
 
-    route = tools.get_route(res.environ)
+    route = base.get_route(res.environ)
     print route.url_for(id=24)
 
 
@@ -75,7 +75,7 @@ def test_routing_path_setup():
         start('200 OK', [('Content-Type', 'text-plain')])
         yield base.get_route(environ)[-1]['key']
 
-    app = TestApp(router)
+    app = webtest.TestApp(router)
 
     res = app.get('/one/two')
     assert res.body == 'one'
@@ -134,7 +134,7 @@ def test_route_building():
         start('200 OK', [('Content-Type', 'text/plain')])
         yield 'empty'
 
-    app = TestApp(router)
+    app = webtest.TestApp(router)
 
     res = app.get('/x-1')
     route = base.get_route(res.environ)

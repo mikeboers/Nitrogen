@@ -1,6 +1,12 @@
 
 import sys
+from pprint import pprint
 
+import webtest
+
+from ..modulerouter import ModuleRouter
+from .. import base
+from ...http import status
 
 class FakeModule(object):
 
@@ -15,7 +21,11 @@ class FakeModule(object):
         assert name not in sys.modules
         sys.modules[name] = self
         self.modules.append(self)
-
+        
+    @property
+    def __name__(self):
+        return self.name
+        
     @property
     def __file__(self):
         return __file__
@@ -38,7 +48,7 @@ def test_routing_path_setup():
     router = ModuleRouter()
     FakeModule('test_one', output='ONE')
 
-    app = TestApp(router)
+    app = webtest.TestApp(router)
 
     res = app.get('/test_one/extra')
     assert res.body == 'ONE'
@@ -56,7 +66,7 @@ def test_routing_path_setup():
     try:
         app.get('/-does/not/exist')
         assert False
-    except HttpNotFound:
+    except status.HttpNotFound:
         pass
 
 

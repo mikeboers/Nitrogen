@@ -1,8 +1,11 @@
 
+from pprint import pprint
+
 from . import EchoApp
 from ..maprouter import MapRouter
+from ..signer import Signer
 
-def test_hexer():
+def test_signer():
     
     a = EchoApp('one')
     b = EchoApp('two')

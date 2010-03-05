@@ -16,35 +16,16 @@ from . import base
 
 class SelfRouter(base.Router):
     
-    def __init__(self, route_key='self', default='action'):
+    def __init__(self, route_key='self', default='index'):
         self.route_key=route_key
         self.default = default
     
     def route_step(self, path):
         path = Path(path)
+        print path
         rawname = path[0] if path else self.default
         name = 'do_' + rawname
         if not hasattr(self, name):
             return
         return getattr(self, name), ''.join(path[1:]), {self.route_key: rawname}
 
-
-
-# def test_main():
-#     
-#     class TestRouter(SelfRouter):
-#         def do_index(self, environ, start):
-#             start('200 OK', [])
-#             yield 'index'
-#     
-#     router = TestRouter()
-#     
-#     print router.route('')
-#     
-#     app = WebTester(router)
-#     res = app.get('')
-#     print repr(res.body)
-    
-
-if __name__ == '__main__':
-    import nose; nose.run(defaultTest=__name__)
