@@ -46,16 +46,19 @@
 
 
 - figure out which parts can be seperated out
-	- multimap
-		- "multimap" is NOT taken on pypi
-		- "MultiMaPy" on github
 	- flickr
 		- "milkr" is NOT taken on pypi
 	- uri
 		- "uri" is taken on pypi
 		- "uritools", "urilib
 		
+
+	- route
+		- "router"
+		- "wsgi-router"
+        
 - mailer does wierd things with unicode email addresses
+
 
 - route.Chain should catch status exceptions and start_response(status, ...) as
   well.
