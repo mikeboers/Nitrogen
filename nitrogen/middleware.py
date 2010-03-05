@@ -29,7 +29,15 @@ def etagger(app):
             ))
         
         output = ''.join(app(environ, inner_start))
-        etag = 'auto-md5:' + hashlib.md5(output).hexdigest()
+        
+        # If the status is anything but a 200 OK then don't touch it.
+        code = int(str(state['status']).split()[0])
+        if code != 200:
+            start(state['status'], state['headers'])
+            yield output
+            return
+        
+        etag = 'md5=' + hashlib.md5(output).hexdigest()
         
         req = Request(environ=environ)
         res = Response(start=start, headers=state['headers'])
@@ -37,7 +45,7 @@ def etagger(app):
         if res.etag is None:
             res.etag = etag
             if req.etag == etag:
-                res.start('not modified')
+                res.start('304 Not Modified')
                 return
         
         res.start(state['status'])
