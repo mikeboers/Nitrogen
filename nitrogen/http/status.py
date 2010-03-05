@@ -1,18 +1,64 @@
 """Module for WSGI status helping functions."""
 
+from __future__ import absolute_import
+
+import sys
+import re
 
 from httplib import responses as _code_to_message
 
 _message_to_code = dict((v.lower(), k) for k, v in _code_to_message.items())
 
+
 def code_to_message(code):
-    return _code_to_message[code]
+    """Convert a integer code into the canonical message.
+    
+    Examples:
+        >>> code_to_message(200)
+        'OK'
+        >>> code_to_message(404)
+        'Not Found'
+    
+    """
+    try:
+        return _code_to_message[int(code)]
+    except KeyError:
+        raise ValueError(code)
+
 
 def message_to_code(msg):
-    return _message_to_code[' '.join(msg.strip().split()).lower()]
+    """Convert a status message into the coresponding integer code.
+    
+    Is case insenstive.
+    
+    Examples:
+        >>> message_to_code('OK')
+        200
+        >>> message_to_code('ok')
+        200
+        >>> message_to_code('not found')
+        404
+    
+    """
+    try:
+        return _message_to_code[str(msg).lower()]
+    except KeyError:
+        raise ValueError(msg)
 
-def normalize_message(msg):
+
+def canonicalize_message(msg):
+    """Return the canonical version of the HTTP status message.
+    
+    Raises ValueError if it can't do it.
+    
+    Examples:
+        
+        >>> canonicalize_message('not found')
+        'Not Found'
+        
+    """
     return code_to_message(message_to_code(msg))
+
 
 def resolve_status(status):
     """Resolve a given object into the status that it should represent.
@@ -66,16 +112,16 @@ def resolve_status(status):
     except ValueError:
         pass
     
+    # Convert it to a code if we can.
+    try:
+        status = message_to_code(status)
+    except ValueError:
+        pass
+    
     # See if status is a status code.
     try:
         return '%d %s' % (status, code_to_message(status))
-    except:
-        pass
-    
-    # See if the constant is set
-    try:
-        return '%d %s' % (message_to_code(status), normalize_message(status))
-    except:
+    except ValueError:
         pass
     
     # Can't find it... just hand it back.
@@ -96,42 +142,50 @@ def status_resolver(app):
 
 
 class BaseHttpStatus(Exception):
+    """Base HTTP status exception from which all will inherit.
+    
+    This is not to be used directly.
+    
+    """
     _code = 200
 
-def make_http_status_exception(code):
-    message = code_to_message(code)
-    name = 'Http' + ''.join(message.split())
-    return type(name, (BaseHttpStatus, ), {'_code': code})
+
+_code_to_exception = {}
+def exception(code):
+    """Create a class for the given HTTP status code or message.
+    
+    Caches the Exception and also stores it as an attribute on this module.
+    This is done so that they are easily Pickleable, and to make them easy to
+    access by name from the outside.
+    
+    Example:
+        >>> x = exception(400)
+        >>> x.__name__, x._code
+        ('HttpBadRequest', 400)
+        
+        >>> x = exception('See Other')
+        >>> x.__name__, x._code
+        ('HttpSeeOther', 303)
+    
+    """
+    if not isinstance(code, int):
+        code = message_to_code(code)
+    if code not in _code_to_exception:
+        message = code_to_message(code)
+        name = 'Http' + ''.join(message.split())
+        _code_to_exception[code] = obj = type(name, (BaseHttpStatus, ), {'_code': code})
+        self = sys.modules[__name__]
+        setattr(self, name    , obj) # Perhaps will depreciate this one?
+        setattr(self, name[4:], obj)
+    return _code_to_exception[code]
 
 
-HttpOK = make_http_status_exception(200)
-
-# All of the 300 class needs a Location header.
-HttpMovedPermanently = make_http_status_exception(301)
-HttpFound = make_http_status_exception(302)
-HttpSeeOther = make_http_status_exception(303)
-HttpNotModified = make_http_status_exception(304)
-HttpTemporaryRedirect = make_http_status_exception(307)
-
-HttpUnauthorized = make_http_status_exception(401) # This once needs a WWW-Authenticate header along with it.
-HttpForbidden = make_http_status_exception(403)
-HttpNotFound = make_http_status_exception(404)
-HttpGone = make_http_status_exception(410)
+# Walk through all of the codes and make a class for each one, assigning it
+# to this module (essentially putting it into the global namespace).
+for code in _code_to_message:
+    exception(code)
 
 
-
-
-def test_status_names():
-    """Make sure that I didn't make a type when setting all of the generated
-    HTTP status exception classes."""
-    for name, obj in globals().items():
-        try:
-            check = issubclass(obj, BaseHttpStatus)
-        except:
-            pass
-        else:
-            if check:
-                assert name == obj.__name__
 
 def test_status_resolver():
     """Nose test, checking that plaintext is returned."""
