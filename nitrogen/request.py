@@ -21,7 +21,7 @@ from .webio import request_params
 from .cookie import Container as CookieContainer
 from .headers import DelayedHeaders, MutableHeaders
 from .webio import request_params
-from .route.tools import get_route
+from .route.base import get_route
 
 
 log = logging.getLogger(__name__)

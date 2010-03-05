@@ -8,12 +8,12 @@ watching how it changes as it passes through various routers.
 """
 
 
-import re
-import collections
 from pprint import pprint
-import weakref
-import unittest
+import collections
 import logging
+import re
+import unittest
+import weakref
 
 from webtest import TestApp as WebTester
 
@@ -266,19 +266,7 @@ class Router(object):
 
 
 
-class TestApp(object):
-    
-    def __init__(self, output=None, start=True):
-        self.start = start
-        self.output = output
-    
-    def __call__(self, environ, start):
-        if self.start:
-            start('200 OK', [('Content-Type', 'text/plain')])
-        return [str(self.output)]
-    
-    def __repr__(self):
-        return 'TestApp(%r)' % self.output
+
         
 
 def test_routing_path_setup():

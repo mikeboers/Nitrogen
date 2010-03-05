@@ -4,7 +4,7 @@ import logging
 
 from ..uri.query import Query
 from .maprouter import MapRouter
-from .base import Router, TestApp
+from .base import Router
 
 
 log = logging.getLogger(__name__)
@@ -39,20 +39,3 @@ class Signer(Router):
         del query['path']
         return path + '/' + str(query)
 
-
-def test_hexer():
-    
-    a = TestApp('one')
-    b = TestApp('two')
-    c = TestApp('three')
-    map = MapRouter('x')
-    map.update(dict(a=a, b=b, c=c))
-    hexer = Signer(map)
-    
-    url = hexer.url_for(x='a')
-    print repr(url)
-    pprint(hexer.route(url))
-    # pprint(hexer.route('/a/whatever'))
-
-if __name__ == '__main__':
-    import nose; nose.run(defaultTest=__name__)

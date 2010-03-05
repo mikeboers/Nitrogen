@@ -2,10 +2,12 @@
 import unittest
 from pprint import pprint
 
-from webtest import TestApp as WebTester
+import webtest
 
-from .base import Router, TestApp, RouteChunk, Unroutable, GenerationError
 from ..http.status import HttpNotFound
+
+from .base import Router, RouteChunk, Unroutable, GenerationError
+from .test import EchoApp
 
 class MapRouter(Router, dict):
     
@@ -56,9 +58,9 @@ class TestCase(unittest.TestCase):
     
     def test_main(self):
     
-        app1 = TestApp('one')
-        app2 = TestApp('two')
-        app3 = TestApp('three')
+        app1 = EchoApp('one')
+        app2 = EchoApp('two')
+        app3 = EchoApp('three')
     
         router = MapRouter('first')
         a = MapRouter('second')
@@ -104,7 +106,7 @@ class TestCase(unittest.TestCase):
                 RouteChunk('/extra', router, dict(first='/a'))
             ], a, '/extra'))
         
-        app = WebTester(router)
+        app = webtest.TestApp(router)
         
         res = app.get('/a/1')
         self.assertEqual(res.body, 'one')
