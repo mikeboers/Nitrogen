@@ -1,8 +1,8 @@
 
 from ..http.status import HttpNotFound
-from . import tools
+from . import base
 
-class Chain(tools.Router, list):
+class Chain(base.Router, list):
     
     def __init__(self, *args):
         self.extend(args)

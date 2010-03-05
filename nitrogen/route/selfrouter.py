@@ -12,9 +12,9 @@ It is written so that you can nest reflectors.
 from webtest import TestApp as WebTester
 
 from ..uri.path import Path
-from . import tools
+from . import base
 
-class SelfRouter(tools.Router):
+class SelfRouter(base.Router):
     
     def __init__(self, route_key='self', default='action'):
         self.route_key=route_key

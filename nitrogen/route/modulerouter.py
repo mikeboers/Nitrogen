@@ -5,7 +5,7 @@ import logging
 import os
 import re
 
-from . import tools
+from . import base
 from ..http.status import HttpNotFound
 from ..uri.path import Path
 
@@ -13,7 +13,7 @@ from ..uri.path import Path
 log = logging.getLogger(__name__)
 
 
-class Module(tools.Router):
+class Module(base.Router):
     
     def __init__(self, router, module):
         self.router = router
@@ -57,7 +57,7 @@ class Module(tools.Router):
         return '<%s.%s of %s>' % (self.__class__.__module__, self.__class__.__name__, self.module.__name__)
 
 
-class ModuleRouter(tools.Router):
+class ModuleRouter(base.Router):
     
     def __init__(self, app_key='app', package='', default='index',
         reload=False, route_key='controller'):
@@ -160,12 +160,12 @@ def test_routing_path_setup():
     res = app.get('/test_one/extra')
     assert res.body == 'ONE'
     
-    tools._assert_next_history_step(res,
+    base._assert_next_history_step(res,
             path='/extra',
             router=router
     )
     
-    route = tools.get_route(res.environ)
+    route = base.get_route(res.environ)
     pprint(route)
     print repr(route.url_for(controller='test_one'))
     

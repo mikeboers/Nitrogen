@@ -10,7 +10,7 @@ import re
 
 from webtest import TestApp
 
-from . import tools
+from . import base
 from ..uri import Path
 from ..http.status import HttpNotFound
 
@@ -220,7 +220,7 @@ class Match(collections.Mapping):
         return self.pattern.format(**data)
 
 
-class ReRouter(tools.Router):
+class ReRouter(base.Router):
 
     def __init__(self):
         self._apps = []
@@ -287,11 +287,11 @@ def test_routing_path_setup():
     @router.register(r'/{word:one|two|three}')
     def one(environ, start):
         start('200 OK', [('Content-Type', 'text-plain')])
-        yield tools.get_route(environ)[-1]['word']
+        yield base.get_route(environ)[-1]['word']
 
     @router.register(r'/x-{num:\d+}', _parsers=dict(num=int))
     def two(environ, start):
-        chunk = tools.get_route(environ)[-1]
+        chunk = base.get_route(environ)[-1]
         output = list(router(environ, start))
         yield '%02d\n' % chunk['num']
         for x in output:
@@ -300,14 +300,14 @@ def test_routing_path_setup():
     @router.register(r'/{key:pre\}post}')
     def three(environ, start, *args, **kwargs):
         start('200 OK', [('Content-Type', 'text-plain')])
-        yield tools.get_route(environ)[-1]['key']
+        yield base.get_route(environ)[-1]['key']
 
     app = TestApp(router)
 
     res = app.get('/one/two')
     assert res.body == 'one'
-    # pprint(tools.get_history(res.environ))
-    tools._assert_next_history_step(res,
+    # pprint(base.get_history(res.environ))
+    base._assert_next_history_step(res,
             path='/two',
             router=router
     )
@@ -315,14 +315,14 @@ def test_routing_path_setup():
     res = app.get('/x-4/x-3/x-2/one')
     # print res.body
     assert res.body == '04\n03\n02\none'
-    # pprint(tools.get_history(res.environ))
-    tools._assert_next_history_step(res,
+    # pprint(base.get_history(res.environ))
+    base._assert_next_history_step(res,
         path='/x-3/x-2/one', router=router, _data={'num': 4})
-    tools._assert_next_history_step(res,
+    base._assert_next_history_step(res,
         path='/x-2/one', router=router, _data={'num': 3})
-    tools._assert_next_history_step(res,
+    base._assert_next_history_step(res,
         path='/one', router=router, _data={'num': 2})
-    tools._assert_next_history_step(res,
+    base._assert_next_history_step(res,
         path='', router=router, _data={'word': 'one'})
 
     try:
@@ -348,11 +348,11 @@ def test_route_building():
     @router.register(r'/{word:one|two|three}')
     def one(environ, start):
         start('200 OK', [('Content-Type', 'text-plain')])
-        yield tools.get_route(environ)[-1]['word']
+        yield base.get_route(environ)[-1]['word']
 
     @router.register(r'/x-{num:\d+}', _parsers=dict(num=int))
     def two(environ, start):
-        kwargs = tools.get_route(environ)[-1]
+        kwargs = base.get_route(environ)[-1]
         start('200 OK', [('Content-Type', 'text-plain')])
         yield '%02d' % kwargs['num']
 
@@ -364,12 +364,12 @@ def test_route_building():
     app = TestApp(router)
 
     res = app.get('/x-1')
-    route = tools.get_route(res.environ)
+    route = base.get_route(res.environ)
     print repr(res.body)
     print repr(route.url_for(num=2))
 
     res = app.get('/x-1/one/blah')
-    route = tools.get_route(res.environ)
+    route = base.get_route(res.environ)
     pprint(route)
     print repr(res.body)
     print repr(route.url_for(word='two'))

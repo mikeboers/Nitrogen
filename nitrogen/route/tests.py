@@ -4,7 +4,7 @@ from pprint import pprint
 from webtest import TestApp as WebTester
 
 from . import *
-from .tools import *
+from .base import *
 from .modulerouter import FakeModule
 from ..http.status import HttpNotFound
 from ..request import as_request

@@ -4,7 +4,7 @@ from pprint import pprint
 
 from webtest import TestApp as WebTester
 
-from .tools import Router, TestApp, RouteChunk, Unroutable, GenerationError
+from .base import Router, TestApp, RouteChunk, Unroutable, GenerationError
 from ..http.status import HttpNotFound
 
 class MapRouter(Router, dict):
