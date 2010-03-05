@@ -24,8 +24,9 @@ filter itself.)
 
 from __future__ import absolute_import
 
+import os
 import logging
-import hashlib, re
+import re
 
 from markdown import markdown as _markdown
 
@@ -36,7 +37,7 @@ log = logging.getLogger(__name__)
 pre_extraction_re = re.compile(r'<pre>.*?</pre>', re.MULTILINE | re.DOTALL)
 italic_re = re.compile(r'(?! {4}|\t)\w+_\w+_\w[\w_]*')
 newline_re = re.compile(r'^[\w\<][^\n]*(\n+)', re.MULTILINE)
-pre_insert_re = re.compile(r'{gfm-extraction-([0-9a-f]{40})\}')
+pre_insert_re = re.compile(r'{github-([0-9a-f]{32})\}')
 
 
 def github_markdown(text):
@@ -44,9 +45,9 @@ def github_markdown(text):
     # Extract pre blocks
     extractions = {}
     def pre_extraction_callback(matchobj):
-        sha1 = hashlib.sha1(matchobj.group(0)).hexdigest()
-        extractions[sha1] = matchobj.group(0)
-        return "{gfm-extraction-%s}" % sha1
+        token = os.urandom(16).encode('hex')
+        extractions[token] = matchobj.group(0)
+        return "{github-%s}" % token
     text = re.sub(pre_extraction_re, pre_extraction_callback, text)
 
     # prevent foo\_bar\_baz from ending up with an italic word in the middle
@@ -81,6 +82,10 @@ def markdown(text, github=True):
 
 
 if __name__ == '__main__':
-    print github_markdown('''hi\nthere
+    print repr(github_markdown('''hi\nthere
 ![Link text here](http://farm1.static.flickr.com/159/345009210_1f826cd5a1_m.jpg)
-''')
+
+<pre>Spaces
+shouldnt
+change</pre>
+'''))
