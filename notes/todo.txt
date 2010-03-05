@@ -1,4 +1,37 @@
 
+- the caching middleware should only be giving a 304 Not Modified if the status
+  was already 200.
+
+- editables should be renamed. maybe ajaxcrud
+
+- editables should roughly follow the Atom publishing protocl. see what pylons
+  does: http://wiki.pylonshq.com/display/pylonscookbook/How+map.resource+enables+controllers+as+services
+
+- routes packages should try to import the HTTPNotFound exception to use as a
+  base for the Unroutable exception, in addition to ValueError or
+  something. Then if nitrogen is installed then it will be catchable as a 404.
+
+- need a general status catcher middleware. status exceptions could have a
+  body which could then be passed by the status catcher. if there is no body
+  then we would log this and then throw a 500.
+
+- rerouters need a _methods key which takes acceptable methods. ie:
+    @router.register(_method='POST') or _method=('PUT', 'DELETE')
+    This MUST understand the _method query param, but only accept not GET/HEAD
+    methods if it is actually a post. Ie you can't have a ?_method=PUT on a
+    GET, only a POST. We have it in the query string so that we don't trigger
+    the file parsing at this point.
+
+- the objects returns from routing api methods should be a named tuple
+- consider renaming route.tools to route.base
+
+- api MUST not just pull in all the get and post data, for that will trigger
+  file parsing. It can look in the get and post data when you ask it to, but
+  do NOT do it automatically or without provocation.
+  
+  - ApiRequest could perform lookups into get/post/cookies and then raise an
+    extended KeyError which would be understoon by te ApiResponse
+
 - need to either bulk up the encoder or replace it with something else.
 	- IE does not supply a Accept-Charset header, but it still does accept
 	  UTF-8.
