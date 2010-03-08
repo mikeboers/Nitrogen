@@ -4,7 +4,7 @@ import logging
 
 from ..uri.query import Query
 from .maprouter import MapRouter
-from .base import Router
+from .core import Router
 
 
 log = logging.getLogger(__name__)

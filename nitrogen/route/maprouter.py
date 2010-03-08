@@ -6,7 +6,7 @@ import webtest
 
 from ..http.status import HttpNotFound
 
-from .base import Router, RouteChunk, Unroutable, GenerationError
+from .core import Router, RouteChunk, Unroutable, GenerationError
 from .test import EchoApp
 
 class MapRouter(Router, dict):

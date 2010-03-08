@@ -10,7 +10,7 @@ import re
 
 from webtest import TestApp
 
-from . import base
+from . import core
 from ..uri import Path
 from ..http.status import HttpNotFound
 
@@ -220,7 +220,7 @@ class Match(collections.Mapping):
         return self.pattern.format(**data)
 
 
-class ReRouter(base.Router):
+class ReRouter(core.Router):
 
     def __init__(self):
         self._apps = []

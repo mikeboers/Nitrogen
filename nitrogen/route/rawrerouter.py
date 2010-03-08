@@ -30,7 +30,7 @@ import collections
 
 from webtest import TestApp
 
-from . import base
+from . import core
 from ..uri import Path
 from ..http.status import HttpNotFound
 
@@ -93,7 +93,7 @@ class Match(collections.Mapping):
         return len(self.args) + len(self.kwargs)
     
     
-class RawReRouter(base.Router):
+class RawReRouter(core.Router):
     
     def __init__(self):
         self._apps = []
@@ -145,13 +145,13 @@ def test_routing_path_setup():
     
     @router.register(r'/(one|two|three)')
     def one(environ, start):
-        word = base.get_route(environ)[-1][1]
+        word = core.get_route(environ)[-1][1]
         start('200 OK', [('Content-Type', 'text-plain')])
         yield word
     
     @router.register(r'/x-{var}')
     def two(environ, start):
-        kwargs = base.get_route(environ)[-1]
+        kwargs = core.get_route(environ)[-1]
         output = list(router(environ, start))
         yield kwargs['var'] + '\n'
         for x in output:
@@ -160,27 +160,27 @@ def test_routing_path_setup():
     @router.register(r'/{key:pre\}post}')
     def three(environ, start):
         start('200 OK', [('Content-Type', 'text-plain')])
-        yield base.get_route(environ)[-1]['key']
+        yield core.get_route(environ)[-1]['key']
     
     app = TestApp(router)
 
     res = app.get('/one/two')
-    # pprint(base.get_history(res.environ))
-    base._assert_next_history_step(res,
+    # pprint(core.get_history(res.environ))
+    core._assert_next_history_step(res,
         path='/two',
         router=router)
     
     res = app.get('/x-four/x-three/x-two/one')
     # print res.body
     assert res.body == 'four\nthree\ntwo\none'
-    # pprint(base.get_history(res.environ))
-    base._assert_next_history_step(res,
+    # pprint(core.get_history(res.environ))
+    core._assert_next_history_step(res,
         path='/x-three/x-two/one', router=router, _data={0: '/x-four', 'var': 'four'})
-    base._assert_next_history_step(res,
+    core._assert_next_history_step(res,
         path='/x-two/one', router=router)
-    base._assert_next_history_step(res,
+    core._assert_next_history_step(res,
         path='/one', router=router)
-    base._assert_next_history_step(res,
+    core._assert_next_history_step(res,
         path='', router=router)
     
         
