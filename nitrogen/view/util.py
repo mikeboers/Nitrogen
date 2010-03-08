@@ -1,11 +1,8 @@
-
 import logging
 import re
 import cgi
 
 import mako.filters
-
-from BeautifulSoup import BeautifulSoup
 
 
 log = logging.getLogger(__name__)
@@ -27,7 +24,9 @@ mako.filters.html_escape = smart_html_escape
 
 def clean_html(html):
     """Asserts the "cleanliness" of html. Closes tags, indents, etc."""
-    return BeautifulSoup(html).prettify().decode('utf8')
+    log.warning('clean_html has been depreciated')
+    return html
+    # return BeautifulSoup(html).prettify().decode('utf8')
 
 
 def urlify_name(name):
