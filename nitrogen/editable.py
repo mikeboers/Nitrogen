@@ -5,17 +5,6 @@ import logging
 from .api import as_api, ApiError, ApiKeyError
 
 
-"""
-
-how it was hooked up before
-ModelAdapter(name='newspost',
-     model=news_model.NewsPost,
-     form=news_model.form,
-     partial='news/post.tpl',
-     partial_key='post'),
-     
-"""
-
 log = logging.getLogger(__name__)
 
 
@@ -35,6 +24,8 @@ class Editable(object):
         self.keys = keys or [col.name for col in self.table.columns]
         
         self.before_save = before_save
+        
+        self.log = logging.getLogger('%s?cls=%s' % (__name__, model.__name__))
     
     @as_api
     def __call__(self, req, res):
@@ -128,7 +119,8 @@ class Editable(object):
         order = [int(x) for x in req['order'].split(',')]
 
         # Remove dummy (zero) ids.
-        order = filter(None, order)
+        order = [x for x in order if x]
+        self.log.debug('order: %r' % order)
 
         # Grab all of the items that we are dealing with.
         items = self.session.query(self.model).filter(self.model.id.in_(order)).all()
