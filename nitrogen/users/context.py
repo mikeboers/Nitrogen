@@ -55,7 +55,7 @@ class UserContext(object):
     def _build_user_table(self):
         self.user_table = Table('%s-users' % self.name, self.model_context.metadata,
             Column('id', Integer, primary_key=True),
-            Column('email', Unicode, unique=True),
+            Column('email', String, unique=True),
             Column('email_is_verified', Boolean, default=False),
             Column('password_hash', PasswordType),
             Column('is_superuser', Boolean, default=False),
@@ -96,12 +96,12 @@ def test_stuff():
     print user_context.user_table
     print user_context.User
     
-    mike = user_context.User(email='test@example.com')
-    tanya = user_context.User(email='test@tanyastemberger.com')
+    alice = user_context.User(email='alice@example.com')
+    bob = user_context.User(email='bob@example.com')
     
     s = user_context.session
-    s.add(mike)
-    s.add(tanya)
+    s.add(alice)
+    s.add(bob)
     s.commit()
     
     print s.query(user_context.User).all()
