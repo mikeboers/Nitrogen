@@ -14,20 +14,24 @@ setup(
     
     install_requires='''
         beaker
-        beautifulsoup
         flup
         formalchemy
-        lorem-ipsum-generator
+        
         mako
         markdown
-        minimock
+        lorem-ipsum-generator
+        
+        # Testing
         nose
-        paste
-        simplejson
-        sqlalchemy
-        webhelpers
-        webob
+        minimock
         webtest
+        
+        sqlalchemy
+        
+        # This is only for the pager and some functions in the templates.
+        webhelpers
+        
+        # For the imgsizer.
         pil
         
         # These are mine.
