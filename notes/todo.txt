@@ -1,4 +1,47 @@
 
+- model and view contexts could be callable wsgi middleware themselves,
+  instead of having a WSGI reset.
+ 
+- use repoze instead of my own auth stuff
+    - light wrapper around the authorizor to move 'repoze.who.identity' somewhere
+      else so that we can have multiple classes of user
+    - looks like I can use repoze.who fairly easily, but repoze.what is going
+      to be a bit nastier
+    - perhaps I still have to write my own user permission/groups code, but
+      dont have to do any of the authentication low-level stuff
+
+- webio functions should actually be in funcions and not just middleware
+  you pass them an environment, they do their stuff, and cache the results in
+  the environ. the second time they just return cached results
+  the middleware simply uses these functions. perhaps another function will
+  store it in the same place as paste does so it is easily picked up by repoz.what.Precicate.get_form_vars
+
+- think about rewriting route storage to work with wsgi.routing_args spec
+    http://www.wsgi.org/wsgi/Specifications/routing_args
+    
+    - I don't think I'll actually be able to do this fully, but I can place my
+      results in here as well as in my place
+
+- rewrite route specs to use SCRIPT_NAME and PATH_INFO as expected.
+  
+
+- bottle (http://bottle.paws.de/) has an interesting idea where they have a 
+  view decorator which injects whatever was returned from the controller into
+  the template view.
+  
+      @view('some_template.mako')
+      @as_request
+      def something(req, res):
+        # blah blah blah
+        return {'key':'value'}
+
+- small wsgi app that serves files. you can ive it a filename and a root. it
+  will normalize the filename and do proper cache headers and so forth
+        
+        return StaticFileHandler(filename, root='/path/to/files', maxage=600)(req.environ, res.start)
+
+- consider using redis as key-value store instead of bucket
+
 - the caching middleware should only be giving a 304 Not Modified if the status
   was already 200.
 
