@@ -1,4 +1,6 @@
 
+- remove the magic from nitrogen.model.__init__
+
 - model and view contexts could be callable wsgi middleware themselves,
   instead of having a WSGI reset.
  
