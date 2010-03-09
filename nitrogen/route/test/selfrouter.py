@@ -13,11 +13,11 @@ def test_main():
     
     router = TestRouter()
     
-    print router.route('')
+    # print router.route('')
     
     app = webtest.TestApp(router)
     res = app.get('/')
-    print repr(res.body)
+    # print repr(res.body)
     
 
 if __name__ == '__main__':

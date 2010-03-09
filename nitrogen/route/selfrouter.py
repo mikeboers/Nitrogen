@@ -22,7 +22,7 @@ class SelfRouter(core.Router):
     
     def route_step(self, path):
         path = Path(path)
-        print path
+        # print path
         rawname = path[0] if path else self.default
         name = 'do_' + rawname
         if not hasattr(self, name):
