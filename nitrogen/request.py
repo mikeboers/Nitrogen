@@ -42,7 +42,7 @@ def _environ_getter(key, callback=None):
     return property(getter)
 
 
-def _environ_time_getter(key):
+def _environ_time_getter(key, raw_callback=None):
     """Builds a property for getting times out of the environ.
     
     An unparsable time results in None.
@@ -54,6 +54,7 @@ def _environ_time_getter(key):
         v = self.environ.get(key)
         if v is None:
             return None
+        v = raw_callback(v) if raw_callback else v
         try:
             dt = parse_http_time(v)
             return dt
@@ -115,7 +116,9 @@ class Request(object):
     # Other generic stuff.
     date = _environ_time_getter('HTTP_DATE')
     host = _environ_getter('HTTP_HOST')
-    if_modified_since = _environ_time_getter('HTTP_IF_MODIFIED_SINCE')
+    
+    # The callback is for IE6 which sends a length parameter along with the date.
+    if_modified_since = _environ_time_getter('HTTP_IF_MODIFIED_SINCE', lambda x: x.split(';', 1)[0].strip())
     referer = _environ_getter('HTTP_REFERER')
     user_agent = _environ_getter('HTTP_USER_AGENT')
     remote_ip = _environ_getter('REMOTE_IP')
