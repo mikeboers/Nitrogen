@@ -1,4 +1,58 @@
 
+- perhaps just use the webob.Request....
+
+- Request should store the body of the request when accessed if it has a posted length less than a threshold (ie 4k). perhaps this is a similar mechanism to how the post shunts into a make_file. the body could be a wrapper
+around a file object. the body.make_file could be a function to create the
+original thing. body.max_length would proxy to post.max_length and files.max_length. body.make_file would not be the same as files.make_file
+
+    webio.parse_query does what it does now, but stores the results in the environ as a cache
+    webio.parse_body returns a tuple of body, post, files. all three of them
+    share a max_length attribute which update on each other. it defaults ~4k.
+    body and files both have a make_file property. body defaults to stringio
+    and files doesn't have it (meaning we don't accept posted files by default) this should be a bad request error
+    as soon as you access post or files or body they ALL get parsed together
+    the field storage object wraps the wsgi.input so that any read call to it
+    pushes the resulting string into the body, and then passes it on
+    
+    need a function to clear all the cached io operations from the environ
+    clear_cache(environ)
+        nitrogen.get
+        nitrogen.post
+        nitrogen.body
+        nitrogen.cookies
+        nitrogen.body_manager
+        nitrogen.headers
+
+cookie building should be on the RESPONSE, not the request. cookies on the
+request should be a simple delayed multi map which is plain key/cookie pairs
+
+    either cookies need to be converted to their actual values (strings, tuples dicts, etc), or if they are mutable it has to not translate into the response
+        - response.cookies starts out completely blank
+        - cookies.expire and cookies.__del__ are different. (del just removes it)
+
+- dispatcher should set the PATH_INFO and SCRIPT_NAME properly from the environ variable
+
+- http exceptions should be heirarchical like http://pylonshq.com/docs/en/0.9.7/thirdparty/webob/#module-webob.exc
+    - or just use these ones... durr
+
+- fix date parsing for request.if_modified_since:
+    ...several lines of middleware...
+     File "/var/www/vhosts/swisssol.com/lib/nitrogen/imgsizer.py", line 129, in __call__
+       if req.if_modified_since and req.if_modified_since >= mtime:
+     File "/var/www/vhosts/swisssol.com/lib/nitrogen/request.py", line 58, in getter
+       dt = parse_http_time(v)
+     File "/var/www/vhosts/swisssol.com/lib/nitrogen/http/time.py", line 56, in parse_http_time
+       dt -= timedelta(seconds=raw[9])
+    TypeError: unsupported type for timedelta seconds component: NoneType
+    
+    This is with the following header:
+        HTTP_IF_MODIFIED_SINCE: 'Sat, 27 Feb 2010 21:26:28 GMT; length=1735'
+    
+    This was also coming from IE 6... This appears to be a Netscape extension
+    to HTTP/1.0. This problem was better solved by etags later in HTTP/1.1.
+
+
+
 - remove the magic from nitrogen.model.__init__
 
 - model and view contexts could be callable wsgi middleware themselves,
