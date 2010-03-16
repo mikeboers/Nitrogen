@@ -32,10 +32,10 @@ from cStringIO import StringIO
 
 from multimap import MultiMap, DelayedMultiMap
 
-from . import cookie
-from .uri import URI
-from .uri.query import Query
-from .headers import DelayedHeaders
+from . import cookies as cookie
+from ..uri import URI
+from ..uri.query import Query
+from ..headers import DelayedHeaders
 
 
 log = logging.getLogger(__name__)

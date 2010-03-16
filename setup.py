@@ -15,6 +15,7 @@ setup(
     install_requires='''
         beaker
         flup
+        webob
         
         # Going to be replacing this with wtform soon.
         formalchemy
