@@ -29,6 +29,8 @@ def etagger(app):
             ))
         
         output = ''.join(app(environ, inner_start))
+        if isinstance(output, unicode):
+            output = output.encode('utf8')
         
         # If the status is anything but a 200 OK then don't touch it.
         code = int(str(state['status']).split()[0])
