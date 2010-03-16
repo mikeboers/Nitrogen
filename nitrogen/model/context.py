@@ -100,5 +100,5 @@ class ModelContext(object):
         try:
             raise DepreciationWarning(msg)
         except DepreciationWarning:
-            self.log.warning(msg, exc_info=sys.exc_info()))
+            self.log.warning(msg, exc_info=sys.exc_info())
         return self.wsgi_fixtures(app)
