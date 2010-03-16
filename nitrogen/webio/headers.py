@@ -88,6 +88,10 @@ class HeaderTraits(object):
     def __getattr__(self, key):
         return self[key]
 
+class Headers(HeaderTraits, multimap.MultiMap):
+    pass
+class MutableHeaders(HeaderTraits, multimap.MutableMultiMap):
+    pass
 class DelayedMutableHeaders(HeaderTraits, multimap.DelayedMutableMultiMap):
     pass
 

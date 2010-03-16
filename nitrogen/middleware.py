@@ -3,7 +3,7 @@ import logging
 import hashlib
 
 from .request import as_request, Request, Response
-from .headers import Headers
+from .webio.headers import Headers
 from .compressor import compressor
 from .encoding import utf8_encoder
 from .http.status import status_resolver, HttpNotFound

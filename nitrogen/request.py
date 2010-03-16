@@ -18,14 +18,20 @@ from webtest import TestApp
 from .http.status import resolve_status
 from .http.time import parse_http_time, format_http_time
 from .webio import request_params
-from .cookie import Container as CookieContainer
-from .headers import DelayedHeaders, MutableHeaders
-from .webio import request_params
+from .webio.query import parse_query
+from .webio.headers import parse_headers, MutableHeaders
+from .webio.cookies import parse_cookies
 from .route.core import get_route
 
 
 log = logging.getLogger(__name__)
 
+
+def _environ_parser(func, *args, **kwargs):
+    def parser(self):
+        return func(self.environ, *args, **kwargs)
+    return property(parser)
+    
 def _environ_getter(key, callback=None):
     """Builds a property for getting values out of the environ.
     
@@ -84,12 +90,12 @@ class Request(object):
     is_head = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'HEAD')
     
     # The objects these pull are provided by webio.request_params.
-    get = _environ_getter('nitrogen.get')
+    get = _environ_parser(parse_query)
+    cookies = _environ_parser(parse_cookies)
+    headers = _environ_parser(parse_headers)
+    
     post = _environ_getter('nitrogen.post')
     files = _environ_getter('nitrogen.files')
-    cookies = _environ_getter('nitrogen.cookies')
-    headers = _environ_getter('nitrogen.headers')
-    
     session = _environ_getter('beaker.session')
     
     @property
