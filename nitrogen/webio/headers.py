@@ -48,7 +48,7 @@ Examples:
 
 import re
 
-from multimap import MultiMap, MutableMultiMap, DelayedMultiMap
+import multimap
         
 def conform_header_name(name, titlecase=True):
     """
@@ -88,21 +88,21 @@ class HeaderTraits(object):
     def __getattr__(self, key):
         return self[key]
 
-class Headers(HeaderTraits, MultiMap):
+class DelayedMutableHeaders(HeaderTraits, multimap.DelayedMutableMultiMap):
     pass
 
-class DelayedHeaders(HeaderTraits, DelayedMultiMap):
-    pass
 
-class MutableHeaders(HeaderTraits, MutableMultiMap):
-    def __setattr__(self, key, value):
-        if key.startswith('_'):
-            MutableMultiMap.__setattr__(self, key, value)
-        else:
-            self[key] = value
+ENVIRON_KEY = 'nitrogen.headers'
 
-
-
+def parse_headers(environ, key=ENVIRON_KEY):
+    """WSGI middleware which adds a header mapping to the environment."""
+    if key not in environ:
+        def gen():
+            for k, v in environ.items():
+                if k.startswith('HTTP_'):
+                    yield k[5:], v
+        environ[key] = DelayedMutableHeaders(gen)
+    return environ[key]
 
 if __name__ == '__main__':
     from nitrogen.test import run

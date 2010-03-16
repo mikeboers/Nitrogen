@@ -256,37 +256,7 @@ def post_parser(app, make_file=None, max_file_length=None, environ=None, **kwarg
     return post_parser_app
         
 
-def cookie_parser(app, hmac_key=None, **kwargs):
-    """WSGI middleware which parses incoming cookies and places them into a
-    standard cookie container keyed under 'nitrogen.cookies'.
-    
-    Params:
-        app - The WSGI app to wrap.
-        hmac_key - If provided cookies will be signed on output, and the
-            signatures verified on import.
-    """
-    
-    class_ = cookie.make_signed_container(hmac_key) if hmac_key else cookie.Container
-    def cookie_parser_app(environ, start):
-        environ['nitrogen.cookies'] = class_(environ.get('HTTP_COOKIE', ''))
-        return app(environ, start)    
-    return cookie_parser_app
 
-
-def cookie_builder(app, **kwargs):
-    """WSGI middleware which sends Set-Cookie headers as nessesary so that the
-    client's cookies will resemble the cookie container stored in the environ
-    at 'nitrogen.cookies'.
-    
-    This tends to be used along with the cookie_parser.
-    """
-    def cookie_builder_app(environ, start):
-        def cookie_builder_start(status, headers, exc_info=None):
-            cookies = environ['nitrogen.cookies']
-            headers.extend(cookies.build_headers())
-            start(status, headers)
-        return app(environ, cookie_builder_start)
-    return cookie_builder_app
 
 
 def uri_parser(app, **kwargs):
@@ -314,20 +284,12 @@ def header_parser(app, **kwargs):
     return header_parser_app
     
 
-def request_params(app, parse_headers=True, parse_uri=True, parse_get=True, parse_post=True,
-        parse_cookies=True, build_cookies=True, **kwargs):
-    if parse_headers:
-        app = header_parser(app, **kwargs)
+def request_params(app, parse_uri=True, parse_post=True,
+        **kwargs):
     if parse_uri:
         app = uri_parser(app, **kwargs)
-    if parse_get:
-        app = get_parser(app, **kwargs)
     if parse_post:
         app = post_parser(app, **kwargs)
-    if parse_cookies:
-        app = cookie_parser(app, **kwargs)
-    if build_cookies:
-        app = cookie_builder(app, **kwargs)
     return app
 
 
