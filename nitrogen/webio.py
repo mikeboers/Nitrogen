@@ -210,7 +210,7 @@ def post_parser(app, make_file=None, max_file_length=None, environ=None, **kwarg
     
     make_file:
         If None, files will not be accepted. Otherwise it must be a callable
-        object which takes key, filename, and length as posotional arguments,
+        object which takes key, filename, and length as positional arguments,
         and returns an object with a write method.
     
     """
@@ -218,7 +218,7 @@ def post_parser(app, make_file=None, max_file_length=None, environ=None, **kwarg
     def post_parser_app(environ, start):
         
         # Don't need to bother doing anything fancy if this is a GET
-        if environ['REQUEST_METHOD'].lower() == 'get':
+        if environ['REQUEST_METHOD'].lower() in ('get', 'head'):
             post  = MultiMap()
             files = MultiMap()
         
