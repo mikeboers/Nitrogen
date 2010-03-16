@@ -32,10 +32,8 @@ from cStringIO import StringIO
 
 from multimap import MultiMap, DelayedMultiMap
 
-from . import cookies as cookie
 from ..uri import URI
 from ..uri.query import Query
-from ..headers import DelayedHeaders
 
 
 log = logging.getLogger(__name__)
@@ -175,20 +173,7 @@ def field_storage(environ, make_file, max_file_length):
     return fs
 
 
-def get_parser(app, **kwargs):
-    """WSGI middleware which parses the query string.
-    
-    A read-only DelayedMultiMap is stored on the environment at 'nitrogen.get'.
-    
-    """
-    
-    def get_parser_app(environ, start):
-        def gen():
-            query = environ.get('QUERY_STRING', '')
-            return Query(query).allitems()
-        environ['nitrogen.get'] = DelayedMultiMap(gen)
-        return app(environ, start)
-    return get_parser_app    
+   
 
 
 def post_parser(app, make_file=None, max_file_length=None, environ=None, **kwargs):
@@ -272,16 +257,6 @@ def uri_parser(app, **kwargs):
     return uri_parser_app
 
 
-def header_parser(app, **kwargs):
-    """WSGI middleware which adds a header mapping to the environment."""
-    def header_parser_app(environ, start):
-        def gen():
-            for k, v in environ.items():
-                if k.startswith('HTTP_'):
-                    yield k[5:], v
-        environ['nitrogen.headers'] = DelayedHeaders(gen)
-        return app(environ, start)
-    return header_parser_app
     
 
 def request_params(app, parse_uri=True, parse_post=True,

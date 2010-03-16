@@ -3,7 +3,7 @@
 - perhaps just use the webob.Request....
 
 - multimap._conform_value should take both the key AND the value.
-
+    
 - Request should store the body of the request when accessed if it has a posted length less than a threshold (ie 4k). perhaps this is a similar mechanism to how the post shunts into a make_file. the body could be a wrapper
 around a file object. the body.make_file could be a function to create the
 original thing. body.max_length would proxy to post.max_length and files.max_length. body.make_file would not be the same as files.make_file
