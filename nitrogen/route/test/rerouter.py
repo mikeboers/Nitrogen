@@ -7,8 +7,8 @@ from . import EchoApp
 from .. import *
 from ...http.status import HttpNotFound
 from ...request import as_request
-from ..base import *
-from .. import base
+from ..core import *
+from .. import core
 from .modulerouter import FakeModule
 
     
@@ -47,7 +47,7 @@ def test_rerouter_get():
     res = app.get('/rerouter/get/12')
     assert res.body == 'rerouter: get 12'
 
-    route = base.get_route(res.environ)
+    route = core.get_route(res.environ)
     print route.url_for(id=24)
 
 
@@ -60,11 +60,11 @@ def test_routing_path_setup():
     @router.register(r'/{word:one|two|three}')
     def one(environ, start):
         start('200 OK', [('Content-Type', 'text-plain')])
-        yield base.get_route(environ)[-1]['word']
+        yield core.get_route(environ)[-1]['word']
 
     @router.register(r'/x-{num:\d+}', _parsers=dict(num=int))
     def two(environ, start):
-        chunk = base.get_route(environ)[-1]
+        chunk = core.get_route(environ)[-1]
         output = list(router(environ, start))
         yield '%02d\n' % chunk['num']
         for x in output:
@@ -73,14 +73,14 @@ def test_routing_path_setup():
     @router.register(r'/{key:pre\}post}')
     def three(environ, start, *args, **kwargs):
         start('200 OK', [('Content-Type', 'text-plain')])
-        yield base.get_route(environ)[-1]['key']
+        yield core.get_route(environ)[-1]['key']
 
     app = webtest.TestApp(router)
 
     res = app.get('/one/two')
     assert res.body == 'one'
-    # pprint(base.get_history(res.environ))
-    base._assert_next_history_step(res,
+    # pprint(core.get_history(res.environ))
+    core._assert_next_history_step(res,
             path='/two',
             router=router
     )
@@ -88,14 +88,14 @@ def test_routing_path_setup():
     res = app.get('/x-4/x-3/x-2/one')
     # print res.body
     assert res.body == '04\n03\n02\none'
-    # pprint(base.get_history(res.environ))
-    base._assert_next_history_step(res,
+    # pprint(core.get_history(res.environ))
+    core._assert_next_history_step(res,
         path='/x-3/x-2/one', router=router, _data={'num': 4})
-    base._assert_next_history_step(res,
+    core._assert_next_history_step(res,
         path='/x-2/one', router=router, _data={'num': 3})
-    base._assert_next_history_step(res,
+    core._assert_next_history_step(res,
         path='/one', router=router, _data={'num': 2})
-    base._assert_next_history_step(res,
+    core._assert_next_history_step(res,
         path='', router=router, _data={'word': 'one'})
 
     try:
@@ -121,11 +121,11 @@ def test_route_building():
     @router.register(r'/{word:one|two|three}')
     def one(environ, start):
         start('200 OK', [('Content-Type', 'text-plain')])
-        yield base.get_route(environ)[-1]['word']
+        yield core.get_route(environ)[-1]['word']
 
     @router.register(r'/x-{num:\d+}', _parsers=dict(num=int))
     def two(environ, start):
-        kwargs = base.get_route(environ)[-1]
+        kwargs = core.get_route(environ)[-1]
         start('200 OK', [('Content-Type', 'text-plain')])
         yield '%02d' % kwargs['num']
 
@@ -137,12 +137,12 @@ def test_route_building():
     app = webtest.TestApp(router)
 
     res = app.get('/x-1')
-    route = base.get_route(res.environ)
+    route = core.get_route(res.environ)
     print repr(res.body)
     print repr(route.url_for(num=2))
 
     res = app.get('/x-1/one/blah')
-    route = base.get_route(res.environ)
+    route = core.get_route(res.environ)
     pprint(route)
     print repr(res.body)
     print repr(route.url_for(word='two'))

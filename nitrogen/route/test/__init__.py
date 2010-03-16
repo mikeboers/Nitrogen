@@ -4,7 +4,7 @@ from pprint import pprint
 from webtest import TestApp as WebTester
 
 from .. import *
-from ..base import *
+from ..core import *
 
 
 

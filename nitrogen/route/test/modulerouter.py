@@ -5,7 +5,7 @@ from pprint import pprint
 import webtest
 
 from ..modulerouter import ModuleRouter
-from .. import base
+from .. import core
 from ...http import status
 
 class FakeModule(object):
@@ -53,12 +53,12 @@ def test_routing_path_setup():
     res = app.get('/test_one/extra')
     assert res.body == 'ONE'
     
-    base._assert_next_history_step(res,
+    core._assert_next_history_step(res,
             path='/extra',
             router=router
     )
     
-    route = base.get_route(res.environ)
+    route = core.get_route(res.environ)
     pprint(route)
     print repr(route.url_for(controller='test_one'))
     
