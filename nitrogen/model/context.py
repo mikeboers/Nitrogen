@@ -2,6 +2,7 @@
 
 import logging
 import threading
+import sys
 
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
@@ -98,7 +99,7 @@ class ModelContext(object):
         # all my web apps have moved on.
         msg = '%s.wsgi_reset is depreciated.' % self.__class__.__name__
         try:
-            raise DepreciationWarning(msg)
-        except DepreciationWarning:
+            raise DeprecationWarning(msg)
+        except DeprecationWarning:
             self.log.warning(msg, exc_info=sys.exc_info())
         return self.wsgi_fixtures(app)
