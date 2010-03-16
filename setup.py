@@ -15,6 +15,8 @@ setup(
     install_requires='''
         beaker
         flup
+        
+        # Going to be replacing this with wtform soon.
         formalchemy
         
         mako
