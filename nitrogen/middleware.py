@@ -8,7 +8,6 @@ from .compressor import compressor
 from .encoding import utf8_encoder
 from .http.status import status_resolver, HttpNotFound
 from .error import error_logger, error_notifier
-from .webio import request_params, post_parser
 from .view import TYPE_HEADER_HTML
 from .session import session_wrapper
 

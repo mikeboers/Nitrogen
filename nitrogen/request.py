@@ -21,6 +21,7 @@ from .webio import request_params
 from .webio.query import parse_query
 from .webio.headers import parse_headers, MutableHeaders
 from .webio.cookies import parse_cookies, get_factory as get_cookie_factory, Container as CookieContainer
+from .webio.body import parse_post, parse_files
 from .route.core import get_route
 
 
@@ -91,13 +92,12 @@ class Request(object):
     is_delete = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'DELETE')
     is_head = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'HEAD')
     
-    # The objects these pull are provided by webio.request_params.
     get = _environ_parser(parse_query)
+    post = _environ_parser(parse_post)
+    files = _environ_parser(parse_files)
     cookies = _environ_parser(parse_cookies)
     headers = _environ_parser(parse_headers)
     
-    post = _environ_getter('nitrogen.post')
-    files = _environ_getter('nitrogen.files')
     session = _environ_getter('beaker.session')
     
     @property

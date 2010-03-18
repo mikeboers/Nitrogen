@@ -3,7 +3,7 @@ from cStringIO import StringIO
 import cgi
 import weakref
 
-from multimap import MultiMap
+from multimap import MutableMultiMap
 
 
 ENVIRON_BODY_CACHE_KEY = 'nitrogen.body_cache'
@@ -99,10 +99,10 @@ class SingleField(cgi.FieldStorage):
 
 class FieldStorage(cgi.FieldStorage):
     
-    def __init__(self, environ, make_file=None, max_length=None, keep_blank_values=True):
+    def __init__(self, environ, make_file=None, max_file_length=None, keep_blank_values=True):
         if make_file is not None:
             self.make_file = make_file
-        self.max_length = max_length
+        self.max_file_length = max_file_length
         environ = environ.copy()
         environ['QUERY_STRING'] = ''
         cgi.FieldStorage.__init__(self, 
@@ -153,7 +153,7 @@ def parse_body(environ, make_file=None, max_file_length=None, cache_body=True,
     
     # Don't need to bother doing anything fancy if this is a GET
     if environ['REQUEST_METHOD'].lower() in ('get', 'head'):
-        return MultiMap(), MultiMap()
+        return MutableMultiMap(), MutableMultiMap()
     
     # Don't need to bother reparsing if we have already cached it.
     if post_key in environ and files_key in environ:
@@ -170,7 +170,7 @@ def parse_body(environ, make_file=None, max_file_length=None, cache_body=True,
         max_file_length=max_file_length
     )
     
-    post, files = MultiMap(), MultiMap()
+    post, files = MutableMultiMap(), MutableMultiMap()
     
     # The list isn't always there. Try to post a empty string with
     # jQuery and it sends content-type "text/plain", so fs.list will be None.
