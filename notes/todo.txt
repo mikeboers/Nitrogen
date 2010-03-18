@@ -1,8 +1,21 @@
 
+- webio.*.*_parse should IMMEDIATELY parse
+    - webio.post.asset_body_cache asserts the body is cached
+    - webio.post.parse_post and _files should take kwarg cache_body for if they
+      should run the assertion or not
+- webio.parse should have convenient functions
+    webio.query.parse_get -> webio.parse.get(environ)
+    webop.body.parse_post -> webop.parse.post
+    webio.body.parse_files -> webio.parse.files
 - cookies need to be made more robust...
+    dumps and loads should be on the container
+    header functions are only on the container
+    .blank_copy() gives you a copy with the same environment (ie keys)
+    SignedContainer.make_factory(hmac_key) for the Signer gives you a premade factory function
+
 - perhaps just use the webob.Request....
 
-- multimap._conform_value should take both the key AND the value.
+- multimap._conform_value could take both the key AND the value.
     
 - Request should store the body of the request when accessed if it has a posted length less than a threshold (ie 4k). perhaps this is a similar mechanism to how the post shunts into a make_file. the body could be a wrapper
 around a file object. the body.make_file could be a function to create the
