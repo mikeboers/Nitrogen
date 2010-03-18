@@ -631,10 +631,14 @@ class SignedContainer(Container):
     def _loads(self, value):
         query = Query(value)
         query.verify(self.hmac_key, strict=True)
-        return query['_']   
-            
-make_signed_container_factory = lambda hmac_key: functools.partial(SignedContainer, hmac_key=hmac_key)
-make_signed_container = make_signed_container_factory
+        return query['_']
+    
+    @classmethod
+    def make_factory(cls, hmac_key):
+        return functools.partial(cls, hmac_key=hmac_key)
+
+
+make_signed_container = SignedContainer.make_factory
 
 
 
