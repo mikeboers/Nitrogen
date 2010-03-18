@@ -7,11 +7,7 @@
     webio.query.parse_get -> webio.parse.get(environ)
     webop.body.parse_post -> webop.parse.post
     webio.body.parse_files -> webio.parse.files
-- cookies need to be made more robust...
-    dumps and loads should be on the container
-    header functions are only on the container
-    .blank_copy() gives you a copy with the same environment (ie keys)
-    SignedContainer.make_factory(hmac_key) for the Signer gives you a premade factory function
+
 
 - perhaps just use the webob.Request....
 
@@ -39,12 +35,6 @@ original thing. body.max_length would proxy to post.max_length and files.max_len
         nitrogen.body_manager
         nitrogen.headers
 
-cookie building should be on the RESPONSE, not the request. cookies on the
-request should be a simple delayed multi map which is plain key/cookie pairs
-
-    either cookies need to be converted to their actual values (strings, tuples dicts, etc), or if they are mutable it has to not translate into the response
-        - response.cookies starts out completely blank
-        - cookies.expire and cookies.__del__ are different. (del just removes it)
 
 - dispatcher should set the PATH_INFO and SCRIPT_NAME properly from the environ variable
 

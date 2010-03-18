@@ -41,7 +41,7 @@ log = logging.getLogger(__name__)
 
 
 class MaxLengthWrapper(object):
-    """Wrapper around file-like objects to ensure that they recieve as much
+    """Wrapper around file-like objects to ensure that they recieve only much
     data as we have permitted them to.
 
     """
@@ -71,8 +71,8 @@ def make_temp_file(field):
     garbage collected. See the tempfile module.
     
     """
-    
-    return tempfile.TemporaryFile("w+b") # We do need the "+" in there...
+    # We do need the "+" in there for the tempfile module's sake.
+    return tempfile.TemporaryFile("w+b") 
 
 
 
