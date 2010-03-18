@@ -20,7 +20,7 @@ from .http.time import parse_http_time, format_http_time
 from .webio import request_params
 from .webio.query import parse_query
 from .webio.headers import parse_headers, MutableHeaders
-from .webio.cookies import parse_cookies
+from .webio.cookies import parse_cookies, get_factory as get_cookie_factory, Container as CookieContainer
 from .route.core import get_route
 
 
@@ -77,10 +77,12 @@ def _attr_getter(key):
 
 class Request(object):
     
-    """HTTP request abstraction class."""
+    """WSGI/HTTP request abstraction class."""
     
-    def __init__(self, environ):
+    def __init__(self, environ, start=None):
         self.environ = environ
+        self.wsgi_start = start
+        self.response = Response(request=self) if start else None
     
     method = _environ_getter('REQUEST_METHOD', str.upper)
     is_get = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'GET')
@@ -217,14 +219,18 @@ def _header_time_setter(key):
 
 class Response(object):
     
-    """HTTP response abstraction."""
+    """HTTP response abstraction.
     
-    def __init__(self, start=None, headers=None):
-        self._start = start
-        self._headers = MutableHeaders(headers or [])
+    Need to pass the request this is connected to if you want to use the maybe
+    pre-build response cookies container."""
+    
+    cookie_class = CookieContainer
+    
+    def __init__(self, start=None, headers=None, request=None, cookie_class=None):
+        self.wsgi_start = start
+        self.headers = headers or []
         
-        self._status = None
-        self.status = '200 OK'
+        self._status = '200 OK'
         
         if 'content-type' in self.headers:
             ctype, cdict = parse_header(self.headers['content-type'])
@@ -236,8 +242,23 @@ class Response(object):
             self._build_content_type_header()
         
         self._filename = None
+        
+        # Base the response cookie class off of the request cookies.
+        if request:
+            if start and request.wsgi_start:
+                raise ValueError('given start and request with wsgi_start')
+            self.wsgi_start = request.wsgi_start
+            self.cookies = request.cookies.blank_copy()
+        else:
+            self.cookies = (cookie_class or self.cookie_class)()
     
-    headers = _attr_getter('_headers')
+    @property
+    def headers(self):
+        return self._headers
+    
+    @headers.setter
+    def headers(self, value):
+        self._headers = value if isinstance(value, MutableHeaders) else MutableHeaders(value)
     
     as_html = _content_type_property('text/html')
     as_text = _content_type_property('text/plain')
@@ -340,7 +361,7 @@ class Response(object):
         added to self.headers.
         """
         
-        if not self._start:
+        if not self.wsgi_start:
             raise ValueError('no WSGI start')
         
         if status:
@@ -359,19 +380,22 @@ class Response(object):
                 raise ValueError('no request attribute %r' % k)
             setattr(self, k, v)
                 
-        headers = self.headers.allitems() + (list(headers) if headers else [])
+        headers = self.headers.allitems() + (list(headers) if headers else []) + self.cookies.build_headers()
         
-        self._start(self.status, headers)
+        self.wsgi_start(self.status, headers)
 
 
+def get_request_pair(environ, start):        
+    request = Request(environ, start)
+    return request, request.response
+    
 def as_request(app):
     """WSGI middleware to adapt WSGI style requests to a single Request object."""
     
     def as_request_app(self, environ, start=None):
         if start is None:
             self, environ, start = None, self, environ
-        request = Request(environ)
-        response = Response(start)
+        request, response = get_request_pair(environ, start)
         if self is not None:
             return app(self, request, response)
         return app(request, response)
