@@ -159,7 +159,38 @@ More Unicode:
     >>> cookies = Container(encoded)
     >>> repr(cookies['key'].value)
     'u\'\\x00\\x01\\x02\\x03\\x04\\x05\\x06\\x07\\x08\\t\\n\\x0b\\x0c\\r\\x0e\\x0f\\x10\\x11\\x12\\x13\\x14\\x15\\x16\\x17\\x18\\x19\\x1a\\x1b\\x1c\\x1d\\x1e\\x1f !"#$%&\\\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\\x7f\\x80\\x81\\x82\\x83\\x84\\x85\\x86\\x87\\x88\\x89\\x8a\\x8b\\x8c\\x8d\\x8e\\x8f\\x90\\x91\\x92\\x93\\x94\\x95\\x96\\x97\\x98\\x99\\x9a\\x9b\\x9c\\x9d\\x9e\\x9f\\xa0\\xa1\\xa2\\xa3\\xa4\\xa5\\xa6\\xa7\\xa8\\xa9\\xaa\\xab\\xac\\xad\\xae\\xaf\\xb0\\xb1\\xb2\\xb3\\xb4\\xb5\\xb6\\xb7\\xb8\\xb9\\xba\\xbb\\xbc\\xbd\\xbe\\xbf\\xc0\\xc1\\xc2\\xc3\\xc4\\xc5\\xc6\\xc7\\xc8\\xc9\\xca\\xcb\\xcc\\xcd\\xce\\xcf\\xd0\\xd1\\xd2\\xd3\\xd4\\xd5\\xd6\\xd7\\xd8\\xd9\\xda\\xdb\\xdc\\xdd\\xde\\xdf\\xe0\\xe1\\xe2\\xe3\\xe4\\xe5\\xe6\\xe7\\xe8\\xe9\\xea\\xeb\\xec\\xed\\xee\\xef\\xf0\\xf1\\xf2\\xf3\\xf4\\xf5\\xf6\\xf7\\xf8\\xf9\\xfa\\xfb\\xfc\\xfd\\xfe\\xff\\u0100\\u0101\\u0102\\u0103\\u0104\\u0105\\u0106\\u0107\\u0108\\u0109\\u010a\\u010b\\u010c\\u010d\\u010e\\u010f\\u0110\\u0111\\u0112\\u0113\\u0114\\u0115\\u0116\\u0117\\u0118\\u0119\\u011a\\u011b\\u011c\\u011d\\u011e\\u011f\\u0120\\u0121\\u0122\\u0123\\u0124\\u0125\\u0126\\u0127\\u0128\\u0129\\u012a\\u012b\\u012c\\u012d\\u012e\\u012f\\u0130\\u0131\\u0132\\u0133\\u0134\\u0135\\u0136\\u0137\\u0138\\u0139\\u013a\\u013b\\u013c\\u013d\\u013e\\u013f\\u0140\\u0141\\u0142\\u0143\\u0144\\u0145\\u0146\\u0147\\u0148\\u0149\\u014a\\u014b\\u014c\\u014d\\u014e\\u014f\\u0150\\u0151\\u0152\\u0153\\u0154\\u0155\\u0156\\u0157\\u0158\\u0159\\u015a\\u015b\\u015c\\u015d\\u015e\\u015f\\u0160\\u0161\\u0162\\u0163\\u0164\\u0165\\u0166\\u0167\\u0168\\u0169\\u016a\\u016b\\u016c\\u016d\\u016e\\u016f\\u0170\\u0171\\u0172\\u0173\\u0174\\u0175\\u0176\\u0177\\u0178\\u0179\\u017a\\u017b\\u017c\\u017d\\u017e\\u017f\\u0180\\u0181\\u0182\\u0183\\u0184\\u0185\\u0186\\u0187\\u0188\\u0189\\u018a\\u018b\\u018c\\u018d\\u018e\\u018f\\u0190\\u0191\\u0192\\u0193\\u0194\\u0195\\u0196\\u0197\\u0198\\u0199\\u019a\\u019b\\u019c\\u019d\\u019e\\u019f\\u01a0\\u01a1\\u01a2\\u01a3\\u01a4\\u01a5\\u01a6\\u01a7\\u01a8\\u01a9\\u01aa\\u01ab\\u01ac\\u01ad\\u01ae\\u01af\\u01b0\\u01b1\\u01b2\\u01b3\\u01b4\\u01b5\\u01b6\\u01b7\\u01b8\\u01b9\\u01ba\\u01bb\\u01bc\\u01bd\\u01be\\u01bf\\u01c0\\u01c1\\u01c2\\u01c3\\u01c4\\u01c5\\u01c6\\u01c7\\u01c8\\u01c9\\u01ca\\u01cb\\u01cc\\u01cd\\u01ce\\u01cf\\u01d0\\u01d1\\u01d2\\u01d3\\u01d4\\u01d5\\u01d6\\u01d7\\u01d8\\u01d9\\u01da\\u01db\\u01dc\\u01dd\\u01de\\u01df\\u01e0\\u01e1\\u01e2\\u01e3\\u01e4\\u01e5\\u01e6\\u01e7\\u01e8\\u01e9\\u01ea\\u01eb\\u01ec\\u01ed\\u01ee\\u01ef\\u01f0\\u01f1\\u01f2\\u01f3\\u01f4\\u01f5\\u01f6\\u01f7\\u01f8\\u01f9\\u01fa\\u01fb\\u01fc\\u01fd\\u01fe\\u01ff\''
-"""
+
+
+Signed cookies:
+
+    >>> SignedClass = make_signed_container('this is the key material')
+    >>> signed = SignedClass()
+    >>> signed['key'] = 'value'
+    >>> encoded = signed.build_headers()[0][1]
+    >>> encoded # doctest:+ELLIPSIS
+    'key="v=value&n=...&s=..."; Path=/'
+    
+    >>> verified = SignedClass(encoded)
+    >>> verified['key'].value
+    u'value'
+    
+    >>> encoded = encoded[:-10] + '"'
+    >>> bad = SignedClass(encoded)
+    >>> bad['key']
+    Traceback (most recent call last):
+    KeyError: 'key'
+    
+    >>> signed = SignedClass()
+    >>> signed.create('key', 'this expires', max_age=10)
+    >>> encoded = signed.build_headers()[0][1]
+    >>> encoded # doctest:+ELLIPSIS
+    'key="v=this+expires&x=...&n=...&s=..."; Max-Age=10; Path=/'
+    
+    >>> verified = SignedClass(encoded)
+    >>> verified['key'].value
+    u'this expires'
+    
+    """
 
 
 #
@@ -168,6 +199,8 @@ More Unicode:
 import string
 import collections
 import re
+import functools
+import logging
 
 # These are for the encrypted cookies.
 try:
@@ -181,7 +214,7 @@ import multimap
 from ..uri.query import Query
 
 
-
+log = logging.getLogger(__name__)
 
 # These quoting routines conform to the RFC2109 specification, which in
 # turn references the character definitions from RFC2068. They provide
@@ -317,7 +350,7 @@ def unquote(to_unquote):
     return ''.join(res)
 
 
-_attr_map = {
+_ATTRIBUTES = {
     "path": "Path",
     "comment": "Comment",
     "domain": "Domain",
@@ -338,44 +371,54 @@ class Cookie(object):
     #   http_only
     
     def __init__(self, value=None, **kwargs):
+        """Create a new cookie.
         
+        Kwargs set the various cookie attributes.
+        
+        """        
         for key in kwargs:
-            if key not in _attr_map:
+            if key not in _ATTRIBUTES:
                 raise ValueError("unexpected keyword argument %r" % k)
-        
-        self._init_value = None
-        
         self.value = value
-        for key in _attr_map:
+        for key in _ATTRIBUTES:
             setattr(self, key, kwargs.get(key))
-        
-    
-    @classmethod
-    def _rebuild(cls, encoded_value):
-        """Called to recreate a cookie object sent from the user."""
-        cookie = cls()
-        cookie.value = cookie._loads(unquote(encoded_value))
-        cookie._init_value = cookie._as_tuple()
-        return cookie
     
     def _as_tuple(self):
-        ret = (('value', self.value), )
-        ret += tuple((key, getattr(self, key)) for key in _attr_map)
-        ret = tuple((k, v) for k, v in ret if v is not None)
-        return ret    
+        """Get the current state of the cookie as a tuple.
+        
+        If the value is mutable, this will still be mutable.
+        
+        """
+        ret = [('value', self.value)] + [(key, getattr(self, key)) for key in _ATTRIBUTES]
+        return tuple((k, v) for k, v in ret if v is not None)
+    
+    def _set_change_checkpoint(self):
+        """Set the reference for `Cookie.has_changed` to the current state.
+        
+        Includes values and attributes. This will be used to determine if the
+        cookie has changes since it was recieved from the browser. If it has
+        not changed, new headers will not be sent by default.
+        
+        """
+        self._change_checkpoint = self._as_tuple()
     
     def has_changed(self):
-        return self._as_tuple() != self._init_value
+        """Has this cookie changed since it was given to us by the browser?"""
+        return self._as_tuple() != getattr(self, '_change_checkpoint', None)
     
     def expire(self):
         """Tell the browser to drop this cookie.
         
-        Effectively sets max_age to 0.
-        """
+        Effectively sets max_age to 0. This does not remove the cookie from
+        the container, and the cookie must not be removed if headers are to
+        be sent to expire the cookie
         
+        """
         self.max_age = 0
     
-    def is_expired(self):
+    @property
+    def expired(self):
+        """Dynamic property which indicates if the cookie has been expired."""
         return self.max_age is not None and self.max_age <= 0
     
     def __str__(self):
@@ -385,57 +428,6 @@ class Cookie(object):
     def __repr__(self):
         return '<%s: %r>' % (self.__class__.__name__, self.value)
     
-    def build_header(self, key, header="Set-Cookie"):
-        # Build up our result
-        result = []
-        
-        # First, the key=value pair
-        result.append("%s=%s" % (key, quote('' if self.is_expired() else self._dumps(self.value))))
-
-        # Now add any defined attributes
-        for key in sorted(_attr_map):
-            name = _attr_map[key]
-            value = getattr(self, key)
-            if key == 'path' and value is None:
-                value = '/'
-            if value is not None:
-                if key == "max-age":
-                    result.append("%s=%d" % (name, value))
-                elif key == "secure" and value:
-                    result.append(name)
-                elif key == "http_only" and value:
-                    result.append(name)
-                else:
-                    result.append("%s=%s" % (name, value))
-
-        # Return the result
-        return (header, '; '.join(result))
-    
-    @staticmethod
-    def _dumps(value):
-        """Serialize a cookie value.
-        
-        Overide me to provide more sophisticated encoding. Must return an
-        octet string.
-        
-        Defaults to UTF8 encoding.
-        
-        """
-        if isinstance(value, unicode):
-            return value.encode('utf8', 'replace')
-        return str(value).decode('utf8', 'replace').encode('utf8')
-        
-    @staticmethod
-    def _loads(raw_string):
-        """Unserialize a cookie value.
-        
-        Overide to provide more sophisticated decoding. Can return any object.
-        Raising a ValueError will have this cookie silently dropped.
-        
-        Defaults to UTF8 decoding the cookie.
-        
-        """
-        return raw_string.decode('utf8', 'replace')
     
 
 #
@@ -470,12 +462,16 @@ class Container(multimap.MutableMultiMap):
         multimap.MutableMultiMap.__init__(self)
         if input:
             self.load(input)
+    
+    def blank_copy(self):
+        return self.__class__()
             
     def load(self, input_string):
         """Load cookies from a string (presumably HTTP_COOKIE)."""
         
+            
         # This is from the original cookie module. I have elected not to
-        # modify this as of yet... Here be dragons!
+        # modify this much as of yet... Here be dragons!
         
         i = 0            # Our starting point
         length = len(input_string)     # Length of string
@@ -497,11 +493,17 @@ class Container(multimap.MutableMultiMap):
                 if cookie:
                     cookie[key[1:]] = value
             else:
+                value = unquote(value)
                 try:
-                    cookie = self.cookie_class._rebuild(value)
-                    self.append((key, cookie))
+                    value = self._loads(value)
                 except ValueError:
+                    # We have decided that a ValueError is the way to signal
+                    # that the cookie should be silently dropped.
                     pass
+                else:
+                    cookie = self.cookie_class(value)
+                    cookie._set_change_checkpoint()
+                    self.append((key, cookie))
     
     def _conform_key(self, key):
         # Make sure the key is legal.
@@ -529,12 +531,60 @@ class Container(multimap.MutableMultiMap):
         """Create a cookie with all attributes in one call."""
         self[key] = self.cookie_class(value, **kwargs)
     
+    @staticmethod
+    def _dumps(value):
+        """Serialize a cookie value.
+
+        Overide this to provide more sophisticated encoding. Must return an
+        octet string.
+
+        Defaults to UTF8 encoding the string of the given value, without
+        catching encoding errros.
+
+        """
+        return str(value).encode('utf8', 'error')
+
+    @staticmethod
+    def _loads(raw_string):
+        """Unserialize a cookie value.
+
+        Overide to provide more sophisticated decoding. Can return any object.
+        Raising a ValueError will have this cookie silently dropped.
+
+        Defaults to UTF8 decoding the cookie, catching UnicodeErrors.
+
+        """
+        try:
+            return raw_string.decode('utf8', 'error')
+        except UnicodeDecodeError:
+            raise ValueError('bad utf8 decode')
+    
+    def build_header(self, name, cookie, header="Set-Cookie"):
+        """Build the header tuple for a given cookie."""
+        result = []
+        result.append("%s=%s" % (name, quote('' if cookie.expired else self._dumps(cookie.value))))
+        for key in sorted(_ATTRIBUTES):
+            name = _ATTRIBUTES[key]
+            value = getattr(cookie, key)
+            if key == 'path' and value is None:
+                value = '/'
+            if value is not None:
+                if key == "max-age":
+                    result.append("%s=%d" % (name, value))
+                elif key == "secure" and value:
+                    result.append(name)
+                elif key == "http_only" and value:
+                    result.append(name)
+                else:
+                    result.append("%s=%s" % (name, value))
+        return (header, '; '.join(result))
+
     def build_headers(self, all=False, header='Set-Cookie'):
-        """Build a list of header tuples suitable to pass to WSGI start callback."""
+        """Build a list of header tuples for all cookies in this container."""
         headers = []
-        for key, cookie in self.iterallitems():
+        for name, cookie in self.iterallitems():
             if all or cookie.has_changed():
-                headers.append(cookie.build_header(key, header=header))
+                headers.append(self.build_header(name, cookie, header=header))
         return headers
 
     def __repr__(self):
@@ -543,7 +593,7 @@ class Container(multimap.MutableMultiMap):
         items.sort()
         for key, value in items:
             L.append('%r: %r' % (key, value.value))
-        return '<cookie.Container:{%s}>' % ' '.join(L)
+        return '<%s.%s:{%s}>' % (self.__class__.__module__, self.__class__.__name__, ' '.join(L))
 
 
 def make_encrypted_container(entropy):
@@ -564,68 +614,87 @@ def make_encrypted_container(entropy):
     
     return EncryptedContainer
 
-def make_signed_container(hmac_key, max_age=None):
-    """Builds a signed cookie container class.
+
+class SignedContainer(Container):
+    def __init__(self, *args, **kwargs):
+        self.hmac_key = kwargs.pop('hmac_key')
+        Container.__init__(self, *args, **kwargs)
     
-    Examples:
-    
-        >>> SignedClass = make_signed_container('this is the key material')
-        >>> signed = SignedClass()
-        >>> signed['key'] = 'value'
-        >>> encoded = signed.build_headers()[0][1]
-        >>> encoded # doctest:+ELLIPSIS
-        'key="v=value&n=...&s=..."; Path=/'
-        
-        >>> verified = SignedClass(encoded)
-        >>> verified['key'].value
-        u'value'
-        
-        >>> encoded = encoded[:-10] + '"'
-        >>> bad = SignedClass(encoded)
-        >>> bad['key']
-        Traceback (most recent call last):
-        KeyError: 'key'
-        
-        >>> signed = SignedClass()
-        >>> signed.create('key', 'this expires', max_age=10)
-        >>> encoded = signed.build_headers()[0][1]
-        >>> encoded # doctest:+ELLIPSIS
-        'key="v=this+expires&x=...&n=...&s=..."; Max-Age=10; Path=/'
-        
-        >>> verified = SignedClass(encoded)
-        >>> verified['key'].value
-        u'this expires'
-        
-    """
-    
-    class SignedContainer(Container):
-        class cookie_class(Cookie):
-            def _dumps(self, value):
-                query = Query(v=value)
-                query.sign(hmac_key)
-                return str(query)
-            @staticmethod
-            def _loads(value):
-                query = Query(value)
-                query.verify(hmac_key, strict=True)
-                return query['v']
-    return SignedContainer
+    def blank_copy(self):
+        return self.__class__(hmac_key=self.hmac_key)
+
+    def _dumps(self, value):
+        query = Query(_=value)
+        query.sign(self.hmac_key)
+        return str(query)
+
+    def _loads(self, value):
+        query = Query(value)
+        query.verify(self.hmac_key, strict=True)
+        return query['_']   
+            
+make_signed_container_factory = lambda hmac_key: functools.partial(SignedContainer, hmac_key=hmac_key)
+make_signed_container = make_signed_container_factory
 
 
 
+# This is the default environment key to use for caching the cookies and the
+# default cookie factory. 
 ENVIRON_KEY = 'nitrogen.cookies'
 
-def parse_cookies(environ, hmac_key=None, key=ENVIRON_KEY):
-    if key not in environ:
-        class_ = make_signed_container(hmac_key) if hmac_key else Container
-        environ[key] = class_(environ.get('HTTP_COOKIE', ''))
-    return environ[key]
+
+def get_factory(environ, hmac_key=None, factory=None, **kwargs):
+    """Get the cookie container factory for the given environment and settings.
     
+    A factory is a callable which takes a 'Cookie' HTTP header string and
+    returns a cookie container.
+    
+    If provided 'factory', the given factory is returned immediately.
+    Elif provided 'hmac_key', a SignedContainer factory is returned.
+    Elif the factory was set with `setup_factory`, that is returned.
+    Else, the base Container is returned.
+    
+    """
+    environ_key = kwargs.get('environ_key', ENVIRON_KEY) + '.factory'
+    factory = (
+        factory or 
+        (make_signed_container(hmac_key) if hmac_key else None) or
+        environ.get(environ_key) or
+        Container
+    )
+    return factory
+
+
+def setup_factory(app, **kwargs):
+    """WSGI middleware which sets the fallback cookie factory for this environ.
+    
+    Done as per the rules of `get_factory`.
+    
+    """
+    def set_factory_app(environ, start):
+        environ[kwargs.get('environ_key', ENVIRON_KEY) + '.factory'] = get_factory(environ, **kwargs)
+        return app(environ, start)
+    return set_factory_app
+     
+      
+def parse_cookies(environ, **kwargs):
+    """Return the cookies from the given environ.
+    
+    The cookies are only parsed the first time this is called, and the result
+    is cached. Therefore, while the factory is settable via kwargs as per the
+    rules of `get_factory`, they are only effective the first time. You must
+    setup the cookies manually if you want something different on the second
+    pass.
+    
+    """
+    environ_key = kwargs.get('environ_key', ENVIRON_KEY)
+    if environ_key not in environ:
+        factory = get_factory(environ, **kwargs)
+        environ[environ_key] = factory(environ.get('HTTP_COOKIE', ''))
+    return environ[environ_key]
+
     
     
 if __name__ == "__main__":
     import nose; nose.run(defaultTest=__name__)
     exit()
-
-
-

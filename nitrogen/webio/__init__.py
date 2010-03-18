@@ -35,6 +35,7 @@ from multimap import MultiMap, DelayedMultiMap
 from ..uri import URI
 from ..uri.query import Query
 
+from .cookies import setup_factory as setup_cookies
 
 log = logging.getLogger(__name__)
 
@@ -259,12 +260,13 @@ def uri_parser(app, **kwargs):
 
     
 
-def request_params(app, parse_uri=True, parse_post=True,
-        **kwargs):
+def request_params(app, parse_uri=True, parse_post=True, parse_cookies=True, hmac_key=None, **kwargs):
     if parse_uri:
         app = uri_parser(app, **kwargs)
     if parse_post:
         app = post_parser(app, **kwargs)
+    if parse_cookies:
+        app = setup_cookies(app, hmac_key=hmac_key)
     return app
 
 
