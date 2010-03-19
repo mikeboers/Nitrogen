@@ -15,10 +15,10 @@ import pprint
 
 import webhelpers.text
 import webhelpers.html
-from markdown import markdown
+# from markdown import markdown
 
 from .util import urlify_name, clean_html, smart_html_escape
-from ..markdown import github_markdown
+from ..markdown import markdown
 from .. import lipsum
 from ..uri.query import encode as query_encode
 
@@ -30,7 +30,7 @@ context['html_escape'] = smart_html_escape
 context['h'] = smart_html_escape
 
 context['json'] = json.dumps
-context['markdown'] = lambda x: clean_html(markdown(github_markdown(x)))
+context['markdown'] = markdown
 context['format_date'] = lambda d, f: (d.strftime(f) if d else '')
 context['randomize'] = lambda x: sorted(x, key=lambda y: random.random())
 context['nl2br'] = lambda s: s.replace("\n", "<br />")
