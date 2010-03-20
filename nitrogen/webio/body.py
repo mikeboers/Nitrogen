@@ -20,6 +20,7 @@ def assert_body_cache(environ, environ_key=None):
         environ['wsgi.input'] = environ[environ_key] = cache
 
 def get_body_file(environ, environ_key=None):
+    environ_key = environ_key or ENVIRON_BODY_CACHE_KEY
     assert_body_cache(environ, environ_key)
     return environ[environ_key]
 
@@ -80,7 +81,7 @@ def make_temp_file(field):
 class SingleField(cgi.FieldStorage):
 
     def __init__(self, parent, *args, **kwargs):
-        self.parent = wekref.proxy(parent)
+        self.parent = weakref.proxy(parent)
         self.made_file = False
         cgi.FieldStorage.__init__(self, *args, **kwargs)
 
@@ -95,6 +96,19 @@ class SingleField(cgi.FieldStorage):
             raise ValueError("reported file size is too big: %r > %r" % (
                 self.length, max_file_length))
         return MaxLengthWrapper(self.parent.make_file(self), max_file_length)
+    
+    @property
+    def content_type(self):
+        return self.type
+    
+    @property
+    def content_type_options(self):
+        return self.type_options
+    
+    def __getattr__(self, name):
+        if name == 'value':
+            return cgi.FieldStorage.__getattr__(self, name)
+        return getattr(self.file, name)
 
 
 class FieldStorage(cgi.FieldStorage):
@@ -115,7 +129,7 @@ class FieldStorage(cgi.FieldStorage):
         return SingleField(self, *args, **kwargs)
     
     def read_single(self):
-        # We don't support non url encoded or mime type forms. But we must
+        # We don't take non urlencoded or multipart/form-data. But we must
         # take special care to make sure something was actually sent before
         # erroring, because jQuery (and others) change the Content-Type to
         # text/plain if the ajax post has no content.
@@ -151,13 +165,18 @@ def parse_body(environ, make_file=None, max_file_length=None, cache_body=True,
     post_key = post_key or ENVIRON_POST_KEY
     files_key = files_key or ENVIRON_FILES_KEY
     
-    # Don't need to bother doing anything fancy if this is a GET
-    if environ['REQUEST_METHOD'].lower() in ('get', 'head'):
-        return MutableMultiMap(), MutableMultiMap()
-    
     # Don't need to bother reparsing if we have already cached it.
     if post_key in environ and files_key in environ:
         return environ[post_key], environ[files_key]
+    
+    
+    post, files = MutableMultiMap(), MutableMultiMap()
+    environ[post_key] = post
+    environ[files_key] = files
+    
+    # Don't need to bother doing anything fancy if this is a GET
+    if environ['REQUEST_METHOD'].lower() in ('get', 'head'):
+        return post, files    
     
     if cache_body:
         assert_body_cache(environ, environ_key=body_cache_key)
@@ -170,13 +189,12 @@ def parse_body(environ, make_file=None, max_file_length=None, cache_body=True,
         max_file_length=max_file_length
     )
     
-    post, files = MutableMultiMap(), MutableMultiMap()
     
     # The list isn't always there. Try to post a empty string with
     # jQuery and it sends content-type "text/plain", so fs.list will be None.
     for chunk in fs.list or []:
         charset = fs.type_options.get('charset', 'utf8')
-        if chunk.filename:
+        if chunk.filename is not None:
             # Using an attribute I added to FieldStorage to see if the internal
             # StringIO is still in use.
             if not chunk.made_file:
@@ -188,13 +206,11 @@ def parse_body(environ, make_file=None, max_file_length=None, cache_body=True,
             if chunk.length >= 0 and chunk.file.recieved != chunk.length:
                 raise ValueError("incorrect file length; got %d of %d" % (
                     chunk.file.recieved, chunk.length))
-            file = chunk.file.fh
-            files.append((chunk.name.decode(charset, 'error'), file))
+            chunk.length = chunk.file.recieved        
+            chunk.file = chunk.file.fh
+            files.append((chunk.name.decode(charset, 'error'), chunk))
         else:
             post.append((chunk.name.decode(charset, 'error'), chunk.value.decode(charset, 'error')))
-    
-    environ[post_key] = post
-    environ[files_key] = files
     
     return post, files
 

@@ -23,19 +23,9 @@ need not provide it.
 """
 
 
-import cgi
-import collections
-import sys
-import tempfile
+
 import logging
-from cStringIO import StringIO
 
-from multimap import MultiMap, DelayedMultiMap
-
-from ..uri import URI
-from ..uri.query import Query
-
-from .cookies import setup_factory as setup_cookies
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +33,8 @@ log = logging.getLogger(__name__)
 def request_params(app, parse_cookies=True, **kwargs):
     log.warning('request_params has been depreciated. use setup_cookies')
     if parse_cookies:
-        app = setup_cookies(app, hmac_key=hmac_key)
+        from .cookies import setup_factory
+        app = setup_factory(app, hmac_key=hmac_key)
     return app
 
 

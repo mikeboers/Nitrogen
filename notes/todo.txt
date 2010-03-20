@@ -1,39 +1,53 @@
 
-- webio.*.*_parse should IMMEDIATELY parse
-    - webio.post.asset_body_cache asserts the body is cached
-    - webio.post.parse_post and _files should take kwarg cache_body for if they
-      should run the assertion or not
+- routing should be able to be case insnsitive
+    - atleast the rerouter
+
+- Request.peek_path_info() and pop_path_info() (for routers, so they don't have to use the full uri.path.Path)
+
+- write out the pros/cons for how the route data is used progressively to
+  build urls only if the routers match
+    - could stay the way it is, but with a _reuse_data kwarg to use all the
+      data upfront.
+    - these seems like something that isn't really of immediate use, so write
+      about it all I feel like, but don't actually do it
+
+- routers should try to keep SCRIPT_NAME and PATH_INFO in check. For simplification we will assume that there are only those which strip chunks off
+the path, or modif the path. therefore, if the new unrouted path is a suffix
+of the old one, then add the difference to SCRIPT_NAME. we set PATH_INFO to
+the new path regardless
+
+- routers should start based off of SCRIPT_NAME and PATH_INFO.
+- should be a wrapper around wsgi_apps/middleware which simply keeps the route
+  and CGI variables in check... this is something to do later cause I don't
+  need it yet.
+
 - webio.parse should have convenient functions
     webio.query.parse_get -> webio.parse.get(environ)
     webop.body.parse_post -> webop.parse.post
     webio.body.parse_files -> webio.parse.files
+
+- figure out how to have the routers be able to backtrack in the case of an
+  unrouteable exception. then I can have a `method` router which is a pass
+  through which only accepts certain methods then you register a chain of
+  method gates to a rerouter, the right method goes to the right controller
+  
+  - the routing protocol could be adjusted so that the route_step returns a
+    generator that yields route chunks, then no length would indicate that it
+    was unroutable
+  - define a basic RouteStep class which is just a named tuple.
+  - see if I can make the routing protocol a little simpler by requiring the
+    data to be an actual dictionary. perhaps fully do the wsgi.routing_args
+    protocl with positional args as well (but I don't know if those would
+    ultimately be useful at all in such a maleable routing system as I have)  
+  - a MethodController could route to it's own GET, POST, etc methods.
 
 
 - perhaps just use the webob.Request....
 
 - multimap._conform_value could take both the key AND the value.
     
-- Request should store the body of the request when accessed if it has a posted length less than a threshold (ie 4k). perhaps this is a similar mechanism to how the post shunts into a make_file. the body could be a wrapper
-around a file object. the body.make_file could be a function to create the
-original thing. body.max_length would proxy to post.max_length and files.max_length. body.make_file would not be the same as files.make_file
-
-    webio.parse_query does what it does now, but stores the results in the environ as a cache
-    webio.parse_body returns a tuple of body, post, files. all three of them
-    share a max_length attribute which update on each other. it defaults ~4k.
-    body and files both have a make_file property. body defaults to stringio
-    and files doesn't have it (meaning we don't accept posted files by default) this should be a bad request error
-    as soon as you access post or files or body they ALL get parsed together
-    the field storage object wraps the wsgi.input so that any read call to it
-    pushes the resulting string into the body, and then passes it on
-    
-    need a function to clear all the cached io operations from the environ
-    clear_cache(environ)
-        nitrogen.get
-        nitrogen.post
-        nitrogen.body
-        nitrogen.cookies
-        nitrogen.body_manager
-        nitrogen.headers
+- either bring in the bucket or make it it's own project
+- bring in PyTomCrypt (try to get it to compile with just the setup)
 
 
 - dispatcher should set the PATH_INFO and SCRIPT_NAME properly from the environ variable
@@ -41,23 +55,20 @@ original thing. body.max_length would proxy to post.max_length and files.max_len
 - http exceptions should be heirarchical like http://pylonshq.com/docs/en/0.9.7/thirdparty/webob/#module-webob.exc
     - or just use these ones... durr
 
-- fix date parsing for request.if_modified_since:
-    ...several lines of middleware...
-     File "/var/www/vhosts/swisssol.com/lib/nitrogen/imgsizer.py", line 129, in __call__
-       if req.if_modified_since and req.if_modified_since >= mtime:
-     File "/var/www/vhosts/swisssol.com/lib/nitrogen/request.py", line 58, in getter
-       dt = parse_http_time(v)
-     File "/var/www/vhosts/swisssol.com/lib/nitrogen/http/time.py", line 56, in parse_http_time
-       dt -= timedelta(seconds=raw[9])
-    TypeError: unsupported type for timedelta seconds component: NoneType
-    
-    This is with the following header:
-        HTTP_IF_MODIFIED_SINCE: 'Sat, 27 Feb 2010 21:26:28 GMT; length=1735'
-    
-    This was also coming from IE 6... This appears to be a Netscape extension
-    to HTTP/1.0. This problem was better solved by etags later in HTTP/1.1.
+- use webob header classes for some of the headers (to avoid the IE 6 content
+  length shit)
 
+- try to design a class for generic middleware which respects the intricacies
+  of the 3rd parameter to start. perhaps design it as a class with methods to
+  overide.
+  
+  - it would allow you to restart until the first real content was sent down
+    the pipe
+  - i dont really understand how to fail gracefully with an exception...
 
+- the exception catcher should buffer the whole request, and reset it every
+  time a start is called which passes on exc_info
+  - this would require all my middleware to use it properly...
 
 - remove the magic from nitrogen.model.__init__
 
@@ -72,19 +83,12 @@ original thing. body.max_length would proxy to post.max_length and files.max_len
     - perhaps I still have to write my own user permission/groups code, but
       dont have to do any of the authentication low-level stuff
 
-- webio functions should actually be in funcions and not just middleware
-  you pass them an environment, they do their stuff, and cache the results in
-  the environ. the second time they just return cached results
-  the middleware simply uses these functions. perhaps another function will
-  store it in the same place as paste does so it is easily picked up by repoz.what.Precicate.get_form_vars
-
 - think about rewriting route storage to work with wsgi.routing_args spec
     http://www.wsgi.org/wsgi/Specifications/routing_args
     
     - I don't think I'll actually be able to do this fully, but I can place my
       results in here as well as in my place
 
-- rewrite route specs to use SCRIPT_NAME and PATH_INFO as expected.
   
 
 - bottle (http://bottle.paws.de/) has an interesting idea where they have a 
@@ -104,10 +108,8 @@ original thing. body.max_length would proxy to post.max_length and files.max_len
 
 - consider using redis as key-value store instead of bucket
 
-- the caching middleware should only be giving a 304 Not Modified if the status
-  was already 200.
 
-- editables should be renamed. maybe ajaxcrud
+- editables should be renamed. maybe ajaxcrud, or nitrogen.model.crud.CRUD
 
 - editables should roughly follow the Atom publishing protocl. see what pylons
   does: http://wiki.pylonshq.com/display/pylonscookbook/How+map.resource+enables+controllers+as+services
