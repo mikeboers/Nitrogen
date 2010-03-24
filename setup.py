@@ -13,9 +13,10 @@ setup(
     packages = find_packages(),
     
     install_requires='''
-        beaker
+        # core
         flup
         webob
+        werkzeug
         
         # Going to be replacing this with wtform soon.
         formalchemy
@@ -24,23 +25,26 @@ setup(
         markdown
         lorem-ipsum-generator
         
-        # Testing
-        nose
-        minimock
-        webtest
-        
         sqlalchemy
         
         # This is only for the pager and some functions in the templates.
         webhelpers
         
-        # For the imgsizer.
-        pil
-        
         # These are mine.
         multimap
         
     ''',
+    
+    extras_require=dict(
+        session=['beaker'],
+        imgsizer=['pil'],
+        testing='''
+            nose
+            webtest
+            # minimock
+            ''',
+        
+    ),
     
     include_package_data=True,
         
