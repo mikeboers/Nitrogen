@@ -7,11 +7,11 @@ Examples:
     Headers([('Content-Encoding', 'deflate'), ('Content-Type', 'test/plain')])
     >>> 'Content-Type' in h
     True
-    >>> 'content type' in h
+    >>> 'content_type' in h
     True
     >>> 'not in h' in h
     False
-    >>> h.content_type
+    >>> h['content-type']
     'test/plain'
     
     >>> h['test'] = 'not allowed'
@@ -20,90 +20,105 @@ Examples:
     TypeError: 'Headers' object does not support item assignment
     
     >>> h = MutableHeaders(a=1, b=2)
-    >>> h.a
-    '1'
-    >>> h.A
-    '1'
-    >>> h['c'] = 3
-    >>> h.c
-    '3'
-    >>> h.d = 4
-    >>> h['D']
-    '4'
     >>> h.append(('multi', 'first'))
     >>> h.append(('multi', 'second'))
-    >>> h.multi
-    'first'
     >>> h.getall('multi')
     ['first', 'second']
-    
-    >>> h.append = 'does this break?'
-    >>> h.append # doctest: +ELLIPSIS
-    <bound method MutableHeaders.append of MutableHeaders([...])>
-    >>> h['append']
-    'does this break?'
     
 """
 
 
 import re
+import collections
+import logging
 
 import multimap
+
+
+log = logging.getLogger(__name__)
+
         
-def conform_header_name(name, titlecase=True):
+def environ_name_to_header(name):
     """
     
-    >>> conform_header_name('Content-Type')
+    >>> environ_name_to_header('Content-Type')
     'Content-Type'
-    >>> conform_header_name('Content Type')
+    >>> environ_name_to_header('content-type')
     'Content-Type'
-    >>> conform_header_name('content-type')
+    >>> environ_name_to_header('HTTP_CONTENT_TYPE')
     'Content-Type'
-    >>> conform_header_name('CONTENT_TYPE')
-    'Content-Type'
-    >>> conform_header_name('---Content---Type---')
-    'Content-Type'
-    >>> conform_header_name('one')
+    >>> environ_name_to_header('one')
     'One'
-    >>> conform_header_name('one two three')
-    'One-Two-Three'
+    >>> environ_name_to_header('x-example')
+    'X-Example'
     
     """
-    name = re.sub(r'[^a-zA-Z0-9]+', ' ', name)
-    chunks = name.strip().split()
-    return '-'.join(chunk.title() if titlecase else chunk for chunk in chunks)
+    if name.startswith('HTTP_'):
+        name = name[5:]
+    return name.replace('_', '-').title()
+
+
+def header_name_to_environ(name):
+    # log.warning(repr(name))
+    name = name.replace('-', '_').upper()
+    if name in ('CONTENT_TYPE', 'CONTENT_LENGTH'):
+        return name
+    return 'HTTP_' + name
+    
 
 class HeaderTraits(object):
     """The additional methods on top of the [Mutable]MultiMap class for a
     header mapping."""
-    def _conform_key(self, key):
-        return conform_header_name(key)
     
-    def _conform_value(self, value):
-        return str(value)
-    
-    def __getattr__(self, key):
-        if key not in self:
-            raise AttributeError(key)
-        return self[key]
+    _conform_key = staticmethod(environ_name_to_header)
+    _conform_value = staticmethod(str)
 
 
-class Headers(HeaderTraits, multimap.MultiMap):
-    pass
 class MutableHeaders(HeaderTraits, multimap.MutableMultiMap):
     pass
-class DelayedMutableHeaders(HeaderTraits, multimap.DelayedMutableMultiMap):
-    pass
+
+
+class EnvironHeaders(collections.MutableMapping):
+
+    def __init__(self, environ):
+        self.environ = environ
+
+    def __getitem__(self, key):
+        return self.environ[header_name_to_environ(key)]
+    
+    def __setitem__(self, key, value):
+        self.environ[header_name_to_environ(key)] = str(value)
+    
+    def __delitem__(self, key):
+        del self.environ[header_name_to_environ(key)]
+
+    def __len__(self):
+        # the iter is necessary because otherwise list calls our
+        # len which would call list again and so forth.
+        return len(list(iter(self)))
+
+    def iteritems(self):
+        for key, value in self.environ.iteritems():
+            if key.startswith('HTTP_') and key not in \
+               ('HTTP_CONTENT_TYPE', 'HTTP_CONTENT_LENGTH'):
+                yield key[5:].replace('_', '-').title(), value
+            elif key in ('CONTENT_TYPE', 'CONTENT_LENGTH'):
+                yield key.replace('_', '-').title(), value
+    
+    def __iter__(self):
+        return iter(x[0] for x in self.iteritems())
 
 
 ENVIRON_KEY = 'nitrogen.headers'
 
+
 def parse_headers(environ, environ_key=ENVIRON_KEY):
     """WSGI middleware which adds a header mapping to the environment."""
     if environ_key not in environ:
-        environ[environ_key] = MutableHeaders((k[5:], v) for k, v in environ.iteritems() if k.startswith('HTTP_'))
+        environ[environ_key] = MutableHeaders(EnvironHeaders(environ))
     return environ[environ_key]
 
+
 if __name__ == '__main__':
-    from nitrogen.test import run
-    run()
+    import nose; nose.run(defaultTest=__name__)
+    exit()
