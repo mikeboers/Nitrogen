@@ -381,7 +381,6 @@ class Query(MutableMultiMap):
         value = 'A' * (6 - len(value)) + str(value) + '=='
         return struct.unpack('>I', base64.urlsafe_b64decode(value))[0]
     
-    TIME_BASE = 1262698296
     TIME_KEY = '_t'
     SIG_KEY = '_s'
     NONCE_KEY = '_n'
@@ -397,9 +396,9 @@ class Query(MutableMultiMap):
         encode_time = self._encode_int
 
         if add_time or (add_time is None and max_age is None):
-            self[time_key] = encode_time(time.time() - self.TIME_BASE)
+            self[time_key] = encode_time(time.time())
         if max_age is not None:
-            self[expiry_key] = encode_time(time.time() + max_age - self.TIME_BASE)
+            self[expiry_key] = encode_time(time.time() + max_age)
         if add_nonce:
             self[nonce_key] = base64.urlsafe_b64encode(
                 hashlib.sha256(os.urandom(1024)).digest())[
@@ -447,7 +446,7 @@ class Query(MutableMultiMap):
         # Make sure the built in expiry time is okay.
         if expiry_key in self:
             try:
-                expiry_time = decode_time(self[expiry_key]) + self.TIME_BASE
+                expiry_time = decode_time(self[expiry_key])
             except struct.error:
                 if strict:
                     raise ValueError('bad expiry time')
@@ -460,7 +459,7 @@ class Query(MutableMultiMap):
         # Make sure it isnt too old.
         if max_age is not None and time_key in self:
             try:
-                creation_time = decode_time(self[time_key]) + self.TIME_BASE
+                creation_time = decode_time(self[time_key])
             except struct.error:
                 if strict:
                     raise ValueError('bad creation time')
