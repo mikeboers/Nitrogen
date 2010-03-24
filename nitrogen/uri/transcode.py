@@ -39,12 +39,16 @@ GEN_DELIMS = ':/?#[]@'
 SUB_DELIMS = '!$&\'()*+,;='
 SAFE = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~'
 
-def unicoder(obj, encoding='UTF-8', errors='replace'):
+CHARSET = 'utf-8'
+DECODE_ERRORS = 'replace'
+ENCODE_ERRORS = 'strict'
+
+def unicoder(obj, charset=CHARSET, errors=DECODE_ERRORS):
     if isinstance(obj, unicode):
         return obj
-    return unicode(str(obj), encoding, errors)
+    return unicode(str(obj), charset, errors)
 
-def encode(string, safe=''):
+def encode(string, safe='', charset=CHARSET, errors=ENCODE_ERRORS):
     """Encode non-safe characters.
     
     Params:
@@ -53,17 +57,17 @@ def encode(string, safe=''):
     """
     
     if isinstance(string, unicode):
-        string = string.encode('utf8', 'replace')
+        string = string.encode(charset, errors)
     safe = set(safe + SAFE)
     out = []
     for char in string:
         out.append(char if char in safe else '%%%02X' % ord(char))
     return ''.join(out)
 
-def decode(string):
+def decode(string, charset=CHARSET, errors=DECODE_ERRORS):
     """Decode encoded characters."""
     
-    return urllib.unquote(string.encode('ascii', 'ignore')).decode('utf8', 'replace')
+    return urllib.unquote(string.encode('ascii', 'ignore')).decode(charset, errors)
 
 if __name__ == '__main__':
     import nose; nose.run(defaultTest=__name__)

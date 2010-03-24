@@ -242,28 +242,32 @@ import struct
 
 from multimap import MutableMultiMap
 
-from .transcode import unicoder, decode as _decode, encode as _encode
+from .transcode import unicoder, decode as _decode, encode as _encode, CHARSET, ENCODE_ERRORS, DECODE_ERRORS
 
-def decode(x):
-    return _decode(x.replace('+', ' '))
 
-def encode(x, safe=''):
-    return _encode(x, safe + ' ').replace(' ', '+')
+def decode(x, charset=CHARSET, errors=DECODE_ERRORS):
+    return _decode(x.replace('+', ' '), charset, errors)
 
-def parse(query):
+
+def encode(x, safe='', charset=CHARSET, errors=ENCODE_ERRORS):
+    return _encode(x, safe + ' ', charset, errors).replace(' ', '+')
+
+
+def parse(query, charset=CHARSET, errors=DECODE_ERRORS):
     ret = []
     if not query:
         return ret
     for pair in query.split(u'&'):
-        pair = [decode(x) for x in pair.split(u'=', 1)]
+        pair = [decode(x, charset, errors) for x in pair.split(u'=', 1)]
         if isinstance(pair[0], str):
-            pair = [unicoder(x) for x in pair]
+            pair = [unicoder(x, charset, errors) for x in pair]
         if len(pair) == 1:
             pair.append(None)
         ret.append(tuple(pair))
     return ret
 
-def unparse(pairs):
+
+def unparse(pairs, charset=CHARSET, errors=ENCODE_ERRORS):
     ret = []
     for pair in pairs:
         if pair[1] is None:
@@ -272,19 +276,19 @@ def unparse(pairs):
             ret.append(encode(pair[0], u'/') + u'=' + encode(pair[1], '/= '))
     return u'&'.join(ret)
 
-class Query(MutableMultiMap):
 
-    def __init__(self, *args, **kwargs):
-        if len(args) > 1:
-            raise ValueError('too many arguments')
-        input = args[0] if args else None
+class Query(MutableMultiMap):
+    
+    def __init__(self, input=None, charset=CHARSET, decode_errors=DECODE_ERRORS, encode_errors=ENCODE_ERRORS, **kwargs):
+        self.charset = charset
+        self.encode_errors = encode_errors
+        self.decode_errors = decode_errors
         if isinstance(input, basestring):
-            input = parse(input)
+            input = parse(input, self.charset, self.decode_errors)
         if input is not None:
             MutableMultiMap.__init__(self, input)
         else:
             MutableMultiMap.__init__(self)
-
         for k, v in kwargs.iteritems():
             self[k] = v
 
@@ -294,12 +298,12 @@ class Query(MutableMultiMap):
     def _conform_key(self, key):
         if key is None:
             return None
-        return unicoder(key)
+        return unicoder(key, self.charset, self.encode_errors)
 
     def _conform_value(self, value):
         if value is None:
             return None
-        return unicoder(value)
+        return unicoder(value, self.charset, self.encode_errors)
 
     def _signature(self, key, hasher):
         return base64.b64encode(hmac.new(key, str(self), hasher or hashlib.md5).digest(), '-_').rstrip('=')
