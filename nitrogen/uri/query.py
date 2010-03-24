@@ -245,15 +245,17 @@ from multimap import MutableMultiMap
 from .transcode import unicoder, decode as _decode, encode as _encode, CHARSET, ENCODE_ERRORS, DECODE_ERRORS
 
 
-def decode(x, charset=CHARSET, errors=DECODE_ERRORS):
-    return _decode(x.replace('+', ' '), charset, errors)
+def decode(x, charset=None, errors=None):
+    return _decode(x.replace('+', ' '), charset or CHARSET, errors or DECODE_ERRORS)
 
 
-def encode(x, safe='', charset=CHARSET, errors=ENCODE_ERRORS):
-    return _encode(x, safe + ' ', charset, errors).replace(' ', '+')
+def encode(x, safe='', charset=None, errors=None):
+    return _encode(x, safe + ' ', charset or CHARSET, errors or ENCODE_ERRORS).replace(' ', '+')
 
 
-def parse(query, charset=CHARSET, errors=DECODE_ERRORS):
+def parse(query, charset=None, errors=None):
+    charset = charset or CHARSET
+    errors = errors or DECODE_ERRORS
     ret = []
     if not query:
         return ret
@@ -267,19 +269,21 @@ def parse(query, charset=CHARSET, errors=DECODE_ERRORS):
     return ret
 
 
-def unparse(pairs, charset=CHARSET, errors=ENCODE_ERRORS):
+def unparse(pairs, charset=None, errors=None):
+    charset = charset or CHARSET
+    errors = errors or ENCODE_ERRORS
     ret = []
     for pair in pairs:
         if pair[1] is None:
-            ret.append(encode(pair[0], u'/'))
+            ret.append(encode(pair[0], u'/', charset, errors))
         else:
-            ret.append(encode(pair[0], u'/') + u'=' + encode(pair[1], '/= '))
+            ret.append(encode(pair[0], u'/', charset, errors) + u'=' + encode(pair[1], '/= ', charset, errors))
     return u'&'.join(ret)
 
 
 class Query(MutableMultiMap):
     
-    def __init__(self, input=None, charset=CHARSET, decode_errors=DECODE_ERRORS, encode_errors=ENCODE_ERRORS, **kwargs):
+    def __init__(self, input=None, charset=None, decode_errors=None, encode_errors=None, **kwargs):
         self.charset = charset
         self.encode_errors = encode_errors
         self.decode_errors = decode_errors

@@ -43,12 +43,12 @@ CHARSET = 'utf-8'
 DECODE_ERRORS = 'replace'
 ENCODE_ERRORS = 'strict'
 
-def unicoder(obj, charset=CHARSET, errors=DECODE_ERRORS):
+def unicoder(obj, charset=None, errors=None):
     if isinstance(obj, unicode):
         return obj
-    return unicode(str(obj), charset, errors)
+    return unicode(str(obj), charset or CHARSET, errors or DECODE_ERRORS)
 
-def encode(string, safe='', charset=CHARSET, errors=ENCODE_ERRORS):
+def encode(string, safe='', charset=None, errors=None):
     """Encode non-safe characters.
     
     Params:
@@ -57,17 +57,17 @@ def encode(string, safe='', charset=CHARSET, errors=ENCODE_ERRORS):
     """
     
     if isinstance(string, unicode):
-        string = string.encode(charset, errors)
+        string = string.encode(charset or CHARSET, errors or ENCODE_ERRORS)
     safe = set(safe + SAFE)
     out = []
     for char in string:
         out.append(char if char in safe else '%%%02X' % ord(char))
     return ''.join(out)
 
-def decode(string, charset=CHARSET, errors=DECODE_ERRORS):
+def decode(string, charset=None, errors=None):
     """Decode encoded characters."""
     
-    return urllib.unquote(string.encode('ascii', 'ignore')).decode(charset, errors)
+    return urllib.unquote(string.encode('ascii', 'ignore')).decode(charset or CHARSET, errors or DECODE_ERRORS)
 
 if __name__ == '__main__':
     import nose; nose.run(defaultTest=__name__)
