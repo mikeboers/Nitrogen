@@ -538,8 +538,7 @@ class Container(multimap.MutableMultiMap):
         """Create a cookie with all attributes in one call."""
         self[key] = self.cookie_class(value, **kwargs)
     
-    @staticmethod
-    def _dumps(value):
+    def _dumps(self, value):
         """Serialize a cookie value.
 
         Overide this to provide more sophisticated encoding. Must return an
@@ -551,8 +550,7 @@ class Container(multimap.MutableMultiMap):
         """
         return unicode(value).encode(self.charset or CHARSET, self.encode_errors or ENCODE_ERRORS)
 
-    @staticmethod
-    def _loads(raw_string):
+    def _loads(self, raw_string):
         """Unserialize a cookie value.
 
         Overide to provide more sophisticated decoding. Can return any object.
@@ -651,7 +649,7 @@ make_signed_container = SignedContainer.make_factory
 
 # This is the default environment key to use for caching the cookies and the
 # default cookie factory. 
-ENVIRON_KEY = 'nitrogen.cookies'
+ENVIRON_KEY = 'nitrogen.req.cookies'
 
 
 def get_factory(environ, hmac_key=None, factory=None, **kwargs):
