@@ -1,25 +1,12 @@
 
-- see what happens when I put binary data into the uri.query.Query
-    - likely explodes... but lets see how
-    - we want to be accepting utf8 encoded data... what do we do in the case
-      that it isn't:
-        - Bad Request error
-        - drop that key-value pair (but log it as a warning)
-        - leave it binary
-    - same with post...
 
-- use Werkzeug body instead of my stuff
-- use Werkzeug headers in a bunch of places
+
+- request headers should possibly proxy back into the environ
 
 - query/post/file/header keyerror should be a subclass of 400 Bad Request
 
 
-- only need to parse the body for the content types:
-    - application/x-www-form-urlencoded
-    - multipart/form-data
 
-- the max_file_length is all good, but what about max_post_length?
-    The way it is now, someone could just send infinitely many files
 
 
 - "Dear valued user,
@@ -29,11 +16,6 @@
 
 "
 
-- take a good look at how wefkzeug parses the body:
-    http://werkzeug.pocoo.org/documentation/dev/request_data.html#how-does-it-parse
-    
-    - it only saves the actual body if it isn't the form or multipart content-types
-    - then it hands you the stream right back
 
 - routing should be able to be case insnsitive
     - atleast the rerouter
@@ -57,10 +39,6 @@ the new path regardless
   and CGI variables in check... this is something to do later cause I don't
   need it yet.
 
-- webio.parse should have convenient functions
-    webio.query.parse_get -> webio.parse.get(environ)
-    webop.body.parse_post -> webop.parse.post
-    webio.body.parse_files -> webio.parse.files
 
 - figure out how to have the routers be able to backtrack in the case of an
   unrouteable exception. then I can have a `method` router which is a pass
