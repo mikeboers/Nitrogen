@@ -14,6 +14,7 @@ from cgi import parse_header
 import base64
 
 from webtest import TestApp
+import werkzeug as wz
 
 from .http.status import resolve_status
 from .http.time import parse_http_time, format_http_time
@@ -127,6 +128,10 @@ class Request(object):
     referer = _environ_getter('HTTP_REFERER')
     user_agent = _environ_getter('HTTP_USER_AGENT')
     remote_ip = _environ_getter('REMOTE_IP')
+    
+    @property
+    def user_agent(self):
+        return wz.UserAgent(self.environ.get('HTTP_USER_AGENT'))
     
     # @property
     # def basic_username(self):
