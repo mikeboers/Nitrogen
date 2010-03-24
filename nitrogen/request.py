@@ -15,6 +15,7 @@ import base64
 
 from webtest import TestApp
 import werkzeug as wz
+import werkzeug.utils as wzutil
 
 from .http.status import resolve_status
 from .http.time import parse_http_time, format_http_time
@@ -166,6 +167,10 @@ class Request(object):
         return self.environ.get('SERVER_NAME', '').startswith('admin.')
 
 
+
+
+
+
 def _content_type_property(spec):
     """Build a property for quick setting of content types.
     
@@ -235,6 +240,24 @@ def _header_time_setter(key):
     return prop
 
 
+def _autoupdate_header(name, load_func):
+    def on_update(obj):
+        headers = obj._nitrogen_response.headers
+        value = str(obj)
+        if obj:
+            headers[name] = obj
+        else:
+            try:
+                del headers[name]
+            except KeyError:
+                pass
+    def header_property(self):
+        x = load_func(self.headers.get(name), on_update=on_update)
+        x._nitrogen_response = self
+        return x
+    header_property.__name__ = name
+    return property(header_property)
+
 class Response(object):
     
     """HTTP response abstraction.
@@ -249,18 +272,13 @@ class Response(object):
         self.headers = headers or []
         
         self._status = '200 OK'
-        
-        if 'content-type' in self.headers:
-            ctype, cdict = parse_header(self.headers['content-type'])
-            self._content_type = ctype
-            self._charset = cdict.get('charset')
-        else:
-            self._content_type = 'text/html'
-            self._charset = 'utf-8'
-            self._build_content_type_header()
-        
+        self._charset = 'utf-8'
         self._filename = None
         
+        if 'Content-Type' in self.headers:
+            ctype, opts = wz.parse_options_header(self.headers['Content-Type'])
+            self._charset = opts.get('charset')
+                
         # Base the response cookie class off of the request cookies.
         if request:
             if start and request.wsgi_start:
@@ -289,19 +307,12 @@ class Response(object):
     last_modified = _header_time_setter('last-modified')
     expires = _header_time_setter('expires')
     
-    @property
-    def max_age(self):
-        if 'cache-control' not in self.headers:
-            return None
-        m = re.search(r'max-age=(\d+)', self.headers['cache-control'])
-        if not m:
-            return None
-        return int(m.group(1))
+
+    cache_control = _autoupdate_header(name='cache_control',
+        load_func=lambda x, on_update: wz.parse_cache_control_header(x, on_update, wz.ResponseCacheControl))
+    www_authenticate = _autoupdate_header(name='www_authenticate', load_func=wz.parse_www_authenticate_header)
     
-    @max_age.setter
-    def max_age(self, value):
-        # TODO: make this not overwrite other stuff.
-        self.headers['cache-control'] = 'max-age=%d, must-revalidate' % value
+    
     
     @property
     def filename(self):
@@ -317,14 +328,18 @@ class Response(object):
         
     @property
     def content_type(self):
-        return self._content_type
+        raw = self.headers.get('Content-Type')
+        if raw:
+            return wz.parse_options_header(raw)[0]
     
     @content_type.setter
-    def content_type(self, value):
-        self._content_type = value
-        self._build_content_type_header()
-    
-    type = content_type
+    def content_type(self, ctype):
+        if ctype is None:
+            self.headers.discard('Content-Type')
+        elif self._charset is not None:
+            self.headers['Content-Type'] = wzutil.get_content_type(ctype, self._charset)
+        else:
+            self.headers['Content-Type'] = ctype
     
     @property
     def charset(self):
@@ -333,7 +348,9 @@ class Response(object):
     @charset.setter
     def charset(self, value):
         self._charset = value
-        self._build_content_type_header()
+        # Need to trigger rebuilding the header.
+        if 'Content-Type' in self.headers:
+            self.content_type = self.content_type
     
     @property
     def status(self):
@@ -343,30 +360,8 @@ class Response(object):
     def status(self, value):
         self._status = resolve_status(value)
     
-    def _build_content_type_header(self):
-        if self.content_type is None:
-            self.headers.remove('content-type')
-        elif self.charset:
-            self.headers['content-type'] = '%s; charset=%s' % (
-                self.content_type, self.charset)
-        else:
-            self.headers['content-type'] = self.content_type
     
-    # @property
-    # def basic_realm(self):
-    #     auth = self.headers.get('WWW-Authenticate')
-    #     if auth is None:
-    #         return None
-    #     mode, blob = auth.split()
-    #     if mode.lower() != 'basic':
-    #         return none
-    #     if blob.startswith('realm="') and blob[-1] == '"':
-    #         return blob[7:-1]
-    #     return None
-    # 
-    # @basic_realm.setter
-    # def basic_realm(self, value):
-    #     self.headers['WWW-Authenticate'] = 'Basic realm="%s"' % value    
+  
     
     def start(self, status=None, headers=None, exc_info=None, plain=None,
         html=None, **kwargs):
@@ -377,49 +372,46 @@ class Response(object):
 
         If headers are supplied, they are sent after those that have been
         added to self.headers.
-        """
         
+        """
         if not self.wsgi_start:
             raise ValueError('no WSGI start')
-        
         if status:
             self.status = status
-        
         # Deal with content-type overrides and properties.
         if plain or html:
-            log.warning('use of html/plain kwargs is depreciated')
+            log.warning('Response.start html/plain kwargs are depreciated')
             if html:
                 self.content_type = 'text/html'
             else:
                 self.content_type = 'text/plain'
-        
         for k, v in kwargs.items():
             if not hasattr(self, k):
                 raise ValueError('no request attribute %r' % k)
             setattr(self, k, v)
-                
         headers = self.headers.allitems() + (list(headers) if headers else []) + self.cookies.build_headers()
-        
         self.wsgi_start(self.status, headers)
 
 
 def get_request_pair(environ, start):        
     request = Request(environ, start)
     return request, request.response
-    
-def as_request(app):
-    """WSGI middleware to adapt WSGI style requests to a single Request object."""
-    
-    def as_request_app(self, environ, start=None):
-        if start is None:
-            self, environ, start = None, self, environ
-        request, response = get_request_pair(environ, start)
-        if self is not None:
-            return app(self, request, response)
-        return app(request, response)
-    
-    return as_request_app
 
+
+class RequestMiddleware(object):
+    
+    def __init__(self, app):
+        self.app = app
+    
+    def __call__(self, environ, start):
+        return self.app(*get_request_pair(environ, start))
+    
+    def __get__(self, instance, owner):
+        if not instance:
+            return self
+        return lambda environ, start: self.app(instance, *get_request_pair(environ, start))
+
+as_request = RequestMiddleware
 
 
 
