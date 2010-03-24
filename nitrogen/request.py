@@ -33,79 +33,43 @@ def _environ_parser(func, *args, **kwargs):
     def parser(self):
         return func(self.environ, *args, **kwargs)
     return property(parser)
-    
-def _environ_getter(key, callback=None):
-    """Builds a property for getting values out of the environ.
-    
-    A callback can be specified to modify the return value.
-    
-    """
-    
-    if callback:
-        def getter(self):
-            return callback(self.environ.get(key))
-    else:
-        def getter(self):
-            return self.environ.get(key)
-    return property(getter)
 
 
-def _environ_time_getter(key):
-    """Builds a property for getting times out of the environ.
-    
-    An unparsable time results in None.
-    
-    TODO: test for what bad dates do
-    """
-    
-    def getter(self):
-        v = self.environ.get(key)
-        if v is None:
-            return None
-        try:
-            dt = parse_http_time(v)
-            return dt
-        except ValueError:
-            return None
-    return property(getter)
 
 
-def _attr_getter(key):
-    """Builds a property which gets an attribute off the object."""
-    def getter(self):
-        return getattr(self, key)
-    return property(getter)
 
-def _accept_header_parser(name):
-    def getter(self):
-        return wz.parse_accept_header(self.headers.get(name, ''))
-    getter.__name__ = name
-    return property(getter)
 
 
 class Request(object):
     
     """WSGI/HTTP request abstraction class."""
     
+    # For decoding query/post/cookies/etc..
+    # Not used yet.
+    charset = 'utf-8'
+    encoding_errors = 'ignore'
+    
     def __init__(self, environ, start=None):
         self.environ = environ
         self.wsgi_start = start
         self.response = Response(request=self) if start else None
     
-    method = _environ_getter('REQUEST_METHOD', str.upper)
-    is_get = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'GET')
-    is_post = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'POST')
-    is_put = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'PUT')
-    is_delete = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'DELETE')
-    is_head = _environ_getter('REQUEST_METHOD', lambda x: x.upper() == 'HEAD')
+    method = wz.environ_property('REQUEST_METHOD', load_func=str.upper)
+    is_get = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'GET')
+    is_post = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'POST')
+    is_put = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'PUT')
+    is_delete = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'DELETE')
+    is_head = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'HEAD')
     
-    get = _environ_parser(parse_query)
+    query_string = wz.environ_property('QUERY_STRING')
+    query = _environ_parser(parse_query)
+    get = query # Depreciated
     post = _environ_parser(parse_post)
     files = _environ_parser(parse_files)
     cookies = _environ_parser(parse_cookies)
     headers = _environ_parser(parse_headers)
     
-    session = _environ_getter('beaker.session')
+    session = wz.environ_property('beaker.session')
     
     @property
     def fullroute(self):
@@ -123,41 +87,31 @@ class Request(object):
     def unrouted(self):
         return get_route(self.environ).path
     
-    # These two are the same. I just like `etag` much more.
-    if_none_match = _environ_getter('HTTP_IF_NONE_MATCH')
-    etag = _environ_getter('HTTP_IF_NONE_MATCH')
     
-    # Other generic stuff.
-    date = _environ_time_getter('HTTP_DATE')
-    host = _environ_getter('HTTP_HOST')
-    if_modified_since = _environ_time_getter('HTTP_IF_MODIFIED_SINCE')
-    referer = _environ_getter('HTTP_REFERER')
-    user_agent = _environ_getter('HTTP_USER_AGENT')
-    remote_ip = _environ_getter('REMOTE_IP')
+    # This one gets a little more attension because IE 6 will send us the
+    # length of the previous request as an option to this header
+    if_modified_since = wz.environ_property('HTTP_IF_MODIFIED_SINCE', load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
     
-    @property
-    def user_agent(self):
-        return wz.UserAgent(self.environ.get('HTTP_USER_AGENT'))
-    
-    accept = _accept_header_parser('accept')
-    accept_charset = _accept_header_parser('accept_charset')
-    accept_encoding = _accept_header_parser('accept_encoding')
-    accept_language = _accept_header_parser('accept_language')
-    
-    # @property
-    # def basic_username(self):
-    #     auth = self.headers.get('Authorization')
-    #     if not auth:
-    #         return None
-    #     if not auth.startswith('Basic '):
-    #         return None
-    #     
-    #     username, password = base64.b64decode(auth.split()[1]).split(':')
-    #     return username
-    
+    # Lots of pretty generic headers...
+    accept = wz.environ_property('HTTP_ACCEPT', load_func=lambda x: wz.parse_accept_header(x, wz.MIMEAccept))
+    accept_charset = wz.environ_property('HTTP_ACCEPT_CHARSET', load_func=lambda x: wz.parse_accept_header(x, wz.CharsetAccept))
+    accept_encoding = wz.environ_property('HTTP_ACCEPT_ENCODING', load_func=lambda x: wz.parse_accept_header(x, wz.Accept))
+    accept_language = wz.environ_property('HTTP_ACCEPT_LANGUAGE', load_func=lambda x: wz.parse_accept_header(x, wz.LanguageAccept))
+    authorization = wz.environ_property('HTTP_AUTHORIZATION', load_func=wz.parse_authorization_header)
+    cache_control = wz.environ_property('HTTP_CACHE_CONTROL', load_func=wz.parse_cache_control_header)
+    date = wz.environ_property('HTTP_DATE', load_func=wz.parse_date)
+    etag = wz.environ_property('HTTP_IF_NONE_MATCH') # Same as if_none_match, but I have used this name before. Still depreciated.
+    host = wz.environ_property('HTTP_HOST')
+    if_none_match = wz.environ_property('HTTP_IF_NONE_MATCH')
+    referer = wz.environ_property('HTTP_REFERER')
+    remote_ip = wz.environ_property('REMOTE_IP')
+    user_agent = wz.environ_property('HTTP_USER_AGENT')
+    user_agent = wz.environ_property('HTTP_USER_AGENT', load_func=wz.UserAgent)
+
     
     # This will be handled another way soon.
-    user = _environ_getter('app.user')
+    # Depreciated.
+    user = wz.environ_property('app.user')
     
     @property
     def is_admin_area(self):
