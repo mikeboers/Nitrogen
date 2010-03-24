@@ -21,7 +21,7 @@ from .http.status import resolve_status
 from .http.time import parse_http_time, format_http_time
 from .webio import request_params
 from .webio.query import parse_query
-from .webio.headers import parse_headers, MutableHeaders
+from .webio.headers import parse_headers, MutableHeaders, EnvironHeaders
 from .webio.cookies import parse_cookies, Container as CookieContainer
 from .webio.body import parse_post, parse_files
 from .route.core import get_route
@@ -61,6 +61,7 @@ class Request(object):
         self.charset = charset
         self.decode_errors = decode_errors
         self.response = Response(request=self) if start else None
+        self.headers = EnvironHeaders(environ)
     
     method = wz.environ_property('REQUEST_METHOD', load_func=str.upper)
     is_get = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'GET')
@@ -69,7 +70,7 @@ class Request(object):
     is_delete = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'DELETE')
     is_head = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'HEAD')
     
-    headers = _environ_parser(parse_headers)
+    # headers = _environ_parser(parse_headers)
     
     query_string = wz.environ_property('QUERY_STRING')
     @property
@@ -133,6 +134,7 @@ class Request(object):
     # This one gets a little more attension because IE 6 will send us the
     # length of the previous request as an option to this header
     if_modified_since = wz.environ_property('HTTP_IF_MODIFIED_SINCE', load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
+    if_unmodified_since = wz.environ_property('HTTP_IF_UNMODIFIED_SINCE', load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
     
     # Lots of pretty generic headers...
     accept = wz.environ_property('HTTP_ACCEPT', load_func=lambda x: wz.parse_accept_header(x, wz.MIMEAccept))
@@ -144,6 +146,7 @@ class Request(object):
     date = wz.environ_property('HTTP_DATE', load_func=wz.parse_date)
     etag = wz.environ_property('HTTP_IF_NONE_MATCH') # Same as if_none_match, but I have used this name before. Still depreciated.
     host = wz.environ_property('HTTP_HOST')
+    if_match = wz.environ_property('HTTP_IF_MATCH')
     if_none_match = wz.environ_property('HTTP_IF_NONE_MATCH')
     referer = wz.environ_property('HTTP_REFERER')
     remote_addr = wz.environ_property('REMOTE_ADDR')
@@ -171,7 +174,7 @@ class Request(object):
 
 
 
-def _content_type_property(spec):
+def _content_type_flag(spec):
     """Build a property for quick setting of content types.
     
     You can only set these properties to be True. When you do so, the content-
@@ -190,56 +193,6 @@ def _content_type_property(spec):
     return prop
 
 
-def _header_setter(key, get=None, set=None):
-    """Build a header property.
-    
-    Optional get and set transform the header value on it's way in and out.
-    
-    """
-    
-    @property
-    def prop(self):
-        v = self.headers.get(key)
-        return get(v) if get else v
-        
-    @prop.setter
-    def prop(self, value):
-        value = set(value) if set else value
-        if value is None:
-            self.headers.remove(key)
-        else:
-            self.headers[key] = value
-    return prop
-
-
-def _header_time_setter(key):
-    """Build a header property which sets a time value.
-    
-    This property reveals a datetime interface, while it sets the actual
-    header to a string.
-    
-    """
-    
-    @property
-    def prop(self):
-        x = self.headers.get(key)
-        try:
-            dt = parse_http_time(x)
-            return dt
-        except ValueError:
-            pass
-        return None
-    
-    @prop.setter
-    def prop(self, value):
-        if value is None:
-            self.headers.remove(key)
-        else:
-            self.headers[key] = format_http_time(value)
-            
-    return prop
-
-
 def _autoupdate_header(name, load_func):
     def on_update(obj):
         headers = obj._nitrogen_response.headers
@@ -251,12 +204,17 @@ def _autoupdate_header(name, load_func):
                 del headers[name]
             except KeyError:
                 pass
-    def header_property(self):
+    def header_get(self):
         x = load_func(self.headers.get(name), on_update=on_update)
         x._nitrogen_response = self
         return x
-    header_property.__name__ = name
-    return property(header_property)
+    header_get.__name__ = name
+    def header_set(self, v):
+        if v is None:
+            self.headers.discard(name)
+        else:
+            self.headers[name] = str(v)
+    return property(header_get, header_set)
 
 class Response(object):
     
@@ -296,35 +254,43 @@ class Response(object):
     def headers(self, value):
         self._headers = value if isinstance(value, MutableHeaders) else MutableHeaders(value)
     
-    as_html = _content_type_property('text/html')
-    as_text = _content_type_property('text/plain')
-    as_json = _content_type_property('application/json')
+    as_html = _content_type_flag('text/html')
+    as_text = _content_type_flag('text/plain')
+    as_json = _content_type_flag('application/json')
     
-    etag = _header_setter('etag')
-    location = _header_setter('location')
-    
-    date = _header_time_setter('date')
-    last_modified = _header_time_setter('last-modified')
-    expires = _header_time_setter('expires')
-    
+    date = wz.header_property('date', read_only=False, load_func=wz.parse_date, dump_func=wz.http_date)
+    etag = wz.header_property('etag', read_only=False)
+    expires = wz.header_property('expires', read_only=False, load_func=wz.parse_date, dump_func=wz.http_date)
+    last_modified = wz.header_property('last_modified', read_only=False, load_func=wz.parse_date, dump_func=wz.http_date)
+    location = wz.header_property('location', read_only=False)
 
-    cache_control = _autoupdate_header(name='cache_control',
-        load_func=lambda x, on_update: wz.parse_cache_control_header(x, on_update, wz.ResponseCacheControl))
+    cache_control = _autoupdate_header(name='cache_control', load_func=lambda x, on_update: wz.parse_cache_control_header(x, on_update, wz.ResponseCacheControl))
     www_authenticate = _autoupdate_header(name='www_authenticate', load_func=wz.parse_www_authenticate_header)
     
     
-    
+    @property
+    def _content_disposition(self):
+        cdisp = self.headers.get('content-disposition')
+        if cdisp:
+            return wz.parse_options_header(cdisp)
+        return cdisp, None
+        
     @property
     def filename(self):
-        return self._filename
+        cdisp, opts = self._content_disposition
+        if cdisp is not None and cdisp.lower() == 'attachment':
+            return opts.get('filename')
     
     @filename.setter
     def filename(self, value):
-        self._filename = None if value is None else str(value)
-        if self._filename is not None:
-            self.headers.content_disposition = 'attachment; filename="%s"' % self.filename.replace('"', '\\"')
+        cdisp, opts = self._content_disposition
+        if cdisp is None or cdisp.lower() == 'attachment':
+            if value is not None:
+                self.headers['content-disposition'] = dump_options_header('attachment', {'filename': value})
+            else:
+                self.headers.discard('content-disposition')
         else:
-            self.headers.remove('content-disposition')
+            raise ValueError('cant set filename for disposition %r' % cdisp)
         
     @property
     def content_type(self):
