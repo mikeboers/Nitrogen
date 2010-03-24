@@ -21,7 +21,7 @@ from .http.time import parse_http_time, format_http_time
 from .webio import request_params
 from .webio.query import parse_query
 from .webio.headers import parse_headers, MutableHeaders
-from .webio.cookies import parse_cookies, get_factory as get_cookie_factory, Container as CookieContainer
+from .webio.cookies import parse_cookies, Container as CookieContainer
 from .webio.body import parse_post, parse_files
 from .route.core import get_route
 
@@ -36,22 +36,29 @@ def _environ_parser(func, *args, **kwargs):
 
 
 
-
-
-
-
 class Request(object):
     
     """WSGI/HTTP request abstraction class."""
     
-    # For decoding query/post/cookies/etc..
-    # Not used yet.
-    charset = 'utf-8'
-    encoding_errors = 'ignore'
+    # The total maximum length of a POST (or PUT) request, including form data
+    # and all files. See http://werkzeug.pocoo.org/documentation/0.6/http.html#werkzeug.parse_form_data
+    # for more info.
+    max_content_length = 2 * 1024 * 1028
     
-    def __init__(self, environ, start=None):
+    # Maximum size for all form data to accept. See http://werkzeug.pocoo.org/documentation/0.6/http.html#werkzeug.parse_form_data
+    # for more info.
+    max_form_memory_size = None
+    
+    # Function to use to create file objects at parse time. Defaults to
+    # rejecting all files. See http://werkzeug.pocoo.org/documentation/0.6/http.html#werkzeug.parse_form_data
+    # for more info.
+    stream_factory = None
+    
+    def __init__(self, environ, start=None, charset=None, decode_errors=None):
         self.environ = environ
         self.wsgi_start = start
+        self.charset = charset
+        self.decode_errors = decode_errors
         self.response = Response(request=self) if start else None
     
     method = wz.environ_property('REQUEST_METHOD', load_func=str.upper)
@@ -61,13 +68,47 @@ class Request(object):
     is_delete = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'DELETE')
     is_head = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'HEAD')
     
-    query_string = wz.environ_property('QUERY_STRING')
-    query = _environ_parser(parse_query)
-    get = query # Depreciated
-    post = _environ_parser(parse_post)
-    files = _environ_parser(parse_files)
-    cookies = _environ_parser(parse_cookies)
     headers = _environ_parser(parse_headers)
+    
+    query_string = wz.environ_property('QUERY_STRING')
+    @property
+    def query(self):
+        return parse_query(self.environ, charset=self.charset, errors=self.decode_errors)
+    get = query # Depreciated
+    
+    @property
+    def cookies(self):
+        return parse_cookies(self.environ, charset=self.charset, decode_errors=self.decode_errors)
+    
+    @property
+    def stream(self):
+        return parse_stream(self.environ,
+            charset=self.charset,
+            errors=self.decode_errors,
+            stream_factory=self.stream_factory,
+            max_content_length=self.max_content_length,
+            max_form_memory_size=self.max_form_memory_size,
+        )
+        
+    @property
+    def post(self):
+        return parse_post(self.environ,
+            charset=self.charset,
+            errors=self.decode_errors,
+            stream_factory=self.stream_factory,
+            max_content_length=self.max_content_length,
+            max_form_memory_size=self.max_form_memory_size,
+        )
+        
+    @property
+    def files(self):
+        return parse_files(self.environ,
+            charset=self.charset,
+            errors=self.decode_errors,
+            stream_factory=self.stream_factory,
+            max_content_length=self.max_content_length,
+            max_form_memory_size=self.max_form_memory_size,
+        )
     
     session = wz.environ_property('beaker.session')
     
@@ -104,9 +145,16 @@ class Request(object):
     host = wz.environ_property('HTTP_HOST')
     if_none_match = wz.environ_property('HTTP_IF_NONE_MATCH')
     referer = wz.environ_property('HTTP_REFERER')
-    remote_ip = wz.environ_property('REMOTE_IP')
+    remote_addr = wz.environ_property('REMOTE_ADDR')
+    remote_port = wz.environ_property('REMOTE_PORT', load_func=int)
     user_agent = wz.environ_property('HTTP_USER_AGENT')
     user_agent = wz.environ_property('HTTP_USER_AGENT', load_func=wz.UserAgent)
+    
+    # WSGI stuff
+    is_secure = wz.environ_property('wsgi.url_scheme', load_func=lambda x: x == 'https')
+    is_multiprocess = wz.environ_property('wsgi.multiprocess')
+    is_multithread = wz.environ_property('wsgi.multithread')
+    is_run_once = wz.environ_property('wsgi.run_once')
 
     
     # This will be handled another way soon.
