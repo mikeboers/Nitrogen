@@ -101,11 +101,7 @@ ENVIRON_KEY = 'nitrogen.headers'
 def parse_headers(environ, environ_key=ENVIRON_KEY):
     """WSGI middleware which adds a header mapping to the environment."""
     if environ_key not in environ:
-        def gen():
-            for k, v in environ.items():
-                if k.startswith('HTTP_'):
-                    yield k[5:], v
-        environ[environ_key] = DelayedMutableHeaders(gen)
+        environ[environ_key] = MutableHeaders((k[5:], v) for k, v in environ.iteritems() if k.startswith('HTTP_'))
     return environ[environ_key]
 
 if __name__ == '__main__':
