@@ -4,6 +4,14 @@ This is only here to be backwards compatible with my earlier sites.
 
 """
 
+
+def run_via(name, *args, **kwargs):
+    import sys
+    self = sys.modules[__name__]
+    name = 'run_via_' + name
+    runner = getattr(self, name)
+    runner(*args, **kwargs)
+    
 def run_via_cgi(app):
     from .server.cgi import CGIServer
     CGIServer(app).run()

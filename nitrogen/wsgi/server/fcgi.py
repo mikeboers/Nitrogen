@@ -17,7 +17,6 @@ Forking notes:
 
 """
 
-
 import itertools
 import multiprocessing.util
 import os
