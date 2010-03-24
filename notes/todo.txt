@@ -1,4 +1,12 @@
 
+- see what happens when I put binary data into the uri.query.Query
+    - likely explodes... but lets see how
+    - we want to be accepting utf8 encoded data... what do we do in the case
+      that it isn't:
+        - Bad Request error
+        - drop that key-value pair (but log it as a warning)
+        - leave it binary
+    - same with post...
 
 - use Werkzeug body instead of my stuff
 - use Werkzeug headers in a bunch of places
