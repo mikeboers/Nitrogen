@@ -76,6 +76,12 @@ def _attr_getter(key):
         return getattr(self, key)
     return property(getter)
 
+def _accept_header_parser(name):
+    def getter(self):
+        return wz.parse_accept_header(self.headers.get(name, ''))
+    getter.__name__ = name
+    return property(getter)
+
 
 class Request(object):
     
@@ -132,6 +138,11 @@ class Request(object):
     @property
     def user_agent(self):
         return wz.UserAgent(self.environ.get('HTTP_USER_AGENT'))
+    
+    accept = _accept_header_parser('accept')
+    accept_charset = _accept_header_parser('accept_charset')
+    accept_encoding = _accept_header_parser('accept_encoding')
+    accept_language = _accept_header_parser('accept_language')
     
     # @property
     # def basic_username(self):
