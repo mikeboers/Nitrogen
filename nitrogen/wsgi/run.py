@@ -4,23 +4,23 @@ This is only here to be backwards compatible with my earlier sites.
 
 """
 
-
-from .wsgi.servers import (CGIServer, FCGIServer, FCGIPreForkServer, SocketServer)
-
-
 def run_via_cgi(app):
+    from .server.cgi import CGIServer
     CGIServer(app).run()
 
 
-def run_via_fcgi(app, **kwargs):    
+def run_via_fcgi(app, **kwargs):
+    from .server.fcgi import FCGIServer
     FCGIServer(app, **kwargs).run()
 
 
 def run_via_fcgi_fork(app, **kwargs):
+    from .server.fcgi import FCGIPreForkServer
     FCGIPreForkServer(app, **kwargs).run()
 
 
 def run_via_socket(app, host='', port=8000, once=False):
+    from .server.socket import SocketServer
     handler = SocketServer(app, host, port)
     if once:
         handler.handle_request()

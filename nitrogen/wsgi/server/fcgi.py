@@ -21,14 +21,10 @@ Forking notes:
 import itertools
 import multiprocessing.util
 import os
-from wsgiref.handlers import CGIHandler as _CGIServer
-from wsgiref.simple_server import make_server as _make_server
 
 from flup.server.fcgi_base import Request as _FCGIRequest
 from flup.server.fcgi import WSGIServer as _FCGIServer
 from flup.server.fcgi_fork import WSGIServer as _FCGIPreForkServer
-
-from .. import error
 
 
 def monkeypatch_fcgi_request(Request):
@@ -50,18 +46,7 @@ def monkeypatch_fcgi_request(Request):
 monkeypatch_fcgi_request(_FCGIRequest)
 
 
-class CGIServer(_CGIServer):
 
-    error_status = error.DEFAULT_ERROR_HTTP_STATUS
-    error_headers = error.DEFAULT_ERROR_HTTP_HEADERS
-    error_body = error.DEFAULT_ERROR_BODY
-
-    def __init__(self, app):
-        _CGIServer.__init__(self)
-        self.app = app
-
-    def run(self):
-        _CGIServer.run(self, self.app)
 
 
 
@@ -125,19 +110,6 @@ class FCGIPreForkServer(_FCGIPreForkServer):
         return ret
 
 
-class SocketServer(object):
 
-    def __init__(self, app, host='', port=8000):
-        self.app = app
-        self.host = host
-        self.port = port
 
-    def make_server(self):
-        return _make_server(self.host, self.port, self.app)
-
-    def handle_request(self):
-        self.make_server().handle_request()
-
-    def run(self):
-        self.make_server().serve_forever()
 
