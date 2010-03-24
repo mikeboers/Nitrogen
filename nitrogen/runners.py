@@ -5,27 +5,19 @@ This is only here to be backwards compatible with my earlier sites.
 """
 
 
-from .wsgi.servers import (CGIServer, FCGIThreadServer, FCGIThreadPoolServer,
-    FCGIForkServer, SocketServer)
+from .wsgi.servers import (CGIServer, FCGIServer, FCGIPreForkServer, SocketServer)
 
 
 def run_via_cgi(app):
     CGIServer(app).run()
 
 
-def run_via_fcgi_thread(app, **kwargs):    
-    FCGIThreadServer(app, **kwargs).run()
+def run_via_fcgi(app, **kwargs):    
+    FCGIServer(app, **kwargs).run()
 
-
-def run_via_fcgi_thread_pool(app, **kwargs):    
-    FCGIThreadPoolServer(app, **kwargs).run()
-    
 
 def run_via_fcgi_fork(app, **kwargs):
-    FCGIForkServer(app, **kwargs).run()
-    
-
-run_via_fcgi = run_via_fcgi_thread_pool
+    FCGIPreForkServer(app, **kwargs).run()
 
 
 def run_via_socket(app, host='', port=8000, once=False):

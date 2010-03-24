@@ -24,12 +24,11 @@ import os
 from wsgiref.handlers import CGIHandler as _CGIServer
 from wsgiref.simple_server import make_server as _make_server
 
-from flup.server.fcgi_base import Request as _FlupFCGIRequest
-from flup.server.fcgi import WSGIServer as _FCGIThreadPoolServer
-from flup.server.fcgi_fork import WSGIServer as _FCGIForkServer
+from flup.server.fcgi_base import Request as _FCGIRequest
+from flup.server.fcgi import WSGIServer as _FCGIServer
+from flup.server.fcgi_fork import WSGIServer as _FCGIPreForkServer
 
 from .. import error
-from .lib.fcgi import Request as _FCGIRequest, WSGIServer as _FCGIThreadServer
 
 
 def monkeypatch_fcgi_request(Request):
@@ -49,7 +48,6 @@ def monkeypatch_fcgi_request(Request):
 
 
 monkeypatch_fcgi_request(_FCGIRequest)
-monkeypatch_fcgi_request(_FlupFCGIRequest)
 
 
 class CGIServer(_CGIServer):
@@ -66,19 +64,17 @@ class CGIServer(_CGIServer):
         _CGIServer.run(self, self.app)
 
 
-class FCGIThreadServer(_FCGIThreadServer):
-    """Only purpose of this class is to change the class name."""
-    pass
 
 
-class FCGIThreadPoolServer(_FCGIThreadPoolServer):
+
+class FCGIServer(_FCGIServer):
 
     def __init__(self, app, min_spare=1, max_spare=5, max_threads=50):
-        super(FCGIThreadPoolServer, self).__init__(app, minSpare=min_spare,
+        super(FCGIServer, self).__init__(app, minSpare=min_spare,
             maxSpare=max_spare, maxThreads=max_threads)
 
 
-class FCGIForkServer(_FCGIForkServer):
+class FCGIPreForkServer(_FCGIPreForkServer):
 
     def __init__(self, app, min_spare=1, max_spare=4, max_children=10,
         max_requests=0, setup=None, teardown=None):
@@ -87,7 +83,7 @@ class FCGIForkServer(_FCGIForkServer):
         self._teardown_child = teardown
         self._pid = os.getpid()
 
-        super(FCGIForkServer, self).__init__(app, minSpare=min_spare,
+        super(FCGIPreForkServer, self).__init__(app, minSpare=min_spare,
             maxSpare=max_spare, maxChildren=max_children,
             maxRequests=max_requests)
 

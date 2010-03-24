@@ -1,4 +1,14 @@
 
+- only need to parse the body for the content types:
+    - application/x-www-form-urlencoded
+    - multipart/form-data
+
+- realy heavily consider renaming get and post to query and form
+- the max_file_length is all good, but what about max_post_length?
+    The way it is now, someone could just send infinitely many files
+
+- can I just use the raw cgi.parsemultipart functions, or maybe the werkzeug parser
+
 - "Dear valued user,
 
     You have found the error page for the error page...
