@@ -213,8 +213,12 @@ import multimap
 # For signed cookies
 from ..uri.query import Query
 
-
 log = logging.getLogger(__name__)
+
+
+CHARSET = 'utf-8'
+ENCODE_ERRORS = 'strict'
+DECODE_ERRORS = 'replace'
 
 # These quoting routines conform to the RFC2109 specification, which in
 # turn references the character definitions from RFC2068. They provide
@@ -458,8 +462,11 @@ class Container(multimap.MutableMultiMap):
     
     cookie_class = Cookie
     
-    def __init__(self, input=None):
+    def __init__(self, input=None, charset=None, encode_errors=None, decode_errors=None):
         multimap.MutableMultiMap.__init__(self)
+        self.charset = charset
+        self.encode_errors = encode_errors
+        self.decode_errors = decode_errors
         if input:
             self.load(input)
     
@@ -542,7 +549,7 @@ class Container(multimap.MutableMultiMap):
         catching encoding errros.
 
         """
-        return str(value).encode('utf8', 'error')
+        return unicode(value).encode(self.charset or CHARSET, self.encode_errors or ENCODE_ERRORS)
 
     @staticmethod
     def _loads(raw_string):
@@ -555,7 +562,7 @@ class Container(multimap.MutableMultiMap):
 
         """
         try:
-            return raw_string.decode('utf8', 'error')
+            return raw_string.decode(self.charset or CHARSET, self.decode_errors or DECODE_ERRORS)
         except UnicodeDecodeError:
             raise ValueError('bad utf8 decode')
     
@@ -624,12 +631,12 @@ class SignedContainer(Container):
         return self.__class__(hmac_key=self.hmac_key)
 
     def _dumps(self, value):
-        query = Query(_=value)
+        query = Query(_=value, charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
         query.sign(self.hmac_key)
         return str(query)
 
     def _loads(self, value):
-        query = Query(value)
+        query = Query(value, charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
         query.verify(self.hmac_key, strict=True)
         return query['_']
     
