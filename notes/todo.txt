@@ -1,4 +1,17 @@
 
+- "Dear valued user,
+
+    You have found the error page for the error page...
+    You win!!
+
+"
+
+- take a good look at how wefkzeug parses the body:
+    http://werkzeug.pocoo.org/documentation/dev/request_data.html#how-does-it-parse
+    
+    - it only saves the actual body if it isn't the form or multipart content-types
+    - then it hands you the stream right back
+
 - routing should be able to be case insnsitive
     - atleast the rerouter
 
@@ -49,6 +62,7 @@ the new path regardless
 - either bring in the bucket or make it it's own project
 - bring in PyTomCrypt (try to get it to compile with just the setup)
 
+- make sure the body parsing doesnt explode if we hand it a 1GB file with no newlines in it
 
 - dispatcher should set the PATH_INFO and SCRIPT_NAME properly from the environ variable
 
