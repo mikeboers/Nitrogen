@@ -30,7 +30,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def request_params(app, parse_cookies=True, **kwargs):
+def request_params(app, parse_cookies=True, hmac_key=None, **kwargs):
     log.warning('request_params has been depreciated. use setup_cookies')
     if parse_cookies:
         from .cookies import setup_factory
