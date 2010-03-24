@@ -3,7 +3,7 @@ import multimap
 
 from ..uri.query import Query
 
-ENVIRON_KEY = 'nitrogen.get'
+ENVIRON_KEY = 'nitrogen.req.get'
 
 def parse_query(environ, charset=None, errors=None, key=ENVIRON_KEY):
     """Return the query for this request."""
