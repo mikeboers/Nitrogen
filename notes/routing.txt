@@ -1,51 +1,82 @@
 
-How the unrouted should be formated:
-    - assert we start with a slash
-    - assert that there are no dot segments - does not match r'/\.\.?(/|$)'
-    - throw a RouterInterfaceError if this happens
-    - do NOT remove empty segments.
+UNROUTED FORMAT
+===============
+
+- If it is non-empty, it MUST start with a slash.
+- It MUSH not have any dot segments whatsoever.
+- It MAY have empty segments, but it is up to the routers to decide how to deal with them.
 
 
 
-===== History =====
+NEW SCHEME
+==========
 
-Everytime a router modifies the unrouted path we should store:
-    before  - What the unrouted path was before routing
-    after   - What the unrouted path is being set to
-    router  - The router which did the routing (for unrouting and logging)
-    rebuild - Called to unroute this section. Optional.
-				This is called with the unrouted path to build upon. It should 
-				return the new unrouted path (usually the given unrouted with
-				a prefix added.)
+I want to have the request method be availible to the routers so I can make RESTful interfaces using the existing system. I can see this expanding so that more and more data becomes availible to the routers in the future, so I propose that we begin passing not just the unrouted path, but an object that encompasses the entire request. Either a namedtuple, or a WSGI environ with only specific keys (PATH_INFO and REQUEST_METHOD for now).
 
-How to build the same path from the routers:
-    - if a rebuild callback is supplied then it will be called with a new 
-	  path segment
-    - they would return what is to be unrouted before the router runs. this
-      string should, when routed again by the same router, result in the same 
-      app running with the same history settings (but this is not always going
-      to be the case).
-    - the default will be to add the difference of before - after.
-      ie. if a router got /a/b/c and put back /b/c originally, if they are
-      handed /new to build on they return /a/new
+I also had the idea to change the basic interface so that instead of returning
+the next step we would route to, we actually return a generator which returns all of the possible next steps in order of preference. This would allow for perhaps a slightly more readable source for having two apps respond to the same route but with different methods. eg.:
 
-To build a new path from a given router:
-    - unroute_from(environ, router, unrouted) will rebuild from history at the
-      first occourance of router assuming unrouted was unrouted at that point.
-    - ReRouter can have a .build(environ, name_or_app, **kwargs) which builds
-      whatever it needs to route to name_or_app, or using the new kwargs figures
-      out which route to use. Then it calls on unroute_from(environ, self, unrouted)
-      to finish the job
+    @app.register('/something')
+    @allow('GET')
+    @as_request
+    def GET_something(req, res):
+        # return something
+    
+    @app.register('/something')
+    @allow('POST')
+    @as_request
+    def POST_something(req, res)
+        # recieve soemthing
+
+A different way of doing this would actually not require passing the method at all:
+
+    @app.register('/something')
+    class something_app(MethodDispatcher):
+        @as_request
+        def do_GET(self, req, res):
+            # return something
+        @as_request
+        def do_POST(self, req, res):
+            # recieve something
+
+The method would then have absolutely no affect on the routing at all.
+
+I am kinda feeling that it is *more* restful to not include anything about the
+request except for the path. So not including the environ at all, and maybe even when the root router is called as a WSGI app we route the whole thing and then skip straight to the end segment to call it. This certainly speaks to the routers not knowing about their parents or anything else in the chain.
+
+However, features are fun, and having routers be able to modify the environ as they pass through could let us do some crazy crazy stuff. But do I want that kind of power? And will I actually use it?
+
+WP says that one of the fundamental properties of REST is the identification of resources via URLs. So if we go and try to be as restful as possible we end up routing to apps that represent resources and then return a different entity/representation depending upon other apsects of the request.
+
+So it seems like the easiest way to go, along with what I may deem the "proper" way to go, is to leave routing just based on paths, and nothing else in the quest.
+
+It also seems that I want to reduce all of the differences bettween routing and wsgi diaptching. Right now the route method computes the full route, and the wsgi interface has each router do each step on it's own (and they are passed the environ). I should make it compute the entire route and jump right to the destination.
+
+The namedtuples sounds like a good idea in general.
+
+The generator interface change also does not affect the RESTness, and might make things a little simpler. Lets do that!
+
+In this new method, can I use WSGI based routers that use PATH_INFO and SCRIPT_NAME? Doesn't really look like. But would I really expect to be able to generate names for a WSGI based router? No. The best I can do is provide a _prefix and _postfix to the url_for method, which tags them on the start and end. A special router (something which only affects generation) could be rigged to do this on a case by case basis.
+
+With this new method, we also only need to sync up the SCRIPT_NAME and PATH_INFO when we are actually done, but it may still be best to do it stepwise.
 
 
-===== @accepts =====
 
-- simple decorator to assert the request mode is one of the given.
-- @accepts('get', 'post')
-- don't need to deal with all or none
+New Interface
+-------------
 
 
-===== new scheme =====
+Route:
+    A class what managed the entire route. It is essentially a list of routing steps in the form of a RouteChunk. The first chunk contains the originally requested path.
+    
+RouteChunk:
+    An individual part of a route. Essentially a namedtuple of the unrouted path at this point in the route, the router responsible for generating it, and the data produced by the router. The data MUST be a dictionary.
+
+
+
+
+PREVIOUS SCHEME
+===============
 
 
 `Route` is the class the manages the whole route. It is essentially a list of one or more chunks. The chunks keep track of what part of the originally requested path remains unrouted. The first route chunk contains the original
@@ -66,182 +97,10 @@ Starting with a request to "/controller/action/id"
 	
 As long as there is a segment left to route, the unrouted will be non-empty. So a unrouted "/" would indicate that there is an empty segment to route.
 
-With the setup how it currently is, there really is not way to have a global url_for-like function. You can specify data for the individual chunks, but then you have to have foreknowledge of it. Must figure out a way to have url_for pass its keyword arguments down the chain to slowly be consumed
-	ModuleRouter could have a url_for_key which determines what it should pop
-	out of the kwargs
-
 a RouteChunk will proxy __getitem__ and __getattr__ to the data object if they
 have one
 
 a Route will proxy __getitem__ and __getattr__ to the last route segment
-
-url_for will have the signature:
-	def url_for(route_name=None, **args, **kwargs)
-		the data gets updated with everything from args, then kwargs, then
-		route_name is set to route_name. then this data object is passed up
-		the chain
-
-RouteChunk.generate(unrouted, data=None, one=False)
-
-
-The url_for I have implemented is a top down method, and it is only good for
-rewriting parameters within the same routes. it is useless for changing controllers, for example. A bottom up approach would start at the first router, ask it to build it's section, and to return the app which it would route to. that app then gets the opourtunity to dobuild the url as well.
-	each app would return it's part of the route, and the app it would route
-	to. then once we hit the end, we can go back down from the top and allow
-	the routers to do other transformations (encrypt or sign?)
-
-So we need a way that can change branches on the route tree.
-
-===== Routers to write ======
-
-Encryptor
-	- decrypts the unrouted
-	- encrypts whatever is to be built
-	- forwards to a single app
-
-Signer:
-	- verifies a signature on the unrouted
-	- signes routes as they are being built
-	- forwards to a single app
-
-===== ReRouter =====
-
-If multiple patterns can be generated with the same data, and they point at the same application, then choose the smaller of the two. Then if there are multiple different apps to choose from, pick the one which used the most number of keys in the data (from before the previous collapse)
-
-===== Ways to generate URLs =====
-
-1. Tip to root: This is what I am doing right now. It does not allow you to
-change branches on the tree.
-
-2. Root to tip, then modify: Start at the very root (whatever the first
-router is). Ask the router where it would route to, and what string would
-make it do so. Keep doing this with whatever they return until they don't have
-the interface anymore (some method). Then, starting at the tip that we have
-determined, allow the routers to modify the unrouted segment. We will have
-traversed from the root to the tip, and then back. We can still write route
-modifiers and we have a root to tip approach.
-
-This requires that we have a flat namespace/paramspace for routes. It also does not specify how finding a route by name would work because names may be very far into the tree on another branch, and we don't really want try every route. We could, but I am not sure that it is even possible to do that. I should think about it.
-
-3. Route by name, to tip, then modify. Go from tip to route seeing if we can get a template by name. If we can, then start the forward building from
-that router. Then move back up the chain. If we can't, explode.
-
-This still does not allow for routing by name into a different branch.
-
-For the following, assume we have a structure like this:
-
-/ - A ModuleRouter
-	/news - A ReRouter
-		/ - "news_index"
-		/post/<id> - "news_post"
-		/archive - "news_archive"
-		/archive/<year>/<month>/<day> - "news_archive"
-	/gallery - A ReRouter
-		/ - "gallery_index"
-		/<set> - "gallery_set"
-		/<set>/<photo> - "gallery_photo"
-		/archive - "gallery_archive_index"
-		/archive/<year>/<month> - "gallery_archive"
-
-Some issues while I came up with this:
-	- we could have multiple routes that go in different directions have the
-	  same name, and only be differentiated by how much data they use
-	- would the data that is supplied by a router by used for the generation
-	  of urls in a different branch? If I am in /news/2009/08/04 and call for
-	  "gallery_archive", should I get "/gallery/archive" or
-	  "/gallery/archive/2009/08"?
-	- seems like data should be availible for everything under the router
-	  which generated it, but not above or beside.
-	- should all of the data passed to url_for be consumed?
-
-If I wan't to build a link to the news from the gallery, either the names will
-have to be registered for everything, or it be done like:
-	url_for(controller="news", action="archive", year=2008)
-  instead of:
-	url_for("news_archive", year=2008)
-
-	If the names have to registered for everything before hand, it seems that
-	the list of routers to get to that name also has to be registered with it
-	so that it can be built properly. Then we would have to have a definative
-	path to every endpoint, and every router would need to be able to see
-	every other router in the tree.
-	
-	Also, what if we are using a ModuleRouter and would like to build a url
-	via a name that is defined in a module that is not loaded yet. Is this
-	even possible? Is this even a concern?
-
-It is also possible that the url_for can be passed a list of routers to base
-the route upon. Then it could be:
-	url_for("news_archive", _routers=[controller, news], year=2008)
-	
-	This would work, but we would need a list of routers.
-
-Instead of the news app supplying "news_archive" to other parts of the site to build urls with, it could supply dict(_name="archive", _root_url='/news' _root_router=router). Then the whole algo runs with the router as the absolute root of the chain.
-
-	This means that the base would be absolutely static, and no modifiers
-	could run to affect it.
-
-
-Perhaps there should be a BaseRouter from which all routers inherit. It would define the primary interface, and it would wrap everything that interacts with the actual route object. Then we can ask the routers where they would go, instead of actually going there. We could also have a function that sees if any of them responds to any route names. We would need to accept that the module router would need to load all of the controllers with names before trying this. It would also allow for children to automatically know where their parent(s) is(are). The parents would be weakrefs.
-
-	What do we do if a router can be reached by two paths? Should it have two
-	parents and default to using the first?
-
-
-So far, the only thing which will absolutely work is specifying all of the parameters and not using names:
-	url_for(controller="news", action="archive", year=2009, month=8, day=4)
-
-Then, be able to supply a _root_url and a _root_router which will just modify
-the algo to start at that router and prefix the result with that url.
-
-Then, a _name will trigger a tip-to-root search for that name along the route as taken, then start building up from there, and then run the modifiers all the way down.
-
-The name could be namespaced. Specify a sequence of names to look for (ie. ['news', 'index']) and we first do a width-first search for 'news', then look for 'index' under where we find news. Have to decide how to prioritize them though (maybe just the first found, or registered gets priority, assuming we can go all the way to ('news', 'index').
-
-	Do we want to specify the namespaces with an interable, or with a string
-	that has delimiters? How about an iterable is taken as it is, or a string
-	is split on '/'.
-
-The paremeters could concievably be namespaced as well, but that seems like the interface will be horrendously complicated.
-
-What is the full interface that is required on routers?
-
-	Route.update(path, router, data)
-	
-	self.register_child(child, name)
-		Register a child as a route that can be taken.
-		
-	Child.route_step(path):
-		Route a single step. Return (child, newpath, data) or None if it can't
-		do the routing.
-	
-	Base.route(path):
-		Return (route, child, path)
-			route - The full route
-			child - What we stopped on
-			path - Whatever remains on the path.
-		If it can't be routed:
-			raise Unroutable(route, router_that_failed, path)
-	
-	Base.__call__(self, environ, start)
-	
-	self.find_by_name(self, name)
-		takes a list specifying a name, and finds the route which has it. this
-		would likely only be on the base
-	
-	
-		
-	self.find_children_with_name(self, name, depth=None, ignore=set(...))
-		returns a list of all children (in order of preference) who respond to
-		the given name (which is a single string). they should be all reachable children, not just direct children.
-		if a depth is given, return only children that deep, or None if you can't go that deep.
-		ignore children in the given set
-	
-	all routers should be hashable by their id
-	
-		
-
-===== BLARGH! =====
 
 I'm going to abandon routing by name for now. I can certainly perform a seach that will give me a list of routes that satisfy a heirarchical name, but then generating a path from that which will agree with the data parameters passed will be tricky. The names will have to take precidence. And then we can't really assert that it will again be routed that way.
 
@@ -260,15 +119,6 @@ interface:
 	.modify_path(path)
 		Optionally transform the unrouted path.
 
-def wrap_url_builder
-URLBuilder.from_route(route, prefix='', **kwargs)
-URLBuilder.from_router(router, prefix='', **kwargs)
-	kwargs go to a URI
-	return a callable that just takes kwargs and builds a url
-
-
-
-ReRouter should prioritize routes which use more keys that are provided
 
 
 
