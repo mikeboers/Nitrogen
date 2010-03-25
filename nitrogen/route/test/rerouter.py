@@ -40,7 +40,7 @@ def test_rerouter_get():
     res = app.get('/get/12')
     assert res.body == 'get 12'
 
-    route = core.get_route(res.environ)
+    route = core.get_route_history(res.environ)
     print route.url_for(id=24)
 
 
@@ -108,11 +108,11 @@ def test_route_building():
     @router.register(r'/{word:one|two|three}')
     def one(environ, start):
         start('200 OK', [('Content-Type', 'text-plain')])
-        yield core.get_route(environ)[-1]['word']
+        yield core.get_route_history(environ)[-1]['word']
 
     @router.register(r'/x-{num:\d+}', _parsers=dict(num=int))
     def two(environ, start):
-        kwargs = core.get_route(environ)[-1]
+        kwargs = core.get_route_history(environ)[-1]
         start('200 OK', [('Content-Type', 'text-plain')])
         yield '%02d' % kwargs.data['num']
 
@@ -124,12 +124,12 @@ def test_route_building():
     app = webtest.TestApp(router)
 
     res = app.get('/x-1')
-    route = core.get_route(res.environ)
+    route = core.get_route_history(res.environ)
     print repr(res.body)
     print repr(route.url_for(num=2))
 
     res = app.get('/x-1/one/blah')
-    route = core.get_route(res.environ)
+    route = core.get_route_history(res.environ)
     pprint(route)
     print repr(res.body)
     print repr(route.url_for(word='two'))

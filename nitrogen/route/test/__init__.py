@@ -37,7 +37,7 @@ def _assert_next_history_step(res, **kwargs):
     environ = res.environ
     # Notice that we are skipping the first one here
     i = environ[environ_key] = environ.get(environ_key, 0) + 1
-    chunk = get_route(environ)[i]
+    chunk = get_route_history(environ)[i]
 
     data = kwargs.pop('_data', None)
 

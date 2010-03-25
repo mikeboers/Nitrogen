@@ -24,7 +24,7 @@ from .webio.query import parse_query
 from .webio.headers import parse_headers, MutableHeaders, EnvironHeaders
 from .webio.cookies import parse_cookies, Container as CookieContainer
 from .webio.body import parse_post, parse_files
-from .route.core import get_route, get_route_data
+from .route.core import get_route_history, get_route_data
 
 
 log = logging.getLogger(__name__)
@@ -115,8 +115,8 @@ class Request(object):
     session = wz.environ_property('beaker.session')
     
     @property
-    def fullroute(self):
-        return get_route(self.environ)
+    def route_history(self):
+        return get_route_history(self.environ)
     
     @wz.cached_property
     def route(self):
@@ -124,11 +124,11 @@ class Request(object):
     
     @property
     def url_for(self):
-        return get_route(self.environ).url_for
+        return get_route_history(self.environ).url_for
     
     @property
     def unrouted(self):
-        return get_route(self.environ)[-1].path
+        return get_route_history(self.environ)[-1].path
     
     
     # This one gets a little more attension because IE 6 will send us the

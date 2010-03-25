@@ -5,12 +5,11 @@
     - simple decorator to assert the request mode is one of the given.
     - @allows('get', 'post')
     - don't need to deal with all or none
-    
-- Route.from_environ should take an initial path, otherwise it will pull from PATH_INFO
-    - this is so that an init_route_from_path_info middleware can do as its name implies
 
 - EntryPointRouter can map paths to string entry points:
     '/img': 'nitrogen.imgsizer:wsgi_main'
 
 - ReRouter should prioritize routes which use more keys that are provided...
     - the priority key should have another segment for the number of keys that are matched against or provided as defaults
+
+- rerouter should accept flags (for case insensitive, etc.)

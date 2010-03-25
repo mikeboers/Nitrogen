@@ -21,7 +21,7 @@ from ..http.status import HttpNotFound
 log = logging.getLogger(__name__)
 
 
-ENVIRON_KEY = 'nitrogen.route.history'
+HISTORY_ENVIRON_KEY = 'nitrogen.route.history'
 
 
 class RouteHistory(list):
@@ -39,7 +39,7 @@ class RouteHistory(list):
 
         """
         assert_valid_unrouted_path(path)
-        self.append(RouteChunk(path, router, data))
+        self.append(RouteHistoryChunk(path, router, data))
     
     def url_for(self, _strict=True, **data):
         for i, chunk in enumerate(self):
@@ -54,10 +54,10 @@ Route = collections.namedtuple('Route', 'history app path'.split())
 GenerationStep = collections.namedtuple('GenerationStep', 'segment next'.split())
 RoutingStep = collections.namedtuple('RoutingStep', 'next path data')
 
-_RouteChunk = collections.namedtuple('RouteChunk', 'path router data'.split())
-class RouteChunk(_RouteChunk):
+_RouteHistoryChunk = collections.namedtuple('RouteHistoryChunk', 'path router data'.split())
+class RouteHistoryChunk(_RouteHistoryChunk):
     def __new__(cls, path, router=None, data=None):
-        return _RouteChunk.__new__(cls, path, router, data or {})
+        return _RouteHistoryChunk.__new__(cls, path, router, data or {})
 
 def assert_valid_unrouted_path(path):
     """Assert that a given path is a valid path for routing.
@@ -94,17 +94,17 @@ def assert_valid_unrouted_path(path):
         raise ValueError('path not normalized: %r' % path)
 
 
-def get_route(environ):
+def get_route_history(environ):
     """Gets the list of routing history from the environ."""
-    return environ.get(ENVIRON_KEY)
+    return environ.get(HISTORY_ENVIRON_KEY)
 
 
 def get_route_data(environ):
-    route = environ.get(ENVIRON_KEY)
-    if not route:
+    history = get_route_history(environ)
+    if not history:
         return {}
     data = {}
-    for chunk in route:
+    for chunk in history:
         data.update(chunk.data)
     return data
 
@@ -194,19 +194,37 @@ class Router(object):
     
     def __call__(self, environ, start):
         
-        history = get_route(environ)
+        history = get_route_history(environ)
         if history:
             path = history[-1].path
         else:
             path = environ.get('PATH_INFO', '')
             
         route = self.route(path)
-        
         if route is None:
             raise HttpNotFound('could not route %r with %r' % (path, self))
-        environ[ENVIRON_KEY] = route.history
-        # TODO: do a step-wise buildup of SCRIPT_NAME
+            
+        # Build up SCRIPT_NAME only taking chunks that a simple prefix removed
+        # from each chunk of history
+        script_name = environ.get('SCRIPT_NAME', '')
+        path_before = route.history[0].path
+        for chunk in route.history[1:]:
+            path_after = chunk.path
+            diff = simple_diff(path_before, path_after)
+            if diff is not None:
+                script_name += diff
+            path_before = path_after
+        
+        # Build up wsgi.routing_args data
+        args, kwargs = environ.get('wsgiorg.routing_args') or ((), {})
+        for step in route.history:
+            kwargs.update(step.data)
+        
+        environ[HISTORY_ENVIRON_KEY] = route.history
+        environ['SCRIPT_NAME'] = script_name
         environ['PATH_INFO'] = route.path
+        environ['wsgiorg.routing_args'] = args, kwargs
+        
         return route.app(environ, start)
     
     def generate(self, new_data, history=None, strict=False):

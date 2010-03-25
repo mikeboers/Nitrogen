@@ -1,7 +1,4 @@
 
-route could have a function for updating the route based solely on the status
-of path_info
-
 
 use wz.dump_cookie to dump cookies... maybe load_cookie to load cookies as well? =P
 
@@ -20,51 +17,14 @@ use wz.dump_cookie to dump cookies... maybe load_cookie to load cookies as well?
 "
 
 
-- routing should be able to be case insnsitive
-    - atleast the rerouter
-
 - Request.peek_path_info() and pop_path_info() (for routers, so they don't have to use the full uri.path.Path)
 
-- write out the pros/cons for how the route data is used progressively to
-  build urls only if the routers match
-    - could stay the way it is, but with a _reuse_data kwarg to use all the
-      data upfront.
-    - these seems like something that isn't really of immediate use, so write
-      about it all I feel like, but don't actually do it
-
-- routers should try to keep SCRIPT_NAME and PATH_INFO in check. For simplification we will assume that there are only those which strip chunks off
-the path, or modif the path. therefore, if the new unrouted path is a suffix
-of the old one, then add the difference to SCRIPT_NAME. we set PATH_INFO to
-the new path regardless
-
-- routers should start based off of SCRIPT_NAME and PATH_INFO.
-- should be a wrapper around wsgi_apps/middleware which simply keeps the route
-  and CGI variables in check... this is something to do later cause I don't
-  need it yet.
-
-
-- figure out how to have the routers be able to backtrack in the case of an
-  unrouteable exception. then I can have a `method` router which is a pass
-  through which only accepts certain methods then you register a chain of
-  method gates to a rerouter, the right method goes to the right controller
-  
-  - the routing protocol could be adjusted so that the route_step returns a
-    generator that yields route chunks, then no length would indicate that it
-    was unroutable
-  - define a basic RouteStep class which is just a named tuple.
-  - see if I can make the routing protocol a little simpler by requiring the
-    data to be an actual dictionary. perhaps fully do the wsgi.routing_args
-    protocl with positional args as well (but I don't know if those would
-    ultimately be useful at all in such a maleable routing system as I have)  
-  - a MethodController could route to it's own GET, POST, etc methods.
 
 
 - multimap._conform_value could take both the key AND the value.
     
 - either bring in the bucket or make it it's own project
 - bring in PyTomCrypt (try to get it to compile with just the setup)
-
-- dispatcher should set the PATH_INFO and SCRIPT_NAME properly from the environ variable
 
 - http exceptions should be heirarchical like http://pylonshq.com/docs/en/0.9.7/thirdparty/webob/#module-webob.exc
     - or just use these ones... durr

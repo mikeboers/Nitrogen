@@ -59,7 +59,7 @@ def test_routing_path_setup():
             router=router
     )
     
-    route = core.get_route(res.environ)
+    route = core.get_route_history(res.environ)
     pprint(route)
     print repr(route.url_for(controller='test_one'))
     

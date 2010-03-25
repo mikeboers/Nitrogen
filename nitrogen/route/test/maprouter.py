@@ -2,7 +2,7 @@
 import unittest
 
 from ...http.status import HttpNotFound
-from ..core import RouteChunk, RoutingError, GenerationError
+from ..core import RouteHistoryChunk, RoutingError, GenerationError
 from ..maprouter import *
 from . import EchoApp
 
@@ -34,18 +34,18 @@ class TestCase(unittest.TestCase):
         route, child, path = router.route('/a/1')
         # pprint(route)
         self.assertEqual(route, [
-            RouteChunk('/a/1', None, None),
-            RouteChunk('/1', router, dict(first='/a')),
-            RouteChunk('', a, dict(second='/1')),
+            RouteHistoryChunk('/a/1', None, None),
+            RouteHistoryChunk('/1', router, dict(first='/a')),
+            RouteHistoryChunk('', a, dict(second='/1')),
         ])
         self.assertEqual(child, app1)
         self.assertEqual(path, '')
         
         route, child, path = router.route('/b/2/more')
         self.assertEqual(route, [
-            RouteChunk('/b/2/more', None, None),
-            RouteChunk('/2/more', router, dict(first='/b')),
-            RouteChunk('/more', b, dict(second='/2')),
+            RouteHistoryChunk('/b/2/more', None, None),
+            RouteHistoryChunk('/2/more', router, dict(first='/b')),
+            RouteHistoryChunk('/more', b, dict(second='/2')),
         ])
         self.assertEqual(child, app2)
         self.assertEqual(path, '/more')
@@ -56,8 +56,8 @@ class TestCase(unittest.TestCase):
             self.fail()
         except RoutingError as e:
             self.assertEqual(e.history, [
-                RouteChunk('/a/extra', None, None),
-                RouteChunk('/extra', router, dict(first='/a'))
+                RouteHistoryChunk('/a/extra', None, None),
+                RouteHistoryChunk('/extra', router, dict(first='/a'))
             ])
             self.assertEqual(e.router, a)
             self.assertEqual(e.path, '/extra')
