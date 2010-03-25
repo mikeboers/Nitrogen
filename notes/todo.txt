@@ -1,13 +1,12 @@
 
+use wz.dump_cookie to dump cookies... maybe load_cookie to load cookies as well? =P
 
+- query/post/file/header keyerror could be a subclass of 400 Bad Request,
+  which would then be caught and understood by the status catcher
 
-- request headers should possibly proxy back into the environ
-
-- query/post/file/header keyerror should be a subclass of 400 Bad Request
-
-
-
-
+- exception catcher should first try to catch HttpExceptions, and then grab
+  everything. the non-HttpException should be turned into a ServerError with
+  a traceback iff the server is in debug mode
 
 - "Dear valued user,
 
@@ -56,22 +55,15 @@ the new path regardless
   - a MethodController could route to it's own GET, POST, etc methods.
 
 
-- perhaps just use the webob.Request....
-
 - multimap._conform_value could take both the key AND the value.
     
 - either bring in the bucket or make it it's own project
 - bring in PyTomCrypt (try to get it to compile with just the setup)
 
-- make sure the body parsing doesnt explode if we hand it a 1GB file with no newlines in it
-
 - dispatcher should set the PATH_INFO and SCRIPT_NAME properly from the environ variable
 
 - http exceptions should be heirarchical like http://pylonshq.com/docs/en/0.9.7/thirdparty/webob/#module-webob.exc
     - or just use these ones... durr
-
-- use webob header classes for some of the headers (to avoid the IE 6 content
-  length shit)
 
 - try to design a class for generic middleware which respects the intricacies
   of the 3rd parameter to start. perhaps design it as a class with methods to
@@ -91,6 +83,7 @@ the new path regardless
   instead of having a WSGI reset.
 
 - either use Paste's exceptions, werkzeug's or make mine into a tree structure
+
 - use repoze instead of my own auth stuff
     - light wrapper around the authorizor to move 'repoze.who.identity' somewhere
       else so that we can have multiple classes of user
@@ -130,7 +123,7 @@ the new path regardless
 - editables should roughly follow the Atom publishing protocl. see what pylons
   does: http://wiki.pylonshq.com/display/pylonscookbook/How+map.resource+enables+controllers+as+services
 
-- routes packages should try to import the HTTPNotFound exception to use as a
+- routes packages should try to import the http.status.NotFound exception to use as a
   base for the Unroutable exception, in addition to ValueError or
   something. Then if nitrogen is installed then it will be catchable as a 404.
 
