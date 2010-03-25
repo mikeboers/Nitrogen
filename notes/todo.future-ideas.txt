@@ -1,10 +1,4 @@
 
-- It might be a idea to convert to ascii with xml references at the end,
-  instead of actual unicode. Need to look into this.
-  
-  My feelings are that this is really a waste of bandwidth. Everything should
-  actually understand UTF-8 in a raw form.
-
 
 - URIs:
   	- take a look here: http://bugs.python.org/issue1462525

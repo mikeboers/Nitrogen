@@ -20,17 +20,26 @@ myself. It really wouldn't be all that bad.
 	
 	call it pyml (PYthon Markup Language)
 		#id
-			%p{'key': 'value', **attributes, (k, v) for something in data}
-				This is some content.
-				%strong
-					with inline strength
-				and
-				%em
-					inline emphasis
-				.
+			%p(key='value', **attributes, **dict((k, v) for something in data))
+				This is some content with **inline strength** and *inline emphasis*.  
+				Two spaces on the end make a line break.
 				
 				A full blank line specifies that it should be a seperate
 				paragraph, but only if it is in a p block.
+				
+				We can also control
+				%em <>
+				    whitespace
+				by using \< and/or \> at the end of a tag line. I'm not sure
+				what this will actually look like but it is something to think
+				about.
+				
+				Perhaps we ~
+				%em
+				    ~could~
+				~ allow for explicit delimiters for where content starts/stops.
+				This example should have the "could" emphasized with only a
+				single space around it.
 			%
 				! if test():
 					some stuff in the test. you break out again by dropping out
@@ -44,4 +53,5 @@ myself. It really wouldn't be all that bad.
 				Or perhaps an ${'inline'.upper()} expression?				
 				## comment
 				
-				%img{'src':'/whatever.jpg'}
+				%img(src='/whatever.jpg')
+				${%img(src='whatever')} for inline stuff

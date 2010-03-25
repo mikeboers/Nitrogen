@@ -60,6 +60,14 @@ In this new method, can I use WSGI based routers that use PATH_INFO and SCRIPT_N
 
 With this new method, we also only need to sync up the SCRIPT_NAME and PATH_INFO when we are actually done, but it may still be best to do it stepwise.
 
+Something to consider is if we should preserve the SCRIPT_NAME at the start of the route as well, to use as a prefix for url_for...
+
+The dict that is passed along during generation should allow it's mutations to
+continue along the chain. Then a generation mutator can be build which could
+greatly simplify the url generation process.
+
+I'm also going to stop proxying any attributes or item access down the Route -> RouteChunk -> data chain.
+
 
 
 New Interface
@@ -71,6 +79,28 @@ Route:
     
 RouteChunk:
     An individual part of a route. Essentially a namedtuple of the unrouted path at this point in the route, the router responsible for generating it, and the data produced by the router. The data MUST be a dictionary.
+
+Router:
+    Base class which provides the route and url_for methods.
+    For something to be treated as a router it should provide the following
+    methods:
+        route_step(path):
+            Return a RouteStep or None if it can't do the routing.
+        generate_step(data)
+            Return a GenerateStep, or None if it can't do the generation.
+        modify_path(path)
+            Optionally transform the unrouted path.
+    
+    Provides the route(path) method, and the url_for(data, route=None) method.
+        
+RouteStep: namedtuple of (next, path, data)
+    next: The next router to go on to.
+    path: The unrouted path that remains after this step.
+    data: A dictionary of data generated at this step.
+
+GenerateStep: namedtuple of (pathsegment, next)
+    segment: The path segment this representes. (Should it start with '/'?)
+    next: The next router to go on to.
 
 
 
@@ -87,14 +117,14 @@ requested path.
 The process of constructing a URL moving backwards along a route is called "generating".
 
 Starting with a request to "/controller/action/id"
-	1) a ModuleRouter pulls off the "controller" and launches controller.__app__.
-	2) a ReRouter matches /action/{id:\d+} and runs whatever app is registered.
-	
-	There are three chunks of route history:
-		1) "/controller/action/id"
-		2) "/action/id"
-		3) "" with data {'id': whatever}
-	
+    1) a ModuleRouter pulls off the "controller" and launches controller.__app__.
+    2) a ReRouter matches /action/{id:\d+} and runs whatever app is registered.
+    
+    There are three chunks of route history:
+        1) "/controller/action/id"
+        2) "/action/id"
+        3) "" with data {'id': whatever}
+    
 As long as there is a segment left to route, the unrouted will be non-empty. So a unrouted "/" would indicate that there is an empty segment to route.
 
 a RouteChunk will proxy __getitem__ and __getattr__ to the data object if they
@@ -111,13 +141,13 @@ root and keep going until they don't support the protocol anymore.
 To generate from an existing route, each step of the process is aided by whatever data was produced at or before that step in the route, minus whatever data is added to lower stages.
 
 interface:
-	.route_step(path)
-		Return (child, newpath, data), or None if it can't do the routing.
-	.generate_step(data)
-		Return (pathsegment, child), or None if it can't
-		do the generation.
-	.modify_path(path)
-		Optionally transform the unrouted path.
+    .route_step(path)
+        Return (child, newpath, data), or None if it can't do the routing.
+    .generate_step(data)
+        Return (pathsegment, child), or None if it can't
+        do the generation.
+    .modify_path(path)
+        Optionally transform the unrouted path.
 
 
 

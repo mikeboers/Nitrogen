@@ -24,7 +24,7 @@ from .webio.query import parse_query
 from .webio.headers import parse_headers, MutableHeaders, EnvironHeaders
 from .webio.cookies import parse_cookies, Container as CookieContainer
 from .webio.body import parse_post, parse_files
-from .route.core import get_route
+from .route.core import get_route, get_route_data
 
 
 log = logging.getLogger(__name__)
@@ -118,9 +118,9 @@ class Request(object):
     def fullroute(self):
         return get_route(self.environ)
     
-    @property
+    @wz.cached_property
     def route(self):
-        return get_route(self.environ).data
+        return get_route_data(self.environ)
     
     @property
     def url_for(self):
@@ -128,7 +128,7 @@ class Request(object):
     
     @property
     def unrouted(self):
-        return get_route(self.environ).path
+        return get_route(self.environ)[-1].path
     
     
     # This one gets a little more attension because IE 6 will send us the
@@ -148,11 +148,12 @@ class Request(object):
     host = wz.environ_property('HTTP_HOST')
     if_match = wz.environ_property('HTTP_IF_MATCH')
     if_none_match = wz.environ_property('HTTP_IF_NONE_MATCH')
+    path_info = wz.environ_property('PATH_INFO')
     referer = wz.environ_property('HTTP_REFERER')
     remote_addr = wz.environ_property('REMOTE_ADDR')
     remote_port = wz.environ_property('REMOTE_PORT', load_func=int)
     remote_user = wz.environ_property('REMOTE_USER')
-    user_agent = wz.environ_property('HTTP_USER_AGENT')
+    script_name = wz.environ_property('SCRIPT_NAME')
     user_agent = wz.environ_property('HTTP_USER_AGENT', load_func=wz.UserAgent)
     
     # WSGI stuff

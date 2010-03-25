@@ -11,13 +11,9 @@ watching how it changes as it passes through various routers.
 from pprint import pprint
 import collections
 import logging
-import re
-import unittest
-import weakref
 
 from webtest import TestApp as WebTester
 
-from ..uri import URI
 from ..uri.path import Path, encode, decode
 from ..http.status import HttpNotFound
 
@@ -25,96 +21,45 @@ from ..http.status import HttpNotFound
 log = logging.getLogger(__name__)
 
 
-class Route(list):
+ENVIRON_KEY = 'nitrogen.route.history'
+
+
+class RouteHistory(list):
     
-    environ_key = 'nitrogen.route'
-    
-    @classmethod
-    def from_environ(cls, environ):
-        if cls.environ_key not in environ:
-            environ[cls.environ_key] = cls(get_request_path(environ))
-        return environ[cls.environ_key]
-    
-    def __init__(self, path=None):
-        if path:
-            self.update(path)
-        self.data = {}
-    
-    def __getattr__(self, name):
-        """Proxy attribute requests to the last chunk."""
-        return getattr(self[-1], name)
+    def __init__(self, path):
+        self.update(path)
     
     def update(self, path, router=None, data=None):
         """Sets the current unrouted path and add to routing history.
         
         Params:
-            unrouted -- The new unrouted path. Must pass validate_path. 
+            unrouted -- The new unrouted path. Must pass assert_valid_unrouted_path. 
             router -- Whatever is responsible for this change.
             data -- A mapping of data extracted from the route for this chunk.
 
         """
-        validate_path(path)
-        self.append(RouteChunk(path, router, data if data is not None else
-            {}))
-        self.data.update(self[-1].data)
+        assert_valid_unrouted_path(path)
+        self.append(RouteChunk(path, router, data))
     
-    def url_for(self, **data):
+    def url_for(self, _strict=True, **data):
         for i, chunk in enumerate(self):
             if chunk.router is not None:
-                return Router.generate(chunk.router, data, self[i:])
+                return chunk.router.generate(data, history=self[i:], strict=_strict)
     
     def __repr__(self):
         return '<%s:%s>' % (self.__class__.__name__, list.__repr__(self))
         
 
-class RouteChunk(collections.Mapping):
+Route = collections.namedtuple('Route', 'history app path'.split())
+GenerationStep = collections.namedtuple('GenerationStep', 'segment next'.split())
+RoutingStep = collections.namedtuple('RoutingStep', 'next path data')
 
-    def __init__(self, path, router=None, data=None):
-        self.path = path
-        self.router = router
-        self.data = data if data is not None else {}
-    
-    def __getitem__(self, key):
-        return self.data[key]
-    
-    def __getattr__(self, name):
-        return getattr(self.data, name)
-    
-    def __iter__(self):
-        return iter(self.data)
-    
-    def __len__(self):
-        return len(self.data)
-    
-    def __eq__(self, other):
-        if not isinstance(other, self.__class__):
-            return False
-        return (self.path == other.path and
-            self.router == other.router and
-            self.data == other.data)
+_RouteChunk = collections.namedtuple('RouteChunk', 'path router data'.split())
+class RouteChunk(_RouteChunk):
+    def __new__(cls, path, router=None, data=None):
+        return _RouteChunk.__new__(cls, path, router, data or {})
 
-    def __repr__(self):
-        return '%s(path=%r, router=%r, data=%r)' % (self.__class__.__name__, self.path,
-            self.router, self.data)
-
-
-def get_request_path(environ):
-    """Get the URI as requested from the environment.
-
-    Pulls from REQUEST_URI if it exists, or the concatenation of SCRIPT_NAME
-    and PATH_INFO. Running under apache REQUEST_URI should exist and be set
-    to whatever the client sent along.
-
-    """
-
-    if 'REQUEST_URI' in environ:
-        path = str(URI(environ['REQUEST_URI']).path)
-    else:
-        path = environ.get('SCRIPT_NAME', '') + environ.get('PATH_INFO', '')
-    return path
-
-
-def validate_path(path):
+def assert_valid_unrouted_path(path):
     """Assert that a given path is a valid path for routing.
 
     Throws a ValueError if the path is not a valid routing path, ie., the path
@@ -122,16 +67,16 @@ def validate_path(path):
 
     Examples:
 
-        >>> validate_path('/one/two')
-        >>> validate_path('/one two')
-        >>> validate_path('')
+        >>> assert_valid_unrouted_path('/one/two')
+        >>> assert_valid_unrouted_path('/one two')
+        >>> assert_valid_unrouted_path('')
 
-        >>> validate_path('relative')
+        >>> assert_valid_unrouted_path('relative')
         Traceback (most recent call last):
         ...
         ValueError: path not absolute: 'relative'
 
-        >>> validate_path('/.')
+        >>> assert_valid_unrouted_path('/.')
         Traceback (most recent call last):
         ...
         ValueError: path not normalized: '/.'
@@ -151,7 +96,17 @@ def validate_path(path):
 
 def get_route(environ):
     """Gets the list of routing history from the environ."""
-    return Route.from_environ(environ)
+    return environ.get(ENVIRON_KEY)
+
+
+def get_route_data(environ):
+    route = environ.get(ENVIRON_KEY)
+    if not route:
+        return {}
+    data = {}
+    for chunk in route:
+        data.update(chunk.data)
+    return data
 
 
 def simple_diff(before, after):
@@ -170,14 +125,21 @@ def simple_diff(before, after):
     return before[:-len(after)] if after else before
 
 
-class Unroutable(ValueError):
-    def __str__(self):
-        return 'failed on route %r at %r with %r' % self.args
-
+class RoutingError(ValueError):
+    def __init__(self, history, router, path):
+        self.history = history
+        self.router = router
+        self.path = path
+        msg = 'failed on route %r at %r with %r' % (history, router, path)
+        ValueError.__init__(self, msg)
 
 class GenerationError(ValueError):
-    def __str__(self):
-        return 'stopped generating at %r by %r with %r' % self.args
+    def __init__(self, path, router, data):
+        self.path = path
+        self.router = router
+        self.data = data
+        msg = 'stopped generating at %r by %r with %r' % (path, router, data)
+        ValueError.__init__(self, msg)
 
 
 class Router(object):
@@ -186,65 +148,93 @@ class Router(object):
         return '<%s at 0x%x>' % (self.__class__.__name__, id(self))
     
     def route_step(self, path):
-        """Return (child, newpath, data) or None if it can't be routed."""
+        """Return RoutingStep, or None if the path can't be routed."""
         raise NotImplementedError()
     
     def generate_step(self, data):
+        """Return GenerationStep, or None if a segment can't be generated."""
         raise NotImplementedError()
     
     def modify_path(self, path):
+        """Modify the path downstream of the router during generation.
+        
+        Allows a router to mutate the unrouted path. The route_step should
+        undo this mutation.
+        
+        """
         return path
     
-    def route(self, path):
-        route = Route(path)
+    def route(self, path, strict=False):
+        """Route a given path, starting at this router.
+        
+        If strict, a router that can't route a step will result in a raised
+        RoutingError exception.
+        
+        """
+        history = RouteHistory(path)
         router = self
         while hasattr(router, 'route_step'):
-            x = router.route_step(path)
-            if x is None:
-                raise Unroutable(route, router, path)
-            child, path, data = x
-            route.update(path, router, data)
-            router = child
-        return route, router, path
+            # print 'a', router, path
+            step = router.route_step(path)
+            if step is None:
+                if strict:
+                    raise RoutingError(history, router, path)
+                return None
+            if not isinstance(step, RoutingStep):
+                step = RoutingStep(*step)
+            # print 'b', step
+            history.update(path=step.path, router=router, data=step.data)
+            router = step.next
+            path = step.path
+        return Route(
+            history=history,
+            app=router,
+            path=path
+        )
     
     def __call__(self, environ, start):
-        route = Route.from_environ(environ)
-        path = route.path
-        x = self.route_step(path)
-        if x is None:
-            try:
-                raise HttpNotFound('could not route %r with %r' % (path, self))
-            except HttpNotFound as e:
-                log.warning(e, exc_info=True)
-                raise
-        child, path, data = x
-        route.update(path, self, data)
-        log.debug(route[-1])
-        return child(environ, start)
+        
+        history = get_route(environ)
+        if history:
+            path = history[-1].path
+        else:
+            path = environ.get('PATH_INFO', '')
+            
+        route = self.route(path)
+        
+        if route is None:
+            raise HttpNotFound('could not route %r with %r' % (path, self))
+        environ[ENVIRON_KEY] = route.history
+        # TODO: do a step-wise buildup of SCRIPT_NAME
+        environ['PATH_INFO'] = route.path
+        return route.app(environ, start)
     
-    @staticmethod
-    def generate(node, new_data, route=None):
+    def generate(self, new_data, history=None, strict=False):
         path = []
         route_i = -1
-        route_data = {}
-        apply_route_data = route is not None
+        route_data = new_data.copy()
+        apply_route_data = history is not None
         nodes = []
+        node = self
         while node is not None and hasattr(node, 'generate_step'):
             nodes.append(node)
             route_i += 1
-            if apply_route_data and (len(route) <= route_i or
-                route[route_i].router is not node):
+            if apply_route_data and (len(history) <= route_i or
+                history[route_i].router is not node):
                 apply_route_data = False
             if apply_route_data:
-                route_data.update(route[route_i].data)
-            data = route_data.copy()
-            data.update(new_data)
-            x = node.generate_step(data)
-            if x is None:
-                raise GenerationError(path, node, data)
+                route_data.update(history[route_i].data)
+                route_data.update(new_data)
+            step = node.generate_step(route_data)
+            if step is None:
+                if strict:
+                    raise GenerationError(path, node, route_data)
+                return None
+            if not isinstance(step, GenerationStep):
+                step = GenerationStep(*step)
             # log.debug((node, data) + x)
-            segment, node = x
-            path.append(segment)
+            node = step.next
+            path.append(step.segment)
         
         out = ''
         for i, segment in reversed(list(enumerate(path))):
@@ -252,10 +242,11 @@ class Router(object):
             out = segment + out
             if hasattr(node, 'modify_path'):
                 out = node.modify_path(out)
+        
         return out
     
-    def url_for(self, **data):
-        return Router.generate(self, data)
+    def url_for(self, _strict=True, **data):
+        return self.generate(data, strict=_strict)
 
 
 
@@ -269,82 +260,3 @@ class Router(object):
 
         
 
-def test_routing_path_setup():
-
-    def app(_environ, start):
-        environ.clear()
-        environ.update(_environ)
-
-        start('200 OK', [('Content-Type', 'text-plain')])
-        yield get_unrouted(environ)
-
-    app = WebTester(TestApp(app))
-
-    res = app.get('/one/two')
-    assert res.body == '/one/two'
-
-    res = app.get('//leading/and/trailing//')
-    assert res.body == '//leading/and/trailing//'
-
-    res = app.get('/./one/../start')
-    assert res.body == '/start'
-
-
-def _assert_next_history_step(res, **kwargs):
-    environ_key = 'nitrogen.route.test.history.i'
-    environ = res.environ
-    # Notice that we are skipping the first one here
-    i = environ[environ_key] = environ.get(environ_key, 0) + 1
-    chunk = get_route(environ)[i]
-
-    data = kwargs.pop('_data', None)
-
-    for k, v in kwargs.items():
-        v2 = getattr(chunk, k, None)
-        assert v == v2, 'on key %r: %r (expected) != %r (actual)' % (k, v, v2)
-
-    if data is not None:
-        assert dict(chunk.data) == data, '%r != %r' % (dict(chunk.data), data)
-
-
-def test_routing_path_setup():
-
-    def _app(environ, start):
-
-        start('200 OK', [('Content-Type', 'text-plain')])
-        route = get_route(environ)
-        path = Path(route.path)
-        segment = path.pop(0)
-        route.update(path=str(path), router=_app)
-
-        yield 'hi'
-
-
-    app = WebTester(_app)
-
-    res = app.get('/one/two')
-    # print get_route(res.environ)
-    _assert_next_history_step(res,
-            path='/two',
-            router=_app), 'history is wrong'
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-if __name__ == '__main__':
-    import nose; nose.run(defaultTest=__name__)

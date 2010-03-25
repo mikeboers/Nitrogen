@@ -10,10 +10,9 @@ import re
 
 from webtest import TestApp
 
-from . import core
 from ..uri import Path
 from ..http.status import HttpNotFound
-
+from . import core
 
 log = logging.getLogger(__name__)
 
@@ -257,8 +256,7 @@ class ReRouter(core.Router):
             m = pattern.match(path)
             if m:
                 kwargs, path = m
-                match = Match(pattern, kwargs, path)
-                return app, path, match
+                return core.RoutingStep(next=app, path=path, data=kwargs)
 
     def generate_step(self, data):
         log.debug('generate_step(%r, %r)' % (self, data))
@@ -267,7 +265,7 @@ class ReRouter(core.Router):
                 pattern._constants.iteritems()):
                 continue
             try:
-                return pattern.format(**data), app
+                return core.GenerationStep(segment=pattern.format(**data), next=app)
             except FormatError:
                 pass
                 # log.exception('FormatError while generating')

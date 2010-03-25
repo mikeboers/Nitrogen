@@ -7,6 +7,7 @@ import webtest
 from ..modulerouter import ModuleRouter
 from .. import core
 from ...http import status
+from . import _assert_next_history_step
 
 class FakeModule(object):
 
@@ -53,7 +54,7 @@ def test_routing_path_setup():
     res = app.get('/test_one/extra')
     assert res.body == 'ONE'
     
-    core._assert_next_history_step(res,
+    _assert_next_history_step(res,
             path='/extra',
             router=router
     )

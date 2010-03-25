@@ -1,4 +1,8 @@
 
+route could have a function for updating the route based solely on the status
+of path_info
+
+
 use wz.dump_cookie to dump cookies... maybe load_cookie to load cookies as well? =P
 
 - query/post/file/header keyerror could be a subclass of 400 Bad Request,
@@ -124,7 +128,7 @@ the new path regardless
   does: http://wiki.pylonshq.com/display/pylonscookbook/How+map.resource+enables+controllers+as+services
 
 - routes packages should try to import the http.status.NotFound exception to use as a
-  base for the Unroutable exception, in addition to ValueError or
+  base for the RoutingError exception, in addition to ValueError or
   something. Then if nitrogen is installed then it will be catchable as a 404.
 
 - need a general status catcher middleware. status exceptions could have a
