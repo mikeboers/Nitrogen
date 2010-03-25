@@ -235,14 +235,14 @@ DECODE_ERRORS = 'replace'
 #
 
 # The set of characters that do not require quoting.
-_safe_chars_set = set(string.ascii_letters + string.digits + "!#$%&'*+-.^_`|~")
+_safe_charset = set(string.ascii_letters + string.digits + "!#$%&'*+-.^_`|~")
 # The set of characters that do not need ecaping iff we quote the string.
-_no_escape_chars_set = set(' (),/;:<>=?@[]{}')
+_no_escape_charsset = set(' (),/;:<>=?@[]{}')
 # How to translate ALL characters.
 _encoding_map = dict()
 for i in range(256):
     c = chr(i)
-    if c in _safe_chars_set or c in _no_escape_chars_set:
+    if c in _safe_charset or c in _no_escape_charsset:
         continue
     _encoding_map[c] = '\\%03o' % i
 _encoding_map['"'] = '\\"'
@@ -250,7 +250,7 @@ _encoding_map['\\'] = '\\\\'
 
 
 def quote(to_quote):
-    if not set(to_quote).difference(_safe_chars_set):
+    if not set(to_quote).difference(_safe_charset):
         return to_quote
     else:
         return '"' + ''.join(map(_encoding_map.get, to_quote, to_quote)) + '"'
@@ -302,6 +302,33 @@ def unquote(to_unquote):
     return ''.join(res)
 
 
+if False:
+    _encoding_map = dict()
+    for i in range(256):
+        c = chr(i)
+        _encoding_map[c] = c
+        if c in _safe_charset or c in _no_escape_charsset:
+            continue
+        _encoding_map[c] = '#%02X' % i
+    _encoding_map['#'] = '#%02X' % ord('#')
+
+
+    def quote(to_quote):
+        if not set(to_quote).difference(_safe_charset):
+            return to_quote
+        else:
+            return '"' + ''.join(_encoding_map[x] for x in to_quote) + '"'
+
+    _unquote_re = re.compile('#([0-9A-F]{2})')
+    _unquote_cb = lambda m: chr(int(m.group(1), 16))
+    def unquote(input):
+        if len(input) < 2:
+            return input
+        if input[0] != '"' or input[-1] != '"':
+            return input
+        return _unquote_re.sub(_unquote_cb, input[1:-1])
+    
+            
 _ATTRIBUTES = {
     "path": "Path",
     "comment": "Comment",
@@ -461,7 +488,7 @@ class Container(multimap.MutableMultiMap):
                 key = key.encode('ascii')
             except UnicodeError:
                 raise ValueError("illegal key value: %r." % key)
-        if set(key).difference(_safe_chars_set):
+        if set(key).difference(_safe_charset):
             raise ValueError("illegal key value: %r" % key)
         return key
     
