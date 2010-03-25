@@ -151,6 +151,7 @@ class Request(object):
     referer = wz.environ_property('HTTP_REFERER')
     remote_addr = wz.environ_property('REMOTE_ADDR')
     remote_port = wz.environ_property('REMOTE_PORT', load_func=int)
+    remote_user = wz.environ_property('REMOTE_USER')
     user_agent = wz.environ_property('HTTP_USER_AGENT')
     user_agent = wz.environ_property('HTTP_USER_AGENT', load_func=wz.UserAgent)
     
@@ -160,6 +161,9 @@ class Request(object):
     is_multithread = wz.environ_property('wsgi.multithread')
     is_run_once = wz.environ_property('wsgi.run_once')
 
+    # Not sent by every library, but atleast jQuery, prototype and Mochikit
+    # and probably some more.
+    is_xhr = wz.environ_property('HTTP_X_REQUESTED_WITH', load_func=lambda x: (x or '').lower() == 'xmlhttprequest')
     
     # This will be handled another way soon.
     # Depreciated.
@@ -216,6 +220,7 @@ def _autoupdate_header(name, load_func):
             self.headers[name] = str(v)
     return property(header_get, header_set)
 
+
 class Response(object):
     
     """HTTP response abstraction.
@@ -231,7 +236,6 @@ class Response(object):
         
         self._status = '200 OK'
         self._charset = 'utf-8'
-        self._filename = None
         
         if 'Content-Type' in self.headers:
             ctype, opts = wz.parse_options_header(self.headers['Content-Type'])
