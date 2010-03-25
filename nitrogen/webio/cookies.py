@@ -208,6 +208,8 @@ try:
 except ImportError:
     import pickle
 
+import werkzeug as wz
+
 import multimap
 
 # For signed cookies
@@ -354,15 +356,17 @@ def unquote(to_unquote):
     return ''.join(res)
 
 
-_ATTRIBUTES = {
+_ATTRIBUTE_PAIRS = {
     "path": "Path",
     "comment": "Comment",
     "domain": "Domain",
     "max_age": "Max-Age",
     "secure": "secure",
-    "http_only": "httponly",
     "version": "Version",
+    "http_only": "HttpOnly",
 }
+
+_ATTRIBUTES = dict(_ATTRIBUTE_PAIRS)
 
 
 
@@ -379,7 +383,8 @@ class Cookie(object):
         
         Kwargs set the various cookie attributes.
         
-        """        
+        """
+        kwargs.setdefault('path', '/') 
         for key in kwargs:
             if key not in _ATTRIBUTES:
                 raise ValueError("unexpected keyword argument %r" % k)
@@ -501,16 +506,10 @@ class Container(multimap.MutableMultiMap):
                     cookie[key[1:]] = value
             else:
                 value = unquote(value)
-                try:
-                    value = self._loads(value)
-                except ValueError:
-                    # We have decided that a ValueError is the way to signal
-                    # that the cookie should be silently dropped.
-                    pass
-                else:
-                    cookie = self.cookie_class(value)
-                    cookie._set_change_checkpoint()
-                    self.append((key, cookie))
+                value = self._loads(value)
+                cookie = self.cookie_class(value)
+                cookie._set_change_checkpoint()
+                self.append((key, cookie))
     
     def _conform_key(self, key):
         # Make sure the key is legal.
@@ -562,7 +561,7 @@ class Container(multimap.MutableMultiMap):
         try:
             return raw_string.decode(self.charset or CHARSET, self.decode_errors or DECODE_ERRORS)
         except UnicodeDecodeError:
-            raise ValueError('bad utf8 decode')
+            pass
     
     def build_header(self, name, cookie, header="Set-Cookie"):
         """Build the header tuple for a given cookie."""
@@ -571,14 +570,12 @@ class Container(multimap.MutableMultiMap):
         for key in sorted(_ATTRIBUTES):
             name = _ATTRIBUTES[key]
             value = getattr(cookie, key)
-            if key == 'path' and value is None:
-                value = '/'
             if value is not None:
                 if key == "max-age":
+                    if isinstance(value, timedelta):
+                        value = (value.days * 60 * 60 * 24) + value.seconds
                     result.append("%s=%d" % (name, value))
-                elif key == "secure" and value:
-                    result.append(name)
-                elif key == "http_only" and value:
+                elif key in ("secure", "http_only") and value:
                     result.append(name)
                 else:
                     result.append("%s=%s" % (name, value))
@@ -615,7 +612,7 @@ def make_encrypted_container(entropy):
                 try:
                     return pickle.loads(aes.decrypt(value))
                 except pickle.UnpicklingError:
-                    raise ValueError('bad pickle')
+                    pass
     
     return EncryptedContainer
 
@@ -635,8 +632,8 @@ class SignedContainer(Container):
 
     def _loads(self, value):
         query = Query(value, charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
-        query.verify(self.hmac_key, strict=True)
-        return query['_']
+        if query.verify(self.hmac_key):
+            return query['_']
     
     @classmethod
     def make_factory(cls, hmac_key):
