@@ -118,18 +118,15 @@ class Request(object):
     def route_history(self):
         return get_route_history(self.environ)
     
-    @wz.cached_property
-    def route(self):
-        return get_route_data(self.environ)
-    
     @property
     def url_for(self):
-        return get_route_history(self.environ).url_for
+        return self.route_history.url_for
     
     @property
     def unrouted(self):
-        return get_route_history(self.environ)[-1].path
+        return self.route_history[-1].path
     
+    route = wz.environ_property('wsgiorg.routing_args', load_func=lambda x: x[1])    
     
     # This one gets a little more attension because IE 6 will send us the
     # length of the previous request as an option to this header

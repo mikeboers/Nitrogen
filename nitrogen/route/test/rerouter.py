@@ -33,12 +33,18 @@ def rerouter_list(req, res):
 @as_request
 def rerouter_list(req, res):
     res.start(as_text=True)
-    yield '%s' % action
+    yield '%s' % req.route['action']
 
 def test_rerouter_get():
 
     res = app.get('/get/12')
     assert res.body == 'get 12'
+    
+    res = app.get('/list')
+    assert res.body == 'list'
+    
+    res = app.get('/something')
+    assert res.body == 'something'
 
     route = core.get_route_history(res.environ)
     print route.url_for(id=24)
