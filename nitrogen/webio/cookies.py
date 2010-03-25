@@ -301,6 +301,18 @@ def unquote(to_unquote):
     
     return ''.join(res)
 
+_unquote_re = re.compile(r"\\(?:([0-3][0-7][0-7])|(.))")
+def _unquote_cb(m):
+    octal, single = m.groups()
+    if octal:
+        return chr(int(octal, 8))
+    return single
+def unquote(input):    
+    if len(input) < 2:
+        return input
+    if input[0] != '"' or input[-1] != '"':
+        return input
+    return _unquote_re.sub(_unquote_cb, input[1:-1])
 
 if False:
     _encoding_map = dict()
