@@ -509,10 +509,17 @@ class RawContainer(multimap.MutableMultiMap):
         """Create a cookie with all attributes in one call."""
         self[key] = self.cookie_class(value, **kwargs)
     
+    _quote_map = {
+        '\\': '\\\\',
+        '"': '\\"'
+    }
+    
     @classmethod
     def _quote_char(cls, char):
         if char in LEGAL_CHARS:
             return char
+        if char in cls._quote_map:
+            return cls._quote_map[char]
         codepoint = ord(char)
         if codepoint < 256:
             return '\\x%02x' % codepoint
@@ -524,6 +531,8 @@ class RawContainer(multimap.MutableMultiMap):
     def _quote_byte(cls, byte):
         if byte in LEGAL_CHARS:
             return byte
+        if char in cls._quote_map:
+            return cls._quote_map[char]
         return '\\%03o' % ord(byte)
         
     @classmethod
@@ -579,10 +588,10 @@ class RawContainer(multimap.MutableMultiMap):
     
     
     def _dumps(self, value):
-        """Serialize a cookie value.
+        """Serialize a cookie into a string.
 
-        Overide this to provide more sophisticated encoding. Must return an
-        octet string.
+        Overide this to provide more sophisticated encoding. Must return a
+        string. Various _quote methods allow for unicode vs bytes.
 
         Defaults to just passing the string through; the _quote can handle
         unicode.
@@ -606,7 +615,7 @@ class RawContainer(multimap.MutableMultiMap):
     def build_header(self, name, cookie, header="Set-Cookie"):
         """Build the header tuple for a given cookie."""
         result = []
-        result.append("%s=%s" % (name, self._quote('' if cookie.expired else self._dumps(cookie.value))))
+        result.append("%s=%s" % (name, self._quote('' if cookie.expired else self._dumps(cookie))))
         for key in sorted(_ATTRIBUTES):
             name = _ATTRIBUTES[key]
             value = getattr(cookie, key)
@@ -640,7 +649,8 @@ class RawContainer(multimap.MutableMultiMap):
 
 class Container(RawContainer):
     
-    def _dumps(self, value):
+    def _dumps(self, cookie):
+        value = cookie.value
         if not isinstance(value, unicode):
             return str(value).decode(self.charset or CHARSET, self.encode_errors or ENCODE_ERRORS)
         return value
@@ -664,7 +674,8 @@ def make_encrypted_container(entropy):
     class EncryptedContainer(Container):
         class cookie_class(Cookie):
             @staticmethod
-            def _dumps(value):
+            def _dumps(cookie):
+                value = cookie.value
                 return aes.encrypt(pickle.dumps(value))
             @staticmethod
             def _loads(value):
@@ -683,10 +694,17 @@ class SignedContainer(Container):
     
     def blank_copy(self):
         return self.__class__(hmac_key=self.hmac_key)
-
-    def _dumps(self, value):
+        
+    def _quote(self, value):
+        return '"%s"' % value
+    
+    def _unquote(self, value):
+        return value[1:-1]
+    
+    def _dumps(self, cookie):
+        value = cookie.value
         query = Query(_=value, charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
-        query.sign(self.hmac_key)
+        query.sign(self.hmac_key, max_age=cookie.max_age)
         return str(query)
 
     def _loads(self, value):
@@ -697,6 +715,18 @@ class SignedContainer(Container):
     @classmethod
     def make_factory(cls, hmac_key):
         return functools.partial(cls, hmac_key=hmac_key)
+
+
+class JsonContainer(SignedContainer):
+    
+    def _dumps(self, cookie):
+        value = cookie.value
+        return SignedContainer._dumps(self, json.dumps(value))
+    
+    def _loads(self, value):
+        value = SignedContainer._loads(self, value)
+        if value is not None:
+            return json.loads(value)
 
 
 make_signed_container = SignedContainer.make_factory
