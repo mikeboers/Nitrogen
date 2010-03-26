@@ -190,13 +190,14 @@ Signed cookies:
 #
 # Import our required modules
 #
-import string
 import collections
-import re
+import Cookie as stdlibcookies
+import cPickle as pickle
 import functools
 import logging
-import cPickle as pickle
-import Cookie as stdlibcookies
+import re
+import string
+import time
 
 import werkzeug as wz
 
@@ -212,19 +213,8 @@ CHARSET = 'utf-8'
 ENCODE_ERRORS = 'strict'
 DECODE_ERRORS = 'replace'
 
-# These quoting routines conform to the RFC2109 specification, which in
-# turn references the character definitions from RFC2068. They provide
-# a two-way quoting algorithm. Any non-text character is translated
-# into a 4 character sequence: a forward-slash followed by the
-# three-digit octal equivalent of the character.  Any '\' or '"' is
-# quoted with a preceeding '\' slash.
-#
-# These are taken from RFC2068 and RFC2109.
-#       _safe_chars       is the list of chars which don't require "'s
-#       _encoding_map       hash-table for fast quoting
-#
-
-# The set of characters that do not require quoting.
+# The set of characters that do not require quoting according to RFC 2109 and
+# RFC 2068.
 SAFE_CHARS  = set(string.ascii_letters + string.digits + "!#$%&'*+-.^_`|~")
 # The set of characters that do not need ecaping iff we quote the string.
 LEGAL_CHARS = SAFE_CHARS.union(set(' (),/;:<>=?@[]{}'))
@@ -518,10 +508,9 @@ class RawContainer(multimap.MutableMultiMap):
             name = _ATTRIBUTES[key]
             value = getattr(cookie, key)
             if value is not None:
-                if key == "max-age":
-                    if isinstance(value, timedelta):
-                        value = (value.days * 60 * 60 * 24) + value.seconds
+                if key == "max_age":
                     result.append("%s=%d" % (name, value))
+                    # result.append("%s=%s" % ('expires', wz.cookie_date(time.time() + value)))
                 elif key in ("secure", "http_only") and value:
                     result.append(name)
                 else:
