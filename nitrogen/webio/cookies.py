@@ -198,6 +198,7 @@ import logging
 import re
 import string
 import time
+import json
 
 import werkzeug as wz
 
@@ -581,23 +582,36 @@ class SignedContainer(Container):
     
     def blank_copy(self):
         return self.__class__(hmac_key=self.hmac_key)
-        
-    def _quote(self, value):
-        return '"%s"' % value
+    #     
+    # def _quote(self, value):
+    #     return '"%s"' % value
+    # 
+    # def _unquote(self, value):
+    #     return value[1:-1]
     
-    def _unquote(self, value):
-        return value[1:-1]
+    SIG_KEYS = dict(
+        nonce_key='n',
+        sig_key='s',
+        time_key='t',
+        expiry_key='x'
+    )
     
     def _dumps(self, cookie):
-        value = cookie.value
-        query = Query(_=value, charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
-        query.sign(self.hmac_key, max_age=cookie.max_age)
-        return str(query)
+        value = Container._dumps(self, cookie)
+        query = Query(value=value, charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
+        query.sign(self.hmac_key, max_age=cookie.max_age, **self.SIG_KEYS)
+        del query['value']
+        return value + ';' + str(query)
 
     def _loads(self, value):
-        query = Query(value, charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
-        if query.verify(self.hmac_key):
-            return query['_']
+        try:
+            value, query = value.rsplit(';', 1)
+        except ValueError:
+            return
+        query = Query(query, charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
+        query['value'] = value
+        if query.verify(self.hmac_key, **self.SIG_KEYS):
+            return value
     
     @classmethod
     def make_factory(cls, hmac_key):
