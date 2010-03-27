@@ -367,7 +367,7 @@ class RawContainer(multimap.MutableMultiMap):
                     cookie[key[1:]] = value
             else:
                 value = self._unquote(value)
-                value = self._loads(value)
+                value = self._loads(key, value)
                 cookie = self.cookie_class(value)
                 cookie._set_change_checkpoint()
                 self.append((key, cookie))
@@ -476,7 +476,7 @@ class RawContainer(multimap.MutableMultiMap):
         return cls._unquote_re.sub(cls._unquote_cb, value)
     
     
-    def _dumps(self, value):
+    def _dumps(self, name, value):
         """Serialize a cookie into a string.
 
         Overide this to provide more sophisticated encoding. Must return a
@@ -490,7 +490,7 @@ class RawContainer(multimap.MutableMultiMap):
             return str(value)
         return value
 
-    def _loads(self, raw_string):
+    def _loads(self, name, raw_string):
         """Unserialize a cookie value.
 
         Overide to provide more sophisticated decoding. Can return any object.
@@ -504,7 +504,7 @@ class RawContainer(multimap.MutableMultiMap):
     def build_header(self, name, cookie, header="Set-Cookie"):
         """Build the header tuple for a given cookie."""
         result = []
-        result.append("%s=%s" % (name, self._quote('' if cookie.expired else self._dumps(cookie))))
+        result.append("%s=%s" % (name, self._quote('' if cookie.expired else self._dumps(name, cookie))))
         for key in sorted(_ATTRIBUTES):
             name = _ATTRIBUTES[key]
             value = getattr(cookie, key)
@@ -537,13 +537,13 @@ class RawContainer(multimap.MutableMultiMap):
 
 class Container(RawContainer):
     
-    def _dumps(self, cookie):
+    def _dumps(self, name, cookie):
         value = cookie.value
         if not isinstance(value, unicode):
             return str(value).decode(self.charset or CHARSET, self.encode_errors or ENCODE_ERRORS)
         return value
     
-    def _loads(self, raw_string):    
+    def _loads(self, name, raw_string):    
         if isinstance(raw_string, unicode):
             return raw_string
         try:
@@ -562,11 +562,11 @@ def make_encrypted_container(entropy):
     class EncryptedContainer(Container):
         class cookie_class(Cookie):
             @staticmethod
-            def _dumps(cookie):
+            def _dumps(name, cookie):
                 value = cookie.value
                 return aes.encrypt(pickle.dumps(value))
             @staticmethod
-            def _loads(value):
+            def _loads(name, value):
                 try:
                     return pickle.loads(aes.decrypt(value))
                 except pickle.UnpicklingError:
@@ -596,20 +596,22 @@ class SignedContainer(Container):
         expiry_key='x'
     )
     
-    def _dumps(self, cookie):
-        value = Container._dumps(self, cookie)
-        query = Query(value=value, charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
-        query.sign(self.hmac_key, max_age=cookie.max_age, **self.SIG_KEYS)
+    def _dumps(self, name, cookie):
+        value = Container._dumps(self, name, cookie)
+        query = Query(dict(name=name, value=value), charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
+        query.sign(self.hmac_key, max_age=cookie.max_age, add_time=True, **self.SIG_KEYS)
         del query['value']
+        del query['name']
         return value + ';' + str(query)
 
-    def _loads(self, value):
+    def _loads(self, name, value):
         try:
             value, query = value.rsplit(';', 1)
         except ValueError:
             return
         query = Query(query, charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
         query['value'] = value
+        query['name'] = name
         if query.verify(self.hmac_key, **self.SIG_KEYS):
             return value
     
