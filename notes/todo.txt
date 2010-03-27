@@ -1,7 +1,4 @@
 
-
-use wz.dump_cookie to dump cookies... maybe load_cookie to load cookies as well? =P
-
 - query/post/file/header keyerror could be a subclass of 400 Bad Request,
   which would then be caught and understood by the status catcher
 
@@ -180,7 +177,6 @@ my own minifier, which sounds like a bad idea).
   a method will fail if exc_info is passed in as well (just looking for 3
   positional arguments).
 
-- decide if the cookie container should default to the path being '/'
 
 - write a Mailer class using the sendmail functions. write a MailLogger to go with it
     - use the rfc822 address functions/classes to handle addresses
@@ -351,9 +347,7 @@ my own minifier, which sounds like a bad idea).
 		  patterns: perms('/admin/*/something?k=v')
 
 
-	- cookies should be read-only on the request, and read-write on the response
-		But does this REALLY make a whole lot of sense? They could be read-write
-		on BOTH (the same object, actually).
+
 	
 	- change the url parameter on the login page that redirects to "next":
 		/login/?next=whereveryouwere . It also need not be url encoded. The query
