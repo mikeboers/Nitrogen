@@ -1,7 +1,15 @@
 
-- query/post/file/header keyerror could be a subclass of 400 Bad Request,
-  which would then be caught and understood by the status catcher
+- should remove the status resolving middleware; it induces sloppyness
 
+- pick which set of http exceptions to use:
+    1. Paste
+        + pretty swell
+        - might need some monkey patching
+    2. WebOb
+        ~ nearly the same as Paste...
+    3. Werkzeug:
+        + nice, but no 300 errors
+    4. Mine
 - exception catcher should first try to catch HttpExceptions, and then grab
   everything. the non-HttpException should be turned into a ServerError with
   a traceback iff the server is in debug mode
@@ -23,9 +31,6 @@
 - either bring in the bucket or make it it's own project
 - bring in PyTomCrypt (try to get it to compile with just the setup)
 
-- http exceptions should be heirarchical like http://pylonshq.com/docs/en/0.9.7/thirdparty/webob/#module-webob.exc
-    - or just use these ones... durr
-
 - try to design a class for generic middleware which respects the intricacies
   of the 3rd parameter to start. perhaps design it as a class with methods to
   overide.
@@ -43,8 +48,6 @@
 - model and view contexts could be callable wsgi middleware themselves,
   instead of having a WSGI reset.
 
-- either use Paste's exceptions, werkzeug's or make mine into a tree structure
-
 - use repoze instead of my own auth stuff
     - light wrapper around the authorizor to move 'repoze.who.identity' somewhere
       else so that we can have multiple classes of user
@@ -52,12 +55,6 @@
       to be a bit nastier
     - perhaps I still have to write my own user permission/groups code, but
       dont have to do any of the authentication low-level stuff
-
-- think about rewriting route storage to work with wsgi.routing_args spec
-    http://www.wsgi.org/wsgi/Specifications/routing_args
-    
-    - I don't think I'll actually be able to do this fully, but I can place my
-      results in here as well as in my place
 
   
 
@@ -84,9 +81,8 @@
 - editables should roughly follow the Atom publishing protocl. see what pylons
   does: http://wiki.pylonshq.com/display/pylonscookbook/How+map.resource+enables+controllers+as+services
 
-- routes packages should try to import the http.status.NotFound exception to use as a
-  base for the RoutingError exception, in addition to ValueError or
-  something. Then if nitrogen is installed then it will be catchable as a 404.
+
+
 
 - need a general status catcher middleware. status exceptions could have a
   body which could then be passed by the status catcher. if there is no body
@@ -114,8 +110,6 @@
 	  UTF-8.
 	- Should only be auto encoding stuff for text/* content types.
 
-- paste webob.Request is completely malleable. this is so you can modify the
-  request and pass it on to someone else. This seems like a Good Thing™.
 
 - route.Transformer could exist solely to manipulate the data that is getting
   passed around. Then one can pass in a model and have the url generated for
@@ -159,12 +153,6 @@
     - The webhelpers one also looks a bit easier to extend.
     - Make line breaks drop in <br />
 
-
-- would be swell if the route generation could be a little smarter. for the
-  swissol product pages I would like to only pass a product model, and i
-  would figure out that I want controller='products' and whatever the collection is.
-
-
 - See about getting https working.
 
 - Compress all of the javascript and css files together with minify (or write
@@ -172,20 +160,8 @@ my own minifier, which sounds like a bad idea).
     - css doesn't need compression if it is coming from sass
     - Shane said to look at sprockets (it is in ruby)
 
-- as_request should be a class with __get__ so that it knows when to inject a
-  self at the front. Also because the current method of detecting if it is
-  a method will fail if exc_info is passed in as well (just looking for 3
-  positional arguments).
-
-
-- write a Mailer class using the sendmail functions. write a MailLogger to go with it
-    - use the rfc822 address functions/classes to handle addresses
 
 - rename the nitrogen.logs.FileLogger to something that indicates it is time based
-
-- make sure that the Makefile does everything the setup script did
-
-- deploy scripts need to work again
 
 - not_found_catcher -> status.status_notifier
     - takes a dict mapping status to template to throw
@@ -194,24 +170,12 @@ my own minifier, which sounds like a bad idea).
 
 - logs should be timestamping with utc time, not local time
 
-- the (Raw)ReRouter(s) should take a second parameter which, if supplied, is
-  the replacement string that will be used as the unrouted after this router
-  is done.
-    - Can maybe do some crazy logic with the ReRouter to provide a reverse path as well.
 
 - it might be a good idea to write my own pickling sockets instead of using
   the Listener and Client from multiprocessing.connection
     - Then I can have more standard symantics about when the socket is closed, and such
 
-- daemon class
-    - The massive PyPi library: http://pypi.python.org/pypi/python-daemon/
-    - Pretty clean daemon implementation here: http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
 
-    - The second one in general looks a lot nicer to work work, but needs to
-      be extended to be smarter about the pid file, possibly using some
-      filelocks (that I have written, not using the filelock module)
-
-- move headers into http package? or pull everything back out of http package.
 
 - admin gateway should work again
 
@@ -236,10 +200,6 @@ my own minifier, which sounds like a bad idea).
 
 - multiple processes logging to the same file is not safe. the docs seems to suggest
   that the multiprocessing module could be handy in writing a new file handler
-
-- see if I can make a daemonize function out of multiprocessing, so that the locks still work
-	they are semaphores, which are based on file descriptors. so just dont kill them all!
-
 
 - route history objects should proxy item access to the data object
 	should have some more properties (prev -> previous piece of history, next,
@@ -372,9 +332,7 @@ my own minifier, which sounds like a bad idea).
   could run "main" of "app.controller.news". This just seems kinda lazy on my
   part though
 
-- consider having the 3 routing protocol methods return dicts instead of tuples.
-  it would make the code easier to read:
-	return dict(path=newpath, child=app, data={})
+
 
 - redirectors
 	mappings of paths (or path regexes) to map from/to with a http status code
@@ -420,9 +378,6 @@ my own minifier, which sounds like a bad idea).
   logged in via the session. can even add a login link into the footer for the
   client to use
 
-- get a lorem-ipsum generator into the main template context
-
-
 
 - read about the Atom publishing protocol, and the set of REST URLs that go with it
   it seems the Pylons uses that setup a bunch (for resources in the route mapper
@@ -462,23 +417,6 @@ be able to be added to from the web with a password or by visiting some signed U
 	monitor
 	sentry
 
-Figure out a better naming scheme for the functions that are WSGI middleware.
-The are called middleware by their function, but the function that does the
-actual wrapping is not middleware. Ideas:
-
-	- LogFormatter.wsgi_setup(app)
-
-go through route notes
-decide if I want the route object to have item access to the data, or if that
-is on route.data
-	if the second, does the request object .route refer to the route, or the data
-	is the data a dict, or a multimap?
-	
-	seems like the Request will be mainly using data, and nothing else will
-	the Request should build up a dictionary for it's own uses. the route need
-	not do it
-
-get new permissions script in place
 
 
 FieldSet._render should take a multipart=True param which allows for file uploads.
@@ -503,22 +441,6 @@ all together
   unless they absolutely need it
 - the UserContext should have a table_prefix, instead of "name"
 
-- What should I name all these environs?
-	- "model_environ":
-		+ makes sense
-		- hard to type
-		. "model_env" short form
-	- "model_context":
-		+ pretty easy to type
-		. "model_ctx" short form
-	- "model_domain":
-		+ really easy to type
-		- no good short form
-	
-	context: the set of circumstances or facts that surround a particular
-		event, situation, etc.
-	environ: the aggregate of surrounding things, conditions, or influences
-	domain: a realm or range of personal knowledge, responsibility, etc.
 
 - ViewContent
 	render should take pre_path and post_path to search before and after the
