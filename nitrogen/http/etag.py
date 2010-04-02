@@ -1,7 +1,7 @@
 
 import hashlib
 
-from .request import Request, Response
+from ..request import Request, Response
 
 
 def etagger(app):
