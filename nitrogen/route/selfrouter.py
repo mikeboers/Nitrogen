@@ -9,8 +9,6 @@ It is written so that you can nest reflectors.
 
 """
 
-from webtest import TestApp as WebTester
-
 from ..uri.path import Path
 from . import core
 

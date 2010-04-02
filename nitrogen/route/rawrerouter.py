@@ -28,8 +28,6 @@ import logging
 from pprint import pprint
 import collections
 
-from webtest import TestApp
-
 from . import core
 from ..uri import Path
 from ..http.status import HttpNotFound

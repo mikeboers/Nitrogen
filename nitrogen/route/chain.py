@@ -1,5 +1,4 @@
 
-from ..http.status import HttpNotFound
 from . import core
 
 class Chain(core.Router, list):

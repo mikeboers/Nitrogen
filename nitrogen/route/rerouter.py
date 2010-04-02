@@ -1,18 +1,13 @@
 
-
 from bisect import insort
-from pprint import pprint
-import base64
 import collections
 import hashlib
 import logging
 import re
 
-from webtest import TestApp
-
 from ..uri import Path
-from ..http.status import HttpNotFound
 from . import core
+
 
 log = logging.getLogger(__name__)
 
