@@ -1,7 +1,63 @@
 
+NO MORE ADMIN SUBDOMAIN
+=======================
+
+Setup with repoze.what, even if there are no permissions and groups yet.
+
+Need to make a decorator that will accept repoze.what.predicates:
+
+    @requires(not_anonymouse(msg="Only administrators allowed here."))
+    @as_request
+    def app(req, res):
+        ...
+
+Instead of going to admin.example.com, you go to example.com/admin, which throws a 401, that is caught by the repoze.who middleware which redirects you to example.com/admin/login to do the actual login. Then you go back to example.com/admin which has the basic admin control panel.
+
+Why do we need to do this?
+    I feel that it needs some cleansing... Maybe not the best reason.
+
+
+REWRITE EDITABLES as CRUD
+=========================
+
+nitrogen.model.crud.App should be passed a session maker, model class, and wtform class. It will have a ATOM-like REST layout.
+
+It must not use a context session, and it must not use formalchemy.
+
+You register the app to some route, and the $.nitrogen.crud function will handle the client side
+
+REQUEST LOCAL OBJECTS
+=====================
+
+MAYBE set up a global werkzeug local manager as middleware to register against. Perhaps this is automatically done by the servers
+
+It may be a better idea in general to have each object which uses a local object clear out its local object itself...
+
+What needs to use this mechanism?
+    - loggers need to pull IP and such from the environ
+    - view context needs to clear out flash messages
+    - model context needs to destroy the context session
+
+VIEW CONTEXT and TEMPLATE PATHs
+===============================
+
+I want to write my own Mako loader so that it is trivially easy for me to
+modify the path.
+
+The various ways I could do this are:
+    - a bare bones class which only has the minimal API
+    - extend the current loader and override the path property.
+    - the path property of the view context can manipulate the loader
+
+The loader (which may well be the entire view context) should have a copy method which returns us another loader/context with the same values. Then we can proceed to modify paths and defaults, etc.
+
+
+HEIRARCHICAL HTTP SIGNALS, STATUSES and ERRORS
+==============================================
+
 - should remove the status resolving middleware; it induces sloppyness
 
-- pick which set of http exceptions to use:
+- pick which set of http exception set to use:
     1. Paste
         + pretty swell
         - might need some monkey patching
@@ -10,9 +66,34 @@
     3. Werkzeug:
         + nice, but no 300 errors
     4. Mine
+        - They are mine.
+        - I would have to write the descriptions and so forth.
+
+    - figure out which of those libraries are going to be included anyways:
+        - werkzeug for sure
+        - paste comes along with repoze
+
+- middleware logs all of the non-http exceptions
+- middleware converts non-http exceptions into a 500 internal server error
+    - this one will need to attach the original exception so that I can get
+      a traceback to the client for debug servers. could pass the causing
+      exception as the detail. (Python 3 would nicely remove the need for
+      doing this manually.)
+    - OR, this can use the exact same function that the next middleware does
+      and simply feeds in a 500 "Internal Server Error" with the detail saying
+      that an unknown error has occoured, and to please try again.
+- other middleware does the actual reporting
+
 - exception catcher should first try to catch HttpExceptions, and then grab
   everything. the non-HttpException should be turned into a ServerError with
   a traceback iff the server is in debug mode
+  
+  
+RANDOM IDEAS
+============
+
+
+
 
 - "Dear valued user,
 
