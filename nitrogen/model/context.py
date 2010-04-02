@@ -78,13 +78,13 @@ class ModelContext(object):
         self._local_sessions.append(s)
         return s
     
-    def wsgi_fixtures(self, app):
+    def wsgi_setup(self, app):
         """WSGI middleware to setup/teardown the model context per request.
         
         Currently resets the thread-local sessions generated
         
         """
-        def ModelContext_wsgi_fixtures_app(environ, start):
+        def ModelContext_wsgi_setup_app(environ, start):
             for x in app(environ, start):
                 yield x
             for s in self._local_sessions:
@@ -92,14 +92,8 @@ class ModelContext(object):
                 # Lets be even more aggresive... It seems that MAYBE a session
                 # would persist when using flup thread pools.
                 s.remove()
-        return ModelContext_wsgi_fixtures_app
+        return ModelContext_wsgi_setup_app
     
-    def wsgi_reset(self, app):
-        # Warn that we have changed the name. This can be removed once
-        # all my web apps have moved on.
-        msg = '%s.wsgi_reset is depreciated.' % self.__class__.__name__
-        try:
-            raise DeprecationWarning(msg)
-        except DeprecationWarning:
-            self.log.warning(msg, exc_info=sys.exc_info())
-        return self.wsgi_fixtures(app)
+    # For reverse compatibility.
+    wsgi_reset = wsgi_setup
+    

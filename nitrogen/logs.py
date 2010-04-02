@@ -70,15 +70,17 @@ class ThreadLocalFormatter(logging.Formatter):
         
         return message
     
-    def setup_wsgi(self, app):
-        def ThreadLocalFormatter__wrap_wsgi_app__inner(environ, start):
+    def wsgi_setup(self, app):
+        def ThreadLocalFormatter_wsgi_setup_app(environ, start):
             with self.request_count_lock:
                 self.request_count += 1
                 self.local_extra['request_index'] = self.request_count
                 self.local_extra['remote_addr'] = environ['REMOTE_ADDR']
             return app(environ, start)
-        return ThreadLocalFormatter__wrap_wsgi_app__inner
-
+        return ThreadLocalFormatter_wsgi_setup_app
+    
+    # For reverse compatibility.
+    setup_wsgi = wsgi_setup
 
 class ProcLocalFormatter(ThreadLocalFormatter):
     

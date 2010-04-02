@@ -200,13 +200,15 @@ def error_notifier(app, render=None, traceback=False, template='_500.tpl'):
             self.status = None
             self.headers = None
         
-        def app_start(self, status, headers):
+        def error_notifier_start(self, status, headers, exc_info=None):
             self.status = status
             self.headers = headers
-        
+            if exc_info:
+                logging.error(exc_info)
+                
         def __iter__(self):
             try:
-                for x in app(self.environ, self.app_start):
+                for x in app(self.environ, self.error_notifier_start):
                     self.output.append(x)
                 self.start(self.status, self.headers or [])
                 for x in self.output:
