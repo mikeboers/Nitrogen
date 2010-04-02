@@ -4,8 +4,13 @@ from __future__ import absolute_import
 
 import sys
 import re
+import logging
 
 from httplib import responses as _code_to_message
+
+
+log = logging.getLogger(__name__)
+
 
 _message_to_code = dict((v.lower(), k) for k, v in _code_to_message.items())
 

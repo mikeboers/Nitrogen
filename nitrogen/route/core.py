@@ -182,7 +182,7 @@ class Router(object):
                 return None
             if not isinstance(step, RoutingStep):
                 step = RoutingStep(*step)
-            # print 'b', step
+            # log.debug('log step: %r' % (step, ))
             history.update(path=step.path, router=router, data=step.data)
             router = step.next
             path = step.path
