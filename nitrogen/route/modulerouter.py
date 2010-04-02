@@ -59,7 +59,7 @@ class Module(core.Router):
 
 class ModuleRouter(core.Router):
     
-    def __init__(self, app_key='app', package='', default='index',
+    def __init__(self, app_key='__app__', package='', default='index',
         reload=False, route_key='controller'):
         
         self.app_key = app_key
