@@ -16,6 +16,24 @@ Instead of going to admin.example.com, you go to example.com/admin, which throws
 Why do we need to do this?
     I feel that it needs some cleansing... Maybe not the best reason.
 
+going to anything that triggers a 401 gives you a form. then you get a user
+cookie care of repoze.who, and I track if you are in edit-mode or not via my
+own cookie
+
+
+AUTHENTICATION
+==============
+
+Just use repoze for now...
+- write a forget or logout function in the app.auth or nitrogen.auth
+- can just use the ini style permission thing for now... can write something
+  better later
+
+Later, rewrite both repoze.who and repoze.what. There isn't all that much I
+want it to do...
+
+Form should take detail from signal exception, which could be stored at 'nitrogen.http.signal.exception'.
+The detail could be the predicate message which is part of the NotAuthorizedError
 
 REWRITE EDITABLES as CRUD
 =========================
@@ -55,12 +73,16 @@ The loader (which may well be the entire view context) should have a copy method
 HEIRARCHICAL HTTP SIGNALS, STATUSES and ERRORS
 ==============================================
 
-- should remove the status resolving middleware; it induces sloppyness
-
 - pick which set of http exception set to use:
     1. Paste
         + pretty swell
         - might need some monkey patching
+            It doesn't. If I only treat it as a signal and use my own code to
+            turn it into html, then it is beautiful. I don't need to go
+            and make sure that every library that uses them conforms to what I
+            want. There are few cases where this will irritate me anyways...
+            If I really wanted to I could write some middlewear which figures
+            out if the paste exception generated it, and replace it
     2. WebOb
         ~ nearly the same as Paste...
     3. Werkzeug:
@@ -73,6 +95,11 @@ HEIRARCHICAL HTTP SIGNALS, STATUSES and ERRORS
         - werkzeug for sure
         - paste comes along with repoze
 
+- the signal_converter middleware should be very very closet to the top of the
+  stack.
+    - store the exception in 'nitrogen.http.signal.caught'
+- middleware which turns exceptions into HTTPServerError (or whatever, via a
+  mapping, maybe) and raises them. 
 - middleware logs all of the non-http exceptions
 - middleware converts non-http exceptions into a 500 internal server error
     - this one will need to attach the original exception so that I can get
@@ -164,21 +191,6 @@ RANDOM IDEAS
 
 
 
-
-- need a general status catcher middleware. status exceptions could have a
-  body which could then be passed by the status catcher. if there is no body
-  then we would log this and then throw a 500.
-
-- rerouters need a _methods key which takes acceptable methods. ie:
-    @router.register(_method='POST') or _method=('PUT', 'DELETE')
-    This MUST understand the _method query param, but only accept not GET/HEAD
-    methods if it is actually a post. Ie you can't have a ?_method=PUT on a
-    GET, only a POST. We have it in the query string so that we don't trigger
-    the file parsing at this point.
-
-- the objects returns from routing api methods should be a named tuple
-- consider renaming route.tools to route.base
-
 - api MUST not just pull in all the get and post data, for that will trigger
   file parsing. It can look in the get and post data when you ask it to, but
   do NOT do it automatically or without provocation.
@@ -258,7 +270,6 @@ my own minifier, which sounds like a bad idea).
 
 
 
-- admin gateway should work again
 
 - model_adapter should work again
 
