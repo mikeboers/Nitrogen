@@ -368,9 +368,10 @@ class RawContainer(multimap.MutableMultiMap):
             else:
                 value = self._unquote(value)
                 value = self._loads(key, value)
-                cookie = self.cookie_class(value)
-                cookie._set_change_checkpoint()
-                self.append((key, cookie))
+                if value is not None:
+                    cookie = self.cookie_class(value)
+                    cookie._set_change_checkpoint()
+                    self.append((key, cookie))
     
     def _conform_key(self, key):
         # Make sure the key is legal.
