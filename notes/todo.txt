@@ -1,4 +1,30 @@
 
+WSGI BEST PRACTISES
+===================
+
+Really need to STOP buffering output. Part of the specification
+(http://www.python.org/dev/peps/pep-0333/#buffering-and-streaming) states that
+middleware must always forward the entire block it recievs to it's parent
+gateway/server.
+
+    - middleware which is fine:
+        compressor
+        log_formatter
+        error_logger
+        utf8_encoder
+        model/view_context setup
+        cookies.setup_factory
+        prep_view_context
+        auth.wrap... I'm not sure
+        not_found_catcher
+        routers
+    - middleware which is NOT fine:
+        output_buffer... clearly. Turn this one into a decorator
+        error_notifier
+
+If I assure that I will only call start_response once, then I can likely do
+this
+
 NO MORE ADMIN SUBDOMAIN
 =======================
 
