@@ -8,20 +8,26 @@ import werkzeug as wz
 from multimap import MutableMultiMap
 
 
+ENVIRON_BODY_CACHE_KEY = 'nitrogen.webio.body.cache'
 
-# def assert_body_cache(environ, environ_key=None):
-#     environ_key = environ_key or ENVIRON_BODY_CACHE_KEY
-#     if environ_key not in environ:
-#         stdin = environ['wsgi.input']
-#         cache = StringIO(stdin.read())
-#         cache.seek(0)
-#         environ['wsgi.input'] = environ[environ_key] = cache
-# 
-# def get_body_file(environ, environ_key=None):
-#     environ_key = environ_key or ENVIRON_BODY_CACHE_KEY
-#     assert_body_cache(environ, environ_key)
-#     return environ[environ_key]
-# 
+
+def assert_body_cache(environ, environ_key=None):
+    environ_key = environ_key or ENVIRON_BODY_CACHE_KEY
+    if environ_key not in environ:
+        stdin = environ['wsgi.input']
+        cache = StringIO(stdin.read())
+        cache.seek(0)
+        environ['wsgi.input'] = environ[environ_key] = cache
+
+def get_body_cache(environ, environ_key=None):
+    environ_key = environ_key or ENVIRON_BODY_CACHE_KEY
+    assert_body_cache(environ, environ_key)
+    return environ[environ_key]
+    
+def rewind_body_cache(environ, environ_key=None):
+    get_body_cache(environ, environ_key).seek(0)
+
+
 # def get_body(environ, environ_key=None):
 #     file = get_body_file(environ, environ_key)
 #     tell = file.tell()
