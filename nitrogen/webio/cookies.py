@@ -393,6 +393,8 @@ class RawContainer(multimap.MutableMultiMap):
     
     def expire(self, key):
         """Expires a cookie."""
+        if key not in self:
+            self[key] = ''
         self[key].expire()
     
     def set(self, key, value, **kwargs):
