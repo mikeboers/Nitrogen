@@ -17,12 +17,14 @@ from webtest import TestApp
 import werkzeug as wz
 import werkzeug.utils as wzutil
 
+from multimap import MutableMultiMap
+
 from .http.status import resolve_status
 from .http.time import parse_http_time, format_http_time
 from .webio import request_params
 from .webio.query import parse_query
 from .webio.headers import parse_headers, MutableHeaders, EnvironHeaders
-from .webio.cookies import parse_cookies, Container as CookieContainer
+from .webio import cookies
 from .webio.body import parse_post, parse_files
 from .route.core import get_route_history, get_route_data
 
@@ -78,9 +80,10 @@ class Request(object):
         return parse_query(self.environ, charset=self.charset, errors=self.decode_errors)
     get = query # Depreciated
     
-    @property
+    @wz.cached_property
     def cookies(self):
-        return parse_cookies(self.environ, charset=self.charset, decode_errors=self.decode_errors)
+        raw = cookies.parse_cookies(self.environ, charset=self.charset, decode_errors=self.decode_errors)
+        return MutableMultiMap((k, c.value) for k, c in raw.iterallitems())
     
     @property
     def stream(self):
@@ -226,15 +229,14 @@ class Response(object):
     Need to pass the request this is connected to if you want to use the maybe
     pre-build response cookies container."""
     
-    cookie_class = CookieContainer
-    
-    def __init__(self, start=None, headers=None, request=None, cookie_class=None):
+    def __init__(self, start=None, headers=None, request=None):
         self.wsgi_start = start
         self.headers = headers or []
         
         self._status = '200 OK'
         self._charset = 'utf-8'
-        
+        self._cookies = None
+    
         if 'Content-Type' in self.headers:
             ctype, opts = wz.parse_options_header(self.headers['Content-Type'])
             self._charset = opts.get('charset')
@@ -244,9 +246,19 @@ class Response(object):
             if start and request.wsgi_start:
                 raise ValueError('given start and request with wsgi_start')
             self.wsgi_start = request.wsgi_start
-            self.cookies = request.cookies.blank_copy()
+            self.cookie_factory = cookies.get_factory(request.environ)
         else:
-            self.cookies = (cookie_class or self.cookie_class)()
+            self.cookie_factory = cookies.Container
+    
+    @property
+    def cookies(self):
+        if self._cookies is None:
+            self._cookies = self.cookie_factory()
+        return self._cookies
+    
+    @cookies.setter
+    def cookies(self, v):
+        self._cookies = v
     
     @property
     def headers(self):
@@ -357,7 +369,9 @@ class Response(object):
             if not hasattr(self, k):
                 raise ValueError('no request attribute %r' % k)
             setattr(self, k, v)
-        headers = self.headers.allitems() + (list(headers) if headers else []) + self.cookies.build_headers()
+        headers = self.headers.allitems() + (list(headers) if headers is not None else [])
+        if self._cookies is not None:
+            headers.extend(self.cookies.build_headers())
         self.wsgi_start(self.status, headers)
 
 
