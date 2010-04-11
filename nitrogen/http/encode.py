@@ -178,6 +178,10 @@ def compressor(app):
                 algos[:] = []
             if algos:
                 headers['Content-Encoding'] = algos[0]
+                try:
+                    del headers['Content-Length']
+                except KeyError:
+                    pass
             start(status, headers.items())
 
         # Do the compression.
