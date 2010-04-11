@@ -17,7 +17,7 @@ from webtest import TestApp
 import werkzeug as wz
 import werkzeug.utils as wzutil
 
-from multimap import MutableMultiMap
+from multimap import MultiMap
 
 from .http.status import resolve_status
 from .http.time import parse_http_time, format_http_time
@@ -83,7 +83,8 @@ class Request(object):
     @wz.cached_property
     def cookies(self):
         raw = cookies.parse_cookies(self.environ, charset=self.charset, decode_errors=self.decode_errors)
-        return MutableMultiMap((k, c.value) for k, c in raw.iterallitems())
+        # This is immutable, because it does not reflect back to the environ at this time.
+        return MultiMap((k, c.value) for k, c in raw.iterallitems())
     
     @property
     def stream(self):
