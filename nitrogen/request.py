@@ -235,6 +235,7 @@ class Response(object):
     def __init__(self, start=None, headers=None, request=None):
         self.wsgi_start = start
         self.headers = headers or []
+        self.request = request
         
         self._status = '200 OK'
         self._charset = 'utf-8'
