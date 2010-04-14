@@ -15,7 +15,7 @@ import logging
 from webtest import TestApp as WebTester
 
 from ..uri.path import Path, encode, decode
-from ..http.status import HttpNotFound
+from ..http.status import HTTPNotFound
 
 
 log = logging.getLogger(__name__)
@@ -202,7 +202,7 @@ class Router(object):
             
         route = self.route(path)
         if route is None:
-            raise HttpNotFound('could not route %r with %r' % (path, self))
+            raise HTTPNotFound('could not route %r with %r' % (path, self))
             
         # Build up SCRIPT_NAME only taking chunks that a simple prefix removed
         # from each chunk of history

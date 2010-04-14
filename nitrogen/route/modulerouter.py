@@ -6,7 +6,7 @@ import os
 import re
 
 from . import core
-from ..http.status import HttpNotFound
+from ..http.status import HTTPNotFound
 from ..uri.path import Path
 
 

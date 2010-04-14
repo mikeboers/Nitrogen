@@ -4,7 +4,7 @@ from pprint import pprint
 import webtest
 
 from . import EchoApp, _assert_next_history_step
-from ...http.status import HttpNotFound
+from ...http.status import HTTPNotFound
 from ...request import as_request
 from ..core import *
 from .. import core
@@ -94,13 +94,13 @@ def test_routing_path_setup():
     try:
         app.get('/-does/not/exist')
         assert False
-    except HttpNotFound:
+    except HTTPNotFound:
         pass
 
     try:
         app.get('/one_extra/does-not-exist')
         assert False
-    except HttpNotFound:
+    except HTTPNotFound:
         pass
 
     res = app.get('/pre}post')

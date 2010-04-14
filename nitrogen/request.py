@@ -342,11 +342,9 @@ class Response(object):
     @status.setter
     def status(self, value):
         self._status = resolve_status(value)
+
     
-    
-  
-    
-    def start(self, status=None, headers=None, exc_info=None, plain=None,
+    def build_headers(self, headers=None, exc_info=None, plain=None,
         html=None, **kwargs):
         """Start the wsgi return sequence.
 
@@ -355,12 +353,8 @@ class Response(object):
 
         If headers are supplied, they are sent after those that have been
         added to self.headers.
-        
+
         """
-        if not self.wsgi_start:
-            raise ValueError('no WSGI start')
-        if status:
-            self.status = status
         # Deal with content-type overrides and properties.
         if plain or html:
             log.warning('Response.start html/plain kwargs are depreciated')
@@ -375,6 +369,24 @@ class Response(object):
         headers = self.headers.allitems() + (list(headers) if headers is not None else [])
         if self._cookies is not None:
             headers.extend(self.cookies.build_headers())
+        return headers
+        
+        
+    def start(self, status=None, *args, **kwargs):
+        """Start the wsgi return sequence.
+
+        If called with status, that status is resolved. If status is None, we
+        use the internal status.
+
+        If headers are supplied, they are sent after those that have been
+        added to self.headers.
+
+        """
+        if not self.wsgi_start:
+            raise ValueError('no WSGI start')
+        headers = self.build_headers(*args, **kwargs)
+        if status:
+            self.status = status
         self.wsgi_start(self.status, headers)
 
 

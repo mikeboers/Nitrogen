@@ -67,7 +67,7 @@ def test_routing_path_setup():
     try:
         app.get('/-does/not/exist')
         assert False
-    except status.HttpNotFound:
+    except status.HTTPNotFound:
         pass
 
 

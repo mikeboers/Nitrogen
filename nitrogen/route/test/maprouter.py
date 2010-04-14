@@ -1,7 +1,7 @@
 
 import unittest
 
-from ...http.status import HttpNotFound
+from ...http.status import HTTPNotFound
 from ..core import RouteHistoryChunk, RoutingError, GenerationError
 from ..maprouter import *
 from . import EchoApp
@@ -71,7 +71,7 @@ class TestCase(unittest.TestCase):
         try:
             res = app.get('/b/4')
             self.fail()
-        except HttpNotFound as e:
+        except HTTPNotFound as e:
             pass
         
         

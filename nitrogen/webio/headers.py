@@ -74,6 +74,8 @@ class HeaderTraits(object):
     _conform_value = staticmethod(str)
 
 
+class Headers(HeaderTraits, multimap.MultiMap):
+    pass
 class MutableHeaders(HeaderTraits, multimap.MutableMultiMap):
     pass
 

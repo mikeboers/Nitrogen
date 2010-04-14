@@ -5,9 +5,12 @@ from __future__ import absolute_import
 import sys
 import re
 import logging
-
 from httplib import responses as _code_to_message
 
+from paste.httpexceptions import *
+from paste.httpexceptions import make_middleware
+
+from nitrogen.webio.headers import Headers
 
 log = logging.getLogger(__name__)
 
@@ -165,66 +168,47 @@ def status_resolver(app, canonicalize=False, strict=False):
     return status_resolver_app
 
 
-class BaseHttpStatus(Exception):
-    """Base HTTP status exception from which all will inherit.
-    
-    This is not to be used directly.
-    
-    """
-    _code = 200
-
-
-_code_to_exception = {}
-def exception(code):
-    """Create a class for the given HTTP status code or message.
-    
-    Caches the Exception and also stores it as an attribute on this module.
-    This is done so that they are easily Pickleable, and to make them easy to
-    access by name from the outside.
-    
-    Example:
-        >>> x = exception(400)
-        >>> x.__name__, x._code
-        ('HttpBadRequest', 400)
-        
-        >>> x = exception('See Other')
-        >>> x.__name__, x._code
-        ('HttpSeeOther', 303)
-    
-    """
-    if not isinstance(code, int):
-        code = message_to_code(code)
-    if code not in _code_to_exception:
-        message = code_to_message(code)
-        name = 'Http' + ''.join(message.split())
-        _code_to_exception[code] = obj = type(name, (BaseHttpStatus, ), {'_code': code})
-        self = sys.modules[__name__]
-        setattr(self, name    , obj) # Perhaps will depreciate this one?
-        setattr(self, name[4:], obj)
-    return _code_to_exception[code]
-
-
-# Walk through all of the codes and make a class for each one, assigning it
-# to this module (essentially putting it into the global namespace).
-for code in _code_to_message:
-    exception(code)
 
 
 def not_found_catcher(app, render):
     """Displays the _404.tpl template along with a "404 Not Found" status if a
-    HttpNotFound is thrown within the app that it wraps. This error is
+    HTTPNotFound is thrown within the app that it wraps. This error is
     normally thrown by routers.
     """
     def not_found_catcher_app(environ, start):
         try:
             for x in app(environ, start):
                 yield x
-        except HttpNotFound as e:
-            log.info('caught HttpNotFound', exc_info=e)
+        except HTTPNotFound as e:
+            log.info('caught HTTPNotFound: %r' % e.detail)
             start('404 Not Found', [('Content-Type', 'text/html')])
             yield render('_404.tpl')
     return not_found_catcher_app
-    
+
+
+def catch_any_status(app):
+    #log.debug("HERE")
+    def catch_any_status_app(environ, start):
+        #log.debug("HERE 2")
+        app_iter = None
+        try:
+            app_iter = iter(app(environ, start))
+            yield next(app_iter)
+        except HTTPException, e:
+            if isinstance(e, HTTPRedirection):
+                headers = Headers(e.headers)
+                log.info('caught %d %s (to %r): %r' % (e.code, e.title, headers['location'], e.detail))
+            else:
+                log.info('caught %d %s: %r' % (e.code, e.title, e.detail))
+            for x in e(environ, start):
+                yield x
+            return
+        else:
+            for x in app_iter:
+                yield x
+            
+    return catch_any_status_app
+
 
 def test_status_resolver():
     """Nose test, checking that plaintext is returned."""

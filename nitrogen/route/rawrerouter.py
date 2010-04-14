@@ -30,7 +30,7 @@ import collections
 
 from . import core
 from ..uri import Path
-from ..http.status import HttpNotFound
+from ..http.status import HTTPNotFound
 
 log = logging.getLogger(__name__)
 
@@ -185,7 +185,7 @@ def test_routing_path_setup():
     try:
         app.get('/-does/not/exist')
         assert False
-    except HttpNotFound:
+    except HTTPNotFound:
         pass
 
     res = app.get('/pre}post')
