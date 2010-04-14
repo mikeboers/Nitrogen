@@ -57,12 +57,14 @@ class Request(object):
     # for more info.
     stream_factory = None
     
+    response_class = None
+    
     def __init__(self, environ, start=None, charset=None, decode_errors=None):
         self.environ = environ
         self.wsgi_start = start
         self.charset = charset
         self.decode_errors = decode_errors
-        self.response = Response(request=self) if start else None
+        self.response = (self.response_class or Response)(request=self) if start else None
         self.headers = EnvironHeaders(environ)
     
     method = wz.environ_property('REQUEST_METHOD', load_func=str.upper)
@@ -376,23 +378,26 @@ class Response(object):
         self.wsgi_start(self.status, headers)
 
 
-def get_request_pair(environ, start):        
-    request = Request(environ, start)
-    return request, request.response
-
 
 class RequestMiddleware(object):
+    
+    request_class = None
     
     def __init__(self, app):
         self.app = app
     
+    def get_request_pair(self, environ, start):
+        request = (self.request_class or Request)(environ, start)
+        return request, request.response
+    
     def __call__(self, environ, start):
-        return self.app(*get_request_pair(environ, start))
+        return self.app(*self.get_request_pair(environ, start))
     
     def __get__(self, instance, owner):
         if not instance:
             return self
-        return lambda environ, start: self.app(instance, *get_request_pair(environ, start))
+        return lambda environ, start: self.app(instance, *self.get_request_pair(environ, start))
+
 
 as_request = RequestMiddleware
 
