@@ -173,15 +173,6 @@ class Request(object):
     # and probably some more.
     is_xhr = wz.environ_property('HTTP_X_REQUESTED_WITH', load_func=lambda x: (x or '').lower() == 'xmlhttprequest')
     is_ajax = is_xhr
-    
-    # This will be handled another way soon.
-    # Depreciated.
-    user = wz.environ_property('app.user')
-    
-    @property
-    def is_admin_area(self):
-        return self.environ.get('SERVER_NAME', '').startswith('admin.')
-
 
 
 
