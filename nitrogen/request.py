@@ -64,8 +64,6 @@ class Request(object):
         self.wsgi_start = start
         self.charset = charset
         self.decode_errors = decode_errors
-        self.response = (self.response_class or Response)(request=self) if start else None
-        self.headers = EnvironHeaders(environ)
     
     method = wz.environ_property('REQUEST_METHOD', load_func=str.upper)
     is_get = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'GET')
@@ -74,7 +72,13 @@ class Request(object):
     is_delete = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'DELETE')
     is_head = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'HEAD')
     
-    # headers = _environ_parser(parse_headers)
+    @wz.cached_property
+    def headers(self):
+        return EnvironHeaders(self.environ)
+
+    @wz.cached_property
+    def response(self):
+        return (self.response_class or Response)(request=self) if self.wsgi_start else None
     
     query_string = wz.environ_property('QUERY_STRING')
     @property
