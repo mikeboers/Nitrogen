@@ -235,7 +235,6 @@ class Response(object):
         
         self._status = '200 OK'
         self._charset = 'utf-8'
-        self._cookies = None
     
         if 'Content-Type' in self.headers:
             ctype, opts = wz.parse_options_header(self.headers['Content-Type'])
@@ -250,15 +249,9 @@ class Response(object):
         else:
             self.cookie_factory = cookies.Container
     
-    @property
+    @wz.cached_property
     def cookies(self):
-        if self._cookies is None:
-            self._cookies = self.cookie_factory()
-        return self._cookies
-    
-    @cookies.setter
-    def cookies(self, v):
-        self._cookies = v
+        return self.cookie_factory()
     
     @property
     def headers(self):
@@ -364,8 +357,7 @@ class Response(object):
                 raise ValueError('no request attribute %r' % k)
             setattr(self, k, v)
         headers = self.headers.allitems() + (list(headers) if headers is not None else [])
-        if self._cookies is not None:
-            headers.extend(self.cookies.build_headers())
+        headers.extend(self.cookies.build_headers())
         return headers
         
         
