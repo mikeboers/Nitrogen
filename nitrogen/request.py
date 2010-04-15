@@ -245,13 +245,16 @@ class Response(object):
             if start and request.wsgi_start:
                 raise ValueError('given start and request with wsgi_start')
             self.wsgi_start = request.wsgi_start
-            self.cookie_factory = cookies.get_factory(request.environ)
-        else:
-            self.cookie_factory = cookies.Container
     
     @wz.cached_property
     def cookies(self):
         return self.cookie_factory()
+    
+    @wz.cached_property
+    def cookie_factory(self):
+        if self.request is not None:
+            return cookies.get_factory(self.request.environ)
+        return cookies.Container
     
     @property
     def headers(self):
