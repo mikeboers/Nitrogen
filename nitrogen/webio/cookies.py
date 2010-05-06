@@ -329,16 +329,22 @@ class RawContainer(multimap.MutableMultiMap):
     
     cookie_class = Cookie
     
-    def __init__(self, input=None, charset=None, encode_errors=None, decode_errors=None):
+    def __init__(self, input=None, defaults=None, charset=None, encode_errors=None, decode_errors=None):
         multimap.MutableMultiMap.__init__(self)
         self.charset = charset
+        self.defaults = defaults or {}
         self.encode_errors = encode_errors
         self.decode_errors = decode_errors
         if input:
             self.load(input)
     
     def blank_copy(self):
-        return self.__class__()
+        return self.__class__(
+            defaults=self.defaults.copy(),
+            charset=self.charset,
+            encode_errors=self.encode_errors,
+            decode_errors=self.decode_errors
+        )
             
     def load(self, input_string):
         """Load cookies from a string (presumably HTTP_COOKIE)."""
@@ -387,7 +393,7 @@ class RawContainer(multimap.MutableMultiMap):
     def _conform_value(self, value):
         if isinstance(value, Cookie):
             return value
-        cookie = self.cookie_class()
+        cookie = self.cookie_class(**self.defaults)
         cookie.value = value
         return cookie
     
@@ -399,7 +405,9 @@ class RawContainer(multimap.MutableMultiMap):
     
     def set(self, key, value, **kwargs):
         """Create a cookie with all attributes in one call."""
-        self[key] = self.cookie_class(value, **kwargs)
+        attrs = self.defaults.copy()
+        attrs.update(kwargs)
+        self[key] = self.cookie_class(value, **attrs)
     
     _quote_map = {
         '\\': '\\\\',
