@@ -25,7 +25,7 @@ from .webio import request_params
 from .webio.query import parse_query
 from .webio.headers import parse_headers, MutableHeaders, EnvironHeaders
 from .webio import cookies
-from .webio.body import parse_post, parse_files
+from .webio import body
 from .route.core import get_route_history, get_route_data
 
 
@@ -72,6 +72,12 @@ class Request(object):
     is_delete = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'DELETE')
     is_head = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'HEAD')
     
+    def assert_body_cache(self):
+        body.assert_body_cache(self.environ)
+    
+    def rewind_body_cache(self):
+        body.rewind_body_cache(self.environ)
+    
     @wz.cached_property
     def headers(self):
         return EnvironHeaders(self.environ)
@@ -104,7 +110,7 @@ class Request(object):
         
     @property
     def post(self):
-        return parse_post(self.environ,
+        return body.parse_post(self.environ,
             charset=self.charset,
             errors=self.decode_errors,
             stream_factory=self.stream_factory,
@@ -114,7 +120,7 @@ class Request(object):
         
     @property
     def files(self):
-        return parse_files(self.environ,
+        return body.parse_files(self.environ,
             charset=self.charset,
             errors=self.decode_errors,
             stream_factory=self.stream_factory,
@@ -380,6 +386,7 @@ class Response(object):
         if status:
             self.status = status
         self.wsgi_start(self.status, headers)
+
 
 
 
