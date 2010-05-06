@@ -25,50 +25,10 @@ gateway/server.
 If I assure that I will only call start_response once, then I can likely do
 this
 
-NO MORE ADMIN SUBDOMAIN
-=======================
-
-Setup with repoze.what, even if there are no permissions and groups yet.
-
-Need to make a decorator that will accept repoze.what.predicates:
-
-    @requires(not_anonymouse(msg="Only administrators allowed here."))
-    @as_request
-    def app(req, res):
-        ...
-
-Instead of going to admin.example.com, you go to example.com/admin, which throws a 401, that is caught by the repoze.who middleware which redirects you to example.com/admin/login to do the actual login. Then you go back to example.com/admin which has the basic admin control panel.
-
-Why do we need to do this?
-    I feel that it needs some cleansing... Maybe not the best reason.
-
-going to anything that triggers a 401 gives you a form. then you get a user
-cookie care of repoze.who, and I track if you are in edit-mode or not via my
-own cookie
 
 
-AUTHENTICATION
-==============
 
-Just use repoze for now...
-- write a forget or logout function in the app.auth or nitrogen.auth
-- can just use the ini style permission thing for now... can write something
-  better later
 
-Later, rewrite both repoze.who and repoze.what. There isn't all that much I
-want it to do...
-
-Form should take detail from signal exception, which could be stored at 'nitrogen.http.signal.exception'.
-The detail could be the predicate message which is part of the NotAuthorizedError
-
-REWRITE EDITABLES as CRUD
-=========================
-
-nitrogen.model.crud.App should be passed a session maker, model class, and wtform class. It will have a ATOM-like REST layout.
-
-It must not use a context session, and it must not use formalchemy.
-
-You register the app to some route, and the $.nitrogen.crud function will handle the client side
 
 REQUEST LOCAL OBJECTS
 =====================
@@ -99,27 +59,6 @@ The loader (which may well be the entire view context) should have a copy method
 HEIRARCHICAL HTTP SIGNALS, STATUSES and ERRORS
 ==============================================
 
-- pick which set of http exception set to use:
-    1. Paste
-        + pretty swell
-        - might need some monkey patching
-            It doesn't. If I only treat it as a signal and use my own code to
-            turn it into html, then it is beautiful. I don't need to go
-            and make sure that every library that uses them conforms to what I
-            want. There are few cases where this will irritate me anyways...
-            If I really wanted to I could write some middlewear which figures
-            out if the paste exception generated it, and replace it
-    2. WebOb
-        ~ nearly the same as Paste...
-    3. Werkzeug:
-        + nice, but no 300 errors
-    4. Mine
-        - They are mine.
-        - I would have to write the descriptions and so forth.
-
-    - figure out which of those libraries are going to be included anyways:
-        - werkzeug for sure
-        - paste comes along with repoze
 
 - the signal_converter middleware should be very very closet to the top of the
   stack.
