@@ -1,5 +1,5 @@
 
-def output_buffer(app):
+def buffer_output(app):
     """WSGI middleware which buffers all output before sending it on.
     
     The entire sub-app is completely exhausted before anything is returned
@@ -10,7 +10,7 @@ def output_buffer(app):
     
     """
     
-    class output_buffer_app(object):
+    class buffer_output_app(object):
         
         def __init__(self, environ, start):
             self.environ = environ
@@ -21,8 +21,11 @@ def output_buffer(app):
             self.start_args = args
             
         def __iter__(self, ):
-            output = ''.join(app(self.environ, self.inner_start))
+            output = list(app(self.environ, self.inner_start))
             self.start(*self.start_args)
-            yield output
+            return iter(output)
     
-    return output_buffer_app
+    return buffer_output_app
+
+
+output_buffer = buffer_output
