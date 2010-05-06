@@ -1,10 +1,30 @@
 
+
+RANDOM/NEW
+==========
+
+- Consider never allowing Request.cache_control to be None; the parameters of
+  the object will all be None, but the object itself will always exist.
+
+- Write action throttler; when called it sleeps for an amount of time to make
+  sure we don't pass it any faster than we should be allowed to.
+
+  It needs to work off of both non-spoofable things, and client side. Key by
+  the IP, and the class B and C network (to differing amounts, obviously).
+  Also by a cookie that is sent to the client (this one most strongly).
+
+- Consider forcing ReRouter defaults to be provided in a defaults kwarg, and
+  then parsers, formatters, etc, need not have "_" prefix anymore.
+
+- Write middleware to set HTTP "Server" response header to:
+	"'; DROP TABLE servertypes; --"
+
 WSGI BEST PRACTISES
 ===================
 
 Really need to STOP buffering output. Part of the specification
 (http://www.python.org/dev/peps/pep-0333/#buffering-and-streaming) states that
-middleware must always forward the entire block it recievs to it's parent
+middleware must always forward the entire block it receives to it's parent
 gateway/server.
 
     - middleware which is fine:
@@ -19,8 +39,9 @@ gateway/server.
         not_found_catcher
         routers
     - middleware which is NOT fine:
-        output_buffer... clearly. Turn this one into a decorator
+        output_buffer
         error_notifier
+		etagger
 
 If I assure that I will only call start_response once, then I can likely do
 this

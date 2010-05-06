@@ -16,11 +16,6 @@
 	- fix the lanaguage of the editable cancel button confirmation
 
 /future
-	- Clean up the names of all the formalchemy stuff to *_form from *_fieldset.
-	- User login/logout methods should be centralized. They are used by:
-		Admin gateway middleware.
-		Login controller.
-		Logout controller.
 	- login throttling
 	- password reset email throttling
 	- rewrite ALL of the permissions.
