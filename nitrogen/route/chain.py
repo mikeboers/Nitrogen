@@ -3,7 +3,8 @@ from . import core
 
 class Chain(core.Router, list):
     
-    def __init__(self, *args):
+    def __init__(self, args):
+        core.Router.__init__(self)
         self.extend(args)
     
     def route_step(self, path):
