@@ -87,7 +87,7 @@ class ModuleRouter(core.Router):
                 # This is my ugly attempt to only throw a 404 if this import
                 # fails, and not some import that this impor triggers.
                 if e.args[0] == 'No module named %s' % segment:
-                    log.warning('could not import controller module %r: %r' % (name, e))
+                    log.info('could not import controller module %r: %r' % (name, e))
                     return
                 else:
                     raise
