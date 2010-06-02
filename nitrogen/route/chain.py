@@ -15,6 +15,6 @@ class Chain(core.Router, list):
     
     def generate_step(self, data):
         for router in self:
-            x = router.generate_step(path)
+            x = router.generate_step(data)
             if x is not None:
                 return x
