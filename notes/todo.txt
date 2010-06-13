@@ -3,6 +3,19 @@
 RANDOM/NEW
 ==========
 
+- Turn some modules into their own projects:
+	- flickr
+	- imgsizer
+	- mail as "easymailer"
+	- route as "pystar"
+	- uri as "uri"
+
+- etagger should only work if the iterable is not an iterator (ie. not an instance of collections.Iterator)
+
+- request.unrouted should work even if nothing was routed
+
+- route Request properties could be provided by a route.RequestMixin
+
 - Consider never allowing Request.cache_control to be None; the parameters of
   the object will all be None, but the object itself will always exist.
 
@@ -12,6 +25,8 @@ RANDOM/NEW
   It needs to work off of both non-spoofable things, and client side. Key by
   the IP, and the class B and C network (to differing amounts, obviously).
   Also by a cookie that is sent to the client (this one most strongly).
+
+  It has either a sleep method or a get_delay method or a test method
 
 - Consider forcing ReRouter defaults to be provided in a defaults kwarg, and
   then parsers, formatters, etc, need not have "_" prefix anymore.
@@ -502,10 +517,6 @@ FieldSet._render should take a multipart=True param which allows for file upload
 	set enctype="multipart/form-data"
 
 
-some class/function to manage request throttling. once configured, calling the
-function will simply delay for a certain amount of time. should be able to be
-tied to both the IP, and all activity in general.
-
 start designing an App class which loads a config, sets up a model/view/
 textblob environ, and generally manages the interactions bettween all the
 parts of a site. This should be a part of nitrogen.
@@ -520,10 +531,6 @@ all together
 - the UserContext should have a table_prefix, instead of "name"
 
 
-- ViewContent
-	render should take pre_path and post_path to search before and after the
-	main path. should be able to make a new render function which remembers
-	these things. should be able to continuously wrap these things
 	
 - Crud
 	manage both the api side of the crud operations (like the editables now)
