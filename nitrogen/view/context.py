@@ -8,7 +8,6 @@ import logging
 import mako.lookup
 
 from .defaults import context
-from .form import build_fieldset_class
 
 class ViewContext(object):
     """Environment for working with views/templates.
@@ -32,7 +31,6 @@ class ViewContext(object):
         
         self.name = str(name or id(self))
         self.log = logging.getLogger('%s?env=%s' % (__name__, self.name))
-        self.FieldSet = build_fieldset_class(self.render)
         
         if path and isinstance(path, basestring):
             path = [path]

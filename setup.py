@@ -18,9 +18,6 @@ setup(
         webob
         werkzeug
         
-        # Going to be replacing this with wtform soon.
-        formalchemy
-        
         mako
         markdown
         lorem-ipsum-generator
@@ -36,7 +33,6 @@ setup(
     ''',
     
     extras_require=dict(
-        session=['beaker'],
         imgsizer=['pil'],
         testing='''
             nose
