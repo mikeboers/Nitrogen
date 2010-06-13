@@ -14,6 +14,50 @@ RANDOM/NEW
 
 - request.unrouted should work even if nothing was routed
 
+- Consider using alternate WSGI setup where the app must return a 3-tuple of
+  (status, headers, iterable). It seems the thing I would actually lose from
+  this would be the write function which gets returned from the start_callback
+  (which I have never actually used, and would break horribly if I used it).
+
+  It should be pretty easy to adapt from one style to the other:
+	
+		import collections
+		import itertools
+
+		def newstyle_to_old(app):
+		    def oldstyle(environ, start):
+		        status, headers, content = app(environ)
+		        start(status, headers)
+		        return content
+		    return oldstyle
+
+		def _warn_on_write(*args):
+		    raise DeprecationWarning('newstyle WSGI does not have a write method')
+
+		def oldstyle_to_newstyle(app):
+		    def newstyle_app(environ):
+		        state = []
+		        def start(status, headers, exc_info=None):
+		            state[:] = (status, headers)
+		            return _warn_on_write
+		        content = list(app(environ, start))
+		        return state[0], state[1], content
+		    return newstyle_app
+
+		def anystyle_to_newstyle(app):
+		    if app.func_code.co_argcount > 1:
+		        return oldstyle_to_newstyle(app)
+		    return app
+		
+  Id you want to do some streaming then you will need to use the newstyle or
+  write a a custom translator which is more forgiving about when start is
+  called.
+
+  Could use app.func_code.co_argcount to determine if it is a newstyle or
+  oldstyle WSGI app. Then a wsgi.call(app, environ) function could exist that
+  is smart about the calling style of the app and gives you back newstyle
+  parameters
+
 - route Request properties could be provided by a route.RequestMixin
 
 - Consider never allowing Request.cache_control to be None; the parameters of
