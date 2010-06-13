@@ -38,9 +38,6 @@ context['nl2br'] = lambda s: s.replace("\n", "<br />")
 
 context['pformat'] = pprint.pformat
 
-# context['textblob'] = textblob
-# context['textblob_md'] = markdownblob
-
 context['truncate'] = webhelpers.text.truncate
 context['html'] = webhelpers.html.HTML
 
@@ -49,6 +46,7 @@ context['clean_html'] = clean_html
 
 context['lipsum'] = lipsum
 
+context['q'] = query_encode
 context['query_encode'] = query_encode
 
 
