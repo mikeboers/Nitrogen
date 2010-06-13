@@ -46,6 +46,10 @@ class ViewContext(object):
         self._local = threading.local()
     
     @property
+    def path(self):
+        return self.lookup.directories
+    
+    @property
     def locals(self):
         """Return the underlying dict of the thread-local object."""
         return self._local.__dict__
@@ -62,8 +66,6 @@ class ViewContext(object):
         data['flash_messages'] = self.flash_messages
         if hasattr(self._local, 'environ'):
             environ = self._local.environ
-            data['is_admin_area'] = environ['SERVER_NAME'].startswith('admin.')
-            data['user'] = environ.get('app.user')
     
     def render(self, template_name, **data):
         """Find a template file and render it with the given keyword args.
