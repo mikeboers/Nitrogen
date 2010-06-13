@@ -40,7 +40,6 @@ class ViewContext(object):
             directories=path,
             input_encoding='utf-8'
         )
-        self.path = self.lookup.directories
         
         self.globals = context.copy()
         self._local = threading.local()
