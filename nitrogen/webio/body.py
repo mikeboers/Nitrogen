@@ -4,6 +4,7 @@ import cStringIO as cstringio
 import StringIO as stringio
 import io
 import cgi
+import functools
 
 import werkzeug as wz
 
@@ -49,12 +50,10 @@ def reject_factory(total_length, content_type, filename, file_length):
     """Do not accept files."""
     raise ValueError('not accepting files')
 
-
 def stringio_factory(total_length, content_type, filename, file_length):
     return StringIO()
 
-
-def temp_file_factory(total_length, content_type, filename, file_length):
+def tempfile_factory(total_length, content_type, filename, file_length):
     """Simple make_file which returns a temporary file.
 
     The underlaying file will be removed from the disk when this object is
@@ -65,20 +64,40 @@ def temp_file_factory(total_length, content_type, filename, file_length):
     import tempfile
     return tempfile.TemporaryFile("w+b")
 
+# For backwards compatibility.
+temp_file_factory = tempfile_factory
 
-class StreamSizer(object):
-    def __init__(self, stream):
-        self.stream = stream
-        self.size = 0
-        self.seek = stream.seek
+
+class FileWrapper(object):
+    
+    def __init__(self, stream_factory, total_length, content_type, file_name, file_length):
+        # We don't want empty file inputs to pull the file_name from the file
+        # object itself. That leads to "<fdopen>" with the tempfile_factory.
+        self.name = ''
+        self.actual_length = 0
+        # I feel this is the proper attribute name.
+        self.file_name = file_name
+        self.reported_length = file_length
+        # I would rather call this "file", but I'm sticking with the werkzeug
+        # naming scheme.
+        self.stream = stream_factory(total_length, content_type, file_name, file_length)
+    
+    @classmethod
+    def wrap(cls, factory):
+        @functools.wraps(factory)
+        def _wrapped_factory(*args):
+            return cls(factory, *args)
+        return _wrapped_factory
+    
     def write(self, stuff):
         self.stream.write(stuff)
-        self.size += len(stuff)
-
-def wrap_stream_factory(factory):
-    def new_factory(*args):
-        return StreamSizer(factory(*args))
-    return new_factory
+        self.actual_length += len(stuff)
+    
+    def __getattr__(self, name):
+        return getattr(self.stream, name)
+    
+    def _done_recieving(self):
+        del self.name
 
 
 def parse_body(environ, stream_factory=None, charset=None, errors=None,
@@ -86,7 +105,7 @@ def parse_body(environ, stream_factory=None, charset=None, errors=None,
     
     if environ_key not in environ:
         _, _, files = environ[environ_key] = wz.parse_form_data(environ,
-            stream_factory=wrap_stream_factory(stream_factory or reject_factory),
+            stream_factory=FileWrapper.wrap(stream_factory or reject_factory),
             charset=charset or CHARSET,
             errors=errors or ERRORS,
             max_form_memory_size=max_form_memory_size,
@@ -95,9 +114,7 @@ def parse_body(environ, stream_factory=None, charset=None, errors=None,
             silent=silent
         )
         for file in files.itervalues():
-            file.size = file.stream.size
-            file.stream = file.stream.stream
-        
+            file._done_recieving()
     return environ[environ_key]
     
 def parse_stream(*args, **kwargs):
