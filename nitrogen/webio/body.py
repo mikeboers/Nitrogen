@@ -1,10 +1,10 @@
 
 from cStringIO import StringIO
 import cStringIO as cstringio
-import StringIO as stringio
-import io
-import cgi
 import functools
+import io
+import StringIO as stringio
+import tempfile
 
 import werkzeug as wz
 
@@ -20,21 +20,18 @@ def assert_body_cache(environ):
         cache.seek(0)
         environ['wsgi.input'] = cache
 
-
 def get_body_cache(environ):
     assert_body_cache(environ)
     return environ['wsgi.input']
 
-
 def rewind_body_cache(environ):
     get_body_cache(environ).seek(0)
 
-
 def get_body(environ):
-    file = get_body_file(environ)
-    tell = file.tell()
+    file = get_body_cache(environ)
+    current_pos = file.tell()
     body = file.read()
-    file.seek(tell)
+    file.seek(current_pos)
     return body
 
 
@@ -61,7 +58,6 @@ def tempfile_factory(total_length, content_type, filename, file_length):
 
     """
     # We do need the "+" in there for the tempfile module's sake.
-    import tempfile
     return tempfile.TemporaryFile("w+b")
 
 # For backwards compatibility.
