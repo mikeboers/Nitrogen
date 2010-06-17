@@ -40,7 +40,7 @@ def get_body(environ):
 
 CHARSET = 'utf-8'
 ERRORS = 'replace'
-ENVIRON_KEY = 'nitrogen.req.body'
+ENVIRON_KEY = 'nitrogen.webio.body'
 
 
 def reject_factory(total_length, content_type, filename, file_length):
