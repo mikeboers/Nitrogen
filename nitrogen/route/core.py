@@ -261,7 +261,7 @@ class Router(object):
             if hasattr(node, 'modify_path'):
                 out = node.modify_path(out)
         
-        return out
+        return str(out)
     
     def url_for(self, _strict=True, **data):
         return self.generate(data, strict=_strict)
