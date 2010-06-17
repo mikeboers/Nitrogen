@@ -14,6 +14,7 @@ RANDOM/NEW
 
 - request.unrouted should work even if nothing was routed
 
+- request.user_agent should never be None (it is coming from PayPal IPN)
 - Consider using alternate WSGI setup where the app must return a 3-tuple of
   (status, headers, iterable). It seems the thing I would actually lose from
   this would be the write function which gets returned from the start_callback
@@ -71,12 +72,22 @@ RANDOM/NEW
   Also by a cookie that is sent to the client (this one most strongly).
 
   It has either a sleep method or a get_delay method or a test method
+  
+  see: http://stackoverflow.com/questions/549/the-definitive-guide-to-website-authentication-beta#477585
+    should implement several different methods from here, as they all have their
+    own place
+  
+  the short_sleep(max_delay) method will sleep if less than max_delay, or throw
+  an exception (which we can then turn into a server error)
 
 - Consider forcing ReRouter defaults to be provided in a defaults kwarg, and
   then parsers, formatters, etc, need not have "_" prefix anymore.
 
 - Write middleware to set HTTP "Server" response header to:
 	"'; DROP TABLE servertypes; --"
+
+is there any way for the app to know if the browser has killed the connection?
+    This could be handy for very long delays of the throttler
 
 WSGI BEST PRACTISES
 ===================
