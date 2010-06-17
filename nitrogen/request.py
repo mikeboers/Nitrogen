@@ -100,7 +100,7 @@ class Request(object):
     
     @property
     def stream(self):
-        return parse_stream(self.environ,
+        return body.parse_stream(self.environ,
             charset=self.charset,
             errors=self.decode_errors,
             stream_factory=self.stream_factory,
@@ -143,6 +143,8 @@ class Request(object):
         return self.route_history[-1].path
     
     route = wz.environ_property('wsgiorg.routing_args', load_func=lambda x: x[1])    
+    
+    body = wz.environ_property('wsgi.input')
     
     # This one gets a little more attension because IE 6 will send us the
     # length of the previous request as an option to this header
