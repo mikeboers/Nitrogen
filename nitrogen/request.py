@@ -37,8 +37,18 @@ def _environ_parser(func, *args, **kwargs):
         return func(self.environ, *args, **kwargs)
     return property(parser)
 
-
-
+def _environ_property(key, load_func=None, default=None):
+    if load_func:
+        @property
+        def _property(self):
+            return load_func(self.environ.get(key, default))
+    else:
+        @property
+        def _property(self):
+            return self.environ.get(key, default)
+    return _property
+        
+        
 class Request(object):
     
     """WSGI/HTTP request abstraction class."""
@@ -65,12 +75,12 @@ class Request(object):
         self.charset = charset
         self.decode_errors = decode_errors
     
-    method = wz.environ_property('REQUEST_METHOD', load_func=str.upper)
-    is_get = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'GET')
-    is_post = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'POST')
-    is_put = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'PUT')
-    is_delete = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'DELETE')
-    is_head = wz.environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'HEAD')
+    method = _environ_property('REQUEST_METHOD', load_func=str.upper)
+    is_get = _environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'GET')
+    is_post = _environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'POST')
+    is_put = _environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'PUT')
+    is_delete = _environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'DELETE')
+    is_head = _environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'HEAD')
     
     def assert_body_cache(self):
         body.assert_body_cache(self.environ)
@@ -86,7 +96,7 @@ class Request(object):
     def response(self):
         return (self.response_class or Response)(request=self) if self.wsgi_start else None
     
-    query_string = wz.environ_property('QUERY_STRING')
+    query_string = _environ_property('QUERY_STRING')
     @property
     def query(self):
         return parse_query(self.environ, charset=self.charset, errors=self.decode_errors)
@@ -128,7 +138,7 @@ class Request(object):
             max_form_memory_size=self.max_form_memory_size,
         )
     
-    session = wz.environ_property('beaker.session')
+    session = _environ_property('beaker.session')
     
     @property
     def route_history(self):
@@ -142,44 +152,44 @@ class Request(object):
     def unrouted(self):
         return self.route_history[-1].path
     
-    route = wz.environ_property('wsgiorg.routing_args', load_func=lambda x: x[1])    
+    route = _environ_property('wsgiorg.routing_args', load_func=lambda x: x[1])    
     
-    body = wz.environ_property('wsgi.input')
+    body = _environ_property('wsgi.input')
     
     # This one gets a little more attension because IE 6 will send us the
     # length of the previous request as an option to this header
-    if_modified_since = wz.environ_property('HTTP_IF_MODIFIED_SINCE', load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
-    if_unmodified_since = wz.environ_property('HTTP_IF_UNMODIFIED_SINCE', load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
+    if_modified_since = _environ_property('HTTP_IF_MODIFIED_SINCE', load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
+    if_unmodified_since = _environ_property('HTTP_IF_UNMODIFIED_SINCE', load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
     
     # Lots of pretty generic headers...
-    accept = wz.environ_property('HTTP_ACCEPT', load_func=lambda x: wz.parse_accept_header(x, wz.MIMEAccept))
-    accept_charset = wz.environ_property('HTTP_ACCEPT_CHARSET', load_func=lambda x: wz.parse_accept_header(x, wz.CharsetAccept))
-    accept_encoding = wz.environ_property('HTTP_ACCEPT_ENCODING', load_func=lambda x: wz.parse_accept_header(x, wz.Accept))
-    accept_language = wz.environ_property('HTTP_ACCEPT_LANGUAGE', load_func=lambda x: wz.parse_accept_header(x, wz.LanguageAccept))
-    authorization = wz.environ_property('HTTP_AUTHORIZATION', load_func=wz.parse_authorization_header)
-    cache_control = wz.environ_property('HTTP_CACHE_CONTROL', load_func=wz.parse_cache_control_header)
-    date = wz.environ_property('HTTP_DATE', load_func=wz.parse_date)
-    etag = wz.environ_property('HTTP_IF_NONE_MATCH') # Same as if_none_match, but I have used this name before. Still depreciated.
-    host = wz.environ_property('HTTP_HOST')
-    if_match = wz.environ_property('HTTP_IF_MATCH')
-    if_none_match = wz.environ_property('HTTP_IF_NONE_MATCH')
-    path_info = wz.environ_property('PATH_INFO')
-    referer = wz.environ_property('HTTP_REFERER')
-    remote_addr = wz.environ_property('REMOTE_ADDR')
-    remote_port = wz.environ_property('REMOTE_PORT', load_func=int)
-    remote_user = wz.environ_property('REMOTE_USER')
-    script_name = wz.environ_property('SCRIPT_NAME')
-    user_agent = wz.environ_property('HTTP_USER_AGENT', load_func=wz.UserAgent)
+    accept = _environ_property('HTTP_ACCEPT', load_func=lambda x: wz.parse_accept_header(x, wz.MIMEAccept))
+    accept_charset = _environ_property('HTTP_ACCEPT_CHARSET', load_func=lambda x: wz.parse_accept_header(x, wz.CharsetAccept))
+    accept_encoding = _environ_property('HTTP_ACCEPT_ENCODING', load_func=lambda x: wz.parse_accept_header(x, wz.Accept))
+    accept_language = _environ_property('HTTP_ACCEPT_LANGUAGE', load_func=lambda x: wz.parse_accept_header(x, wz.LanguageAccept))
+    authorization = _environ_property('HTTP_AUTHORIZATION', load_func=wz.parse_authorization_header) # This will be None for no header.
+    cache_control = _environ_property('HTTP_CACHE_CONTROL', load_func=wz.parse_cache_control_header)
+    date = _environ_property('HTTP_DATE', load_func=wz.parse_date)
+    etag = _environ_property('HTTP_IF_NONE_MATCH') # Same as if_none_match, but I have used this name before. Still depreciated.
+    host = _environ_property('HTTP_HOST')
+    if_match = _environ_property('HTTP_IF_MATCH')
+    if_none_match = _environ_property('HTTP_IF_NONE_MATCH')
+    path_info = _environ_property('PATH_INFO')
+    referer = _environ_property('HTTP_REFERER')
+    remote_addr = _environ_property('REMOTE_ADDR')
+    remote_port = _environ_property('REMOTE_PORT', load_func=int)
+    remote_user = _environ_property('REMOTE_USER')
+    script_name = _environ_property('SCRIPT_NAME')
+    user_agent = _environ_property('HTTP_USER_AGENT', load_func=wz.UserAgent, default='')
     
     # WSGI stuff
-    is_secure = wz.environ_property('wsgi.url_scheme', load_func=lambda x: x == 'https')
-    is_multiprocess = wz.environ_property('wsgi.multiprocess')
-    is_multithread = wz.environ_property('wsgi.multithread')
-    is_run_once = wz.environ_property('wsgi.run_once')
+    is_secure = _environ_property('wsgi.url_scheme', load_func=lambda x: x == 'https')
+    is_multiprocess = _environ_property('wsgi.multiprocess')
+    is_multithread = _environ_property('wsgi.multithread')
+    is_run_once = _environ_property('wsgi.run_once')
 
     # Not sent by every library, but atleast jQuery, prototype and Mochikit
     # and probably some more.
-    is_xhr = wz.environ_property('HTTP_X_REQUESTED_WITH', load_func=lambda x: (x or '').lower() == 'xmlhttprequest')
+    is_xhr  = _environ_property('HTTP_X_REQUESTED_WITH', load_func=lambda x: x.lower() == 'xmlhttprequest', default='')
     is_ajax = is_xhr
 
 
