@@ -156,8 +156,8 @@ def get_cleaned_traceback():
     try:
         return list(MakoTraceback().traceback)
     except:
-        type, value, traceback = sys.exc_info()
-        return traceback.extract_tb(traceback)
+        type, value, tb = sys.exc_info()
+        return traceback.extract_tb(tb)
 
 
 def error_logger(app, level=logging.ERROR):
