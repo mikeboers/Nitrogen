@@ -16,7 +16,7 @@ class Session(BaseSession):
     
     def lock(self, exclusive=False):
         """Lock the DB for our IMMEDIATE (default) or EXCLUSIVE use."""
-        self.execute("BEGIN %S" % 'EXCLUSIVE' if exclusive else "IMMEDIATE")
+        self.execute("BEGIN %s" % ("EXCLUSIVE" if exclusive else "IMMEDIATE"))
     
     def write_lock(self):
         """Get an IMMEDIATE lock on the DB, so that noone but us may write."""
