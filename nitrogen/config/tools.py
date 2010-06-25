@@ -7,7 +7,7 @@ class Server(dict):
     
     def __init__(self, name, **kwargs):
         self.__name = name
-        dict.__init__(self, **kwargs)
+        dict.__init__(self, name=name, **kwargs)
     
     def __hash__(self):
         return hash(self.__name)
