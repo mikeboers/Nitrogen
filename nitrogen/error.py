@@ -153,10 +153,11 @@ def get_cleaned_traceback():
     
     """
     
+    type, value, tb = sys.exc_info()
     try:
         return list(MakoTraceback().traceback)
     except:
-        type, value, tb = sys.exc_info()
+        log.exception('Error while Mako was cleaning traceback')
         return traceback.extract_tb(tb)
 
 
