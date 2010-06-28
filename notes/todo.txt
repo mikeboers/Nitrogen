@@ -3,6 +3,10 @@
 RANDOM/NEW
 ==========
 
+- Replace my textarea plugin with http://plugins.jquery.com/project/a-tools
+
+- Consider replacing my attrdata plugin with http://plugins.jquery.com/project/customdata
+
 - Turn some modules into their own projects:
 	- flickr
 	- imgsizer
