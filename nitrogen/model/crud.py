@@ -106,11 +106,12 @@ class CRUD(object):
 
     def handle_delete(self, req, res):
         id_ = req['id']
-        obj = self.session.query(self.model).get(id_)
+        s = self.Session()
+        obj = s.query(self.model).get(id_)
         if not obj:
             raise ApiError("could not find object %d" % id_)
         obj.delete()
-        self.session.commit()
+        s.commit()
 
     def handle_order(self, req, res):
         order = [int(x) for x in req['order'].split(',')]
