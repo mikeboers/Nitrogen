@@ -1,6 +1,7 @@
 
 
 import logging
+import re
 
 from multimap import MultiMap
 
@@ -100,7 +101,12 @@ class CRUD(object):
             s.commit()
 
             res['id'] = model.id
-            data = {self.partial_key: model}
+            data = {}
+            for key in req:
+                m = re.match(r'^partial_kwargs\[(.+?)\]$', key)
+                if m:
+                    data[m.group(1)] = req[key]
+            data[self.partial_key] = model
             data.update(self.partial_kwargs)
             res['partial'] = self.render(self.partial, **data)
 
