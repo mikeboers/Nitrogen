@@ -12,6 +12,7 @@ place.
 
 import json
 import pprint
+import random
 
 import webhelpers.text
 import webhelpers.html
