@@ -1,5 +1,4 @@
 
-from pprint import pprint
 import logging
 
 from ..uri.query import Query

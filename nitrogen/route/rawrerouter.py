@@ -25,7 +25,6 @@ arguments supplied to register.
 
 import re
 import logging
-from pprint import pprint
 import collections
 
 from . import core

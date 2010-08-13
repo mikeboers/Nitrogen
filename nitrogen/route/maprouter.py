@@ -1,8 +1,4 @@
 
-from pprint import pprint
-
-import webtest
-
 from .core import Router, RoutingStep, GenerationStep
 
 

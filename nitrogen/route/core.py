@@ -7,12 +7,8 @@ watching how it changes as it passes through various routers.
 
 """
 
-
-from pprint import pprint
 import collections
 import logging
-
-from webtest import TestApp as WebTester
 
 from ..uri.path import Path, encode, decode
 from ..http.status import HTTPNotFound

@@ -1,6 +1,4 @@
 
-from pprint import pprint
-from webtest import TestApp
 import logging
 import os
 import re
