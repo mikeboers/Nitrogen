@@ -30,6 +30,8 @@ setup(
         # These are mine.
         multimap
         
+        wtforms
+        
     ''',
     
     extras_require=dict(
