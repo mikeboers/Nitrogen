@@ -51,7 +51,7 @@ def _environ_property(key, load_func=None, default=None):
 
 class CommonCore(object):
     
-    cookie_factory = cookies.Container
+    cookie_factory = None
     
     @classmethod
     def build_class(cls, name, extra_bases=(), **namespace):
@@ -265,7 +265,7 @@ class Response(CommonCore):
     
     @wz.cached_property
     def cookies(self):
-        return self.cookie_factory()
+        return (self.cookie_factory or cookies.Container)()
     
     @property
     def headers(self):
@@ -406,18 +406,19 @@ class Application(object):
     def __init__(self, app):
         self.app = app
     
-    def get_request_pair(self, environ, start):
-        request  = (self.request_class or Request)(environ)
-        response = (self.response_class or Response)(start=start)
+    @classmethod
+    def _get_pair(cls, environ, start):
+        request  = (cls.request_class  or Request )(environ)
+        response = (cls.response_class or Response)(start=start)
         return request, response
     
     def __call__(self, environ, start):
-        return self.app(*self.get_request_pair(environ, start))
+        return self.app(*self._get_pair(environ, start))
     
     def __get__(self, instance, owner):
         if not instance:
             return self
-        return lambda environ, start: self.app(instance, *self.get_request_pair(environ, start))
+        return lambda environ, start: self.app(instance, *self._get_pair(environ, start))
 
 
 as_request = Application
