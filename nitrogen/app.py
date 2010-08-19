@@ -7,7 +7,8 @@ from . import route
 from . import request
 from .webio import cookies
 from .wsgi.server import serve
-
+from nitrogen.http.encode import compressor
+from nitrogen.http.status import catch_any_status
 
 class ConfigKeyError(KeyError):
     pass
@@ -32,7 +33,11 @@ class AppCore(object):
         
         self._rerouter = route.ReRouter()
         self.routers = route.Chain([self._rerouter])
-        self.wsgi_app = self.routers
+        
+        # First level of middleware wrapping.
+        app = self.routers
+        app = catch_any_status(app)
+        self.wsgi_app = app
         
         self.__is_setup = False
         self._local = self.local()
@@ -65,12 +70,12 @@ class AppCore(object):
                 self.cookie_factory = cookies.SignedContainer.make_factory(self.config['private_key'])
             else:
                 self.cookie_factory = cookies.Container
-        self.Request = request.Request.build_class(
+        self.request_class = request.Request.build_class(
             self.__class__.__name__ + 'Request',
             (),
             cookie_factory=self.cookie_factory
         )
-        self.Response = request.Response.build_class(
+        self.response_class = request.Response.build_class(
             self.__class__.__name__ + 'Response',
             (),
             cookie_factory=self.cookie_factory
@@ -79,16 +84,15 @@ class AppCore(object):
             self.__class__.__name__ + 'RequestApplication',
             (request.Application, ),
             dict(
-                request_class=self.Request,
-                response_class=self.Response,
+                request_class=self.request_class,
+                response_class=self.response_class,
             )
         )
-    
-    def init_request(self, environ):
-        """Setup all the low-level stuff for this request."""
-        self._clear_locals()
-        self._local.environ = environ
-        self._local.request = self.Request(environ)
+        
+        # Do whatever middleware wrapping we need to do.
+        app = self.wsgi_app
+        app = compressor(app)
+        self._wsgi_app = app
     
     @property
     def request(self):
@@ -96,8 +100,10 @@ class AppCore(object):
     
     def __call__(self, environ, start):
         self.setup()
-        self.init_request(environ)
-        return self.wsgi_app(environ, start)
+        self._clear_locals()
+        self._local.environ = environ
+        self._local.request = self.request_class(environ)
+        return self._wsgi_app(environ, start)
     
     def run(self, mode='socket', *args, **kwargs):
         serve(mode, self, *args, **kwargs)
