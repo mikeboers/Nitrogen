@@ -219,6 +219,7 @@ DECODE_ERRORS = 'replace'
 SAFE_CHARS  = set(string.ascii_letters + string.digits + "!#$%&'*+-.^_`|~")
 # The set of characters that do not need ecaping iff we quote the string.
 LEGAL_CHARS = SAFE_CHARS.union(set(' (),/;:<>=?@[]{}'))
+LEGAL_CHARS = SAFE_CHARS.union(set(' (),/:<>=?@[]{}')) # Removed semicolon for FF 4.
 
             
 _ATTRIBUTES = {
@@ -613,11 +614,11 @@ class SignedContainer(Container):
         query.sign(self.hmac_key, max_age=cookie.max_age, add_time=True, **self.SIG_KEYS)
         del query['value']
         del query['name']
-        return value + ';' + str(query)
+        return value + ':' + str(query)
 
     def _loads(self, name, value):
         try:
-            value, query = value.rsplit(';', 1)
+            value, query = value.rsplit(':', 1)
         except ValueError:
             return
         query = Query(query, charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
