@@ -10,8 +10,9 @@ from sqlalchemy.orm import sessionmaker
 from .declarative import declarative_base
 from .session import Session
 
+from ..app import AppCore
 
-class AppDBMixin(object):
+class DBApp(AppCore):
     """A helper to contain the basic parts of a database connections.
     
     By default this also uses the nitrogen extended Session (with locking) and
@@ -27,12 +28,16 @@ class AppDBMixin(object):
     """
     
     def __init__(self, *args, **kwargs):
-        super(AppDBMixin, self).__init__(*args, **kwargs)
-        
+        super(DBApp, self).__init__(*args, **kwargs)
         self.engine = None
-        self.Session = sessionmaker(class_=Session, autocommit=autocommit, autoflush=True)
+        self.Session = sessionmaker(class_=Session, autocommit=False, autoflush=True)
         self.metadata = MetaData()
         self.Base = declarative_base(metadata=self.metadata)
+    
+    def _setup(self):
+        super(DBApp, self)._setup()
+        if self.engine is None:
+            self.bind(self.config['db_bind'])
     
     def bind(self, engine, echo=False):
         """Bind to an engine or string."""

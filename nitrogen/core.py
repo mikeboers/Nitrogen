@@ -1,7 +1,7 @@
 
-from .app import AppCore
+from .db.core import DBApp
 
-class App(AppCore):
+class App(DBApp):
     pass
 
-del AppCore
+del DBApp
