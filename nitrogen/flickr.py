@@ -1,4 +1,8 @@
-"""Flickr API binding!"""
+"""Flickr API binding.
+
+This has been depreciated. Please start using PyFlickr instead.
+
+"""
 
 import urllib
 import json

@@ -169,10 +169,13 @@ class Request(object):
     authorization = _environ_property('HTTP_AUTHORIZATION', load_func=wz.parse_authorization_header) # This will be None for no header.
     cache_control = _environ_property('HTTP_CACHE_CONTROL', load_func=wz.parse_cache_control_header)
     date = _environ_property('HTTP_DATE', load_func=wz.parse_date)
-    etag = _environ_property('HTTP_IF_NONE_MATCH') # Same as if_none_match, but I have used this name before. Still depreciated.
     host = _environ_property('HTTP_HOST')
+    
+    # Should be using etag objects
     if_match = _environ_property('HTTP_IF_MATCH')
     if_none_match = _environ_property('HTTP_IF_NONE_MATCH')
+    etag = _environ_property('HTTP_IF_NONE_MATCH') # Same as if_none_match, but I have used this name before. Still depreciated.
+    
     path_info = _environ_property('PATH_INFO')
     referer = _environ_property('HTTP_REFERER')
     remote_addr = _environ_property('REMOTE_ADDR')
@@ -287,7 +290,10 @@ class Response(object):
     as_json = _content_type_flag('application/json')
     
     date = wz.header_property('date', read_only=False, load_func=wz.parse_date, dump_func=wz.http_date)
+    
+    # Should be etag object.
     etag = wz.header_property('etag', read_only=False)
+    
     expires = wz.header_property('expires', read_only=False, load_func=wz.parse_date, dump_func=wz.http_date)
     last_modified = wz.header_property('last_modified', read_only=False, load_func=wz.parse_date, dump_func=wz.http_date)
     location = wz.header_property('location', read_only=False)

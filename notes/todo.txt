@@ -3,6 +3,154 @@
 RANDOM/NEW
 ==========
 
+
+- the debug flag should only ever mean to turn on debugging (ie. logging
+  exceptino reporting, and interactive debugger)
+
+- consider doing what werkzeug does with it's request objects:
+
+    @Request.application
+    def application(request):
+        return Response("Hello %s!" % request.args.get('name', 'World!'))
+
+	Response is actually a wsgi application; if it has some content set and
+	you return the value of calling it then all the proper headers (ie, an etag
+	will be set)
+	
+	So now what actually keeps me from using werkzeug Request/Response?
+	Why does the request have to see the response, anyways?
+		- cookie config
+		
+	could use request.reponse.headers to set headers
+	could yield (200, <headers>) and then body pieces
+	could return Request(content, code=whatever, headers=whatever)
+
+- nitrogen.App
+
+	- replaces the model_context
+		move crud to nitrogen.crud
+		move declarative and session and context (as mixin) to nitrogen.db
+		app.setup_db() will pull db_bind from the app.config
+		
+	- replaces the view_context
+		- app.flash(message, category)
+			these get appended to 'app.flash_messages' in the current session
+			app.get_flashed_messages returns that list and clears it out
+			
+	- app.current_request is a proxy to the local request object
+	
+	- setup up sessions automatically
+	
+	- incorporates the logging
+	- app.router = ChainRouter([ReRouter()])
+	- app.route = app.router[0].register
+	- app.url_for is from the main router
+	- app.local is a function which gives back local objects that are reset
+	  when a thread is reused
+	- app.wsgi_app is the actual wsgi app that gets called. One can wrap this
+	  at will. It is likely in our interests to have two sets of middleware
+	  stacks, as the compressor should come really really late in the game
+		- low level: (app.wsgi_init)
+			compressor
+			encoder (utf8 encoder)
+			one level of error catching/handling
+			model/view local reset (this is replaced anyways)
+			global local reset
+		- high level: (app.wsgi_app)
+			prep_view_context
+			catch_status_exceptions
+			cookie.setup_factory
+			authentication (this can be added by an application)
+	- app.run() defaults to serving it with a socket (this is app.config.run_mode = 'socket')
+		app.run(mode='fcgi')
+	- app.shell() provides some command-line integration
+		but for what?
+		perhaps running migrate
+	
+	- app.init_request(environ)
+		does all the very low level stuff
+	- app.handle_request(environ, start)
+		does the high level (application level) stuff
+	
+	- app.setup() is called automatically when .run is called. it also calls
+	  all the other setup functions (logging, db, view). this can be done either
+	  with a list of functions (app.setup_functions) or with an even system
+	  (things respond to 'nitrogen.setup' event with no args)
+	- app.config is an extension of a dict
+		- config.from_object will pull all attribute that do not start with '_'
+	- text blobs are actually a mixin!
+		- registers it's own MapRouter
+		- adds to the app.view_globals
+	
+	- make it incredibly extensible:
+		- textblobs are an extension (respond to __textblob)
+			register __textblob in the master MapRouter
+			they have their own template path
+				within that path they are 'ext-textblob/textblob.html'
+			they serve the javascript files themselves
+				use FileRouter, which just serves files from a directory
+				lift the stuff behind this directly from flask
+		- session is an extension
+		- imgsizer
+			register _imgsizer in the master MapRouter
+			use werkzeug.is_resource_modified just for the last_modified header
+		
+		- all of these are classes that extend AppCore and use super properly
+	
+	- somehow need to be able to specify cookies to set/delete before the
+	  container is set, because that will come from the environ["nitrogen.cookie.build_header"]
+		- app will have it's own Response and Request classes; perhaps we could
+		  extend those to know what cookie_factory we want to use
+			app.cookie_factory could be a method which uses app.config['private_key']
+			
+			app.request_class = Request.build_class('AppRequest', cookie_factory=self.cookie_factory)
+				@classmethod
+				CommonCore.build_class(cls, name, extra_bases=(), **dict):
+					return type(name, (cls, ) + extra_bases, dict)
+			app.response_class = Response.build_class(cookie_factory=self.cookie_factory)
+	
+	
+	nitrogen.core contains imports to all these fun things:
+		- App from nitrogen.app
+		- abort raises an exception, from http.status
+		- redirect raises a redicrection exception
+	
+	- app.export_onto(__import__(__name__))
+		- exports a LOT of the properties into modulespace
+		
+	
+	
+
+- see if I really have to add an IP and such to logs on my own: perhaps
+  the logs that I pipe into apache stderr get that sort of thing added on
+- look really closely at flask
+    I can roughly approximate everything that flask is going by having a
+    nitrogen.app.App class which wraps together all the db/template/config
+    stuff
+    
+    If I want my framework to be as easy to start using, then I will have to
+    have sensible defaults for everything.
+    
+        from nitrogen import App
+        app = App(__name__)
+        
+        @app.route('/')
+        def index(req, res):
+            return 'Hello, world!'
+    
+    How much do I really need to keep holding onto WSGI? There are only a couple
+    cases that I really need to keep going that way: repoze.who and repoze.what
+        
+
+- nitrogen.route.ReRouter could have some builtin types:
+    @router.register(r'/photos/{photo_id}')
+    this could make sure that photo_id matches r'\d+', and gets casted to/from
+    an integer
+
+
+
+
+
 - Replace my textarea plugin with http://plugins.jquery.com/project/a-tools
 
 - Consider replacing my attrdata plugin with http://plugins.jquery.com/project/customdata
