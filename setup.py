@@ -26,7 +26,7 @@ setup(
         multimap
         
         wtforms
-        
+        paste
     ''',
     
     extras_require=dict(

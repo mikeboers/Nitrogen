@@ -14,4 +14,5 @@ class SocketServer(object):
         self.make_server().handle_request()
 
     def run(self):
+        print 'Running on %s:%s.' % (self.host, self.port)
         self.make_server().serve_forever()
