@@ -69,4 +69,4 @@ def request(environ, start):
 
 
 if __name__ == '__main__':
-    serve('socket', app)
+    app.run('socket')

@@ -51,6 +51,8 @@ def _environ_property(key, load_func=None, default=None):
 
 class CommonCore(object):
     
+    cookie_factory = cookies.Container
+    
     @classmethod
     def build_class(cls, name, extra_bases=(), **namespace):
     	return type(name, (cls, ) + extra_bases, namespace)
@@ -74,11 +76,8 @@ class Request(CommonCore):
     # for more info.
     stream_factory = None
     
-    response_class = None
-    
-    def __init__(self, environ, start=None, charset=None, decode_errors=None):
+    def __init__(self, environ, charset=None, decode_errors=None):
         self.environ = environ
-        self.wsgi_start = start
         self.charset = charset
         self.decode_errors = decode_errors
     
@@ -98,10 +97,6 @@ class Request(CommonCore):
     @wz.cached_property
     def headers(self):
         return EnvironHeaders(self.environ)
-
-    @wz.cached_property
-    def response(self):
-        return (self.response_class or Response)(request=self) if self.wsgi_start else None
     
     query_string = _environ_property('QUERY_STRING')
     @property
@@ -111,7 +106,7 @@ class Request(CommonCore):
     
     @wz.cached_property
     def cookies(self):
-        raw = cookies.parse_cookies(self.environ, charset=self.charset, decode_errors=self.decode_errors)
+        raw = cookies.parse_cookies(self.environ, factory=self.cookie_factory, charset=self.charset, decode_errors=self.decode_errors)
         # This is immutable, because it does not reflect back to the environ at this time.
         return MultiMap((k, c.value) for k, c in raw.iterallitems())
     
@@ -256,10 +251,10 @@ class Response(CommonCore):
     Need to pass the request this is connected to if you want to use the maybe
     pre-build response cookies container."""
     
-    def __init__(self, start=None, headers=None, request=None):
+    # The request is depricated.
+    def __init__(self, headers=None, start=None):
         self.wsgi_start = start
         self.headers = headers or []
-        self.request = request
         
         self._status = '200 OK'
         self._charset = 'utf-8'
@@ -267,22 +262,10 @@ class Response(CommonCore):
         if 'Content-Type' in self.headers:
             ctype, opts = wz.parse_options_header(self.headers['Content-Type'])
             self._charset = opts.get('charset')
-                
-        # Base the response cookie class off of the request cookies.
-        if request:
-            if start and request.wsgi_start:
-                raise ValueError('given start and request with wsgi_start')
-            self.wsgi_start = request.wsgi_start
     
     @wz.cached_property
     def cookies(self):
         return self.cookie_factory()
-    
-    @wz.cached_property
-    def cookie_factory(self):
-        if self.request is not None:
-            return cookies.get_factory(self.request.environ)
-        return cookies.Container
     
     @property
     def headers(self):
@@ -415,16 +398,18 @@ class Response(CommonCore):
 
 
 
-class RequestMiddleware(object):
+class Application(object):
     
     request_class = None
+    response_class = None
     
     def __init__(self, app):
         self.app = app
     
     def get_request_pair(self, environ, start):
-        request = (self.request_class or Request)(environ, start)
-        return request, request.response
+        request  = (self.request_class or Request)(environ)
+        response = (self.response_class or Response)(start=start)
+        return request, response
     
     def __call__(self, environ, start):
         return self.app(*self.get_request_pair(environ, start))
@@ -435,7 +420,7 @@ class RequestMiddleware(object):
         return lambda environ, start: self.app(instance, *self.get_request_pair(environ, start))
 
 
-as_request = RequestMiddleware
+as_request = Application
 
 
 

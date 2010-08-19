@@ -6,6 +6,8 @@ from werkzeug import cached_property
 from . import route
 from . import request
 from .webio import cookies
+from .wsgi.server import serve
+
 
 class ConfigKeyError(KeyError):
     pass
@@ -73,8 +75,17 @@ class AppCore(object):
             (),
             cookie_factory=self.cookie_factory
         )
+        self.as_request = type(
+            self.__class__.__name__ + 'RequestApplication',
+            (request.Application, ),
+            dict(
+                request_class=self.Request,
+                response_class=self.Response,
+            )
+        )
     
     def init_request(self, environ):
+        """Setup all the low-level stuff for this request."""
         self._clear_locals()
         self._local.environ = environ
         self._local.request = self.Request(environ)
@@ -86,5 +97,8 @@ class AppCore(object):
     def __call__(self, environ, start):
         self.setup()
         self.init_request(environ)
-        return self.routers(environ, start)
+        return self.wsgi_app(environ, start)
+    
+    def run(self, mode='socket', *args, **kwargs):
+        serve(mode, self, *args, **kwargs)
 

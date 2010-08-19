@@ -3,6 +3,8 @@
 RANDOM/NEW
 ==========
 
+- consider switching to werkzeug's exceptions
+	- only if we stop using beaker for sessions... cause beaker requires paste
 
 - the debug flag should only ever mean to turn on debugging (ie. logging
   exceptino reporting, and interactive debugger)
@@ -26,27 +28,16 @@ RANDOM/NEW
 	could return Request(content, code=whatever, headers=whatever)
 
 - nitrogen.App
-
-	- replaces the model_context
-		move crud to nitrogen.crud
-		move declarative and session and context (as mixin) to nitrogen.db
-		app.setup_db() will pull db_bind from the app.config
 		
 	- replaces the view_context
 		- app.flash(message, category)
 			these get appended to 'app.flash_messages' in the current session
 			app.get_flashed_messages returns that list and clears it out
-			
-	- app.current_request is a proxy to the local request object
 	
 	- setup up sessions automatically
 	
 	- incorporates the logging
-	- app.router = ChainRouter([ReRouter()])
-	- app.route = app.router[0].register
-	- app.url_for is from the main router
-	- app.local is a function which gives back local objects that are reset
-	  when a thread is reused
+	
 	- app.wsgi_app is the actual wsgi app that gets called. One can wrap this
 	  at will. It is likely in our interests to have two sets of middleware
 	  stacks, as the compressor should come really really late in the game
@@ -61,8 +52,10 @@ RANDOM/NEW
 			catch_status_exceptions
 			cookie.setup_factory
 			authentication (this can be added by an application)
+	
 	- app.run() defaults to serving it with a socket (this is app.config.run_mode = 'socket')
 		app.run(mode='fcgi')
+	
 	- app.shell() provides some command-line integration
 		but for what?
 		perhaps running migrate
@@ -76,8 +69,10 @@ RANDOM/NEW
 	  all the other setup functions (logging, db, view). this can be done either
 	  with a list of functions (app.setup_functions) or with an even system
 	  (things respond to 'nitrogen.setup' event with no args)
+	
 	- app.config is an extension of a dict
 		- config.from_object will pull all attribute that do not start with '_'
+	
 	- text blobs are actually a mixin!
 		- registers it's own MapRouter
 		- adds to the app.view_globals
