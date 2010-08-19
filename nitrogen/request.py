@@ -48,8 +48,15 @@ def _environ_property(key, load_func=None, default=None):
             return self.environ.get(key, default)
     return _property
         
-        
-class Request(object):
+
+class CommonCore(object):
+    
+    @classmethod
+    def build_class(cls, name, extra_bases=(), **namespace):
+    	return type(name, (cls, ) + extra_bases, namespace)
+
+
+class Request(CommonCore):
     
     """WSGI/HTTP request abstraction class."""
     
@@ -242,7 +249,7 @@ def _autoupdate_header(name, load_func):
     return property(header_get, header_set)
 
 
-class Response(object):
+class Response(CommonCore):
     
     """HTTP response abstraction.
     
