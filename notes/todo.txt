@@ -53,23 +53,6 @@ RANDOM/NEW
 			cookie.setup_factory
 			authentication (this can be added by an application)
 	
-	- app.run() defaults to serving it with a socket (this is app.config.run_mode = 'socket')
-		app.run(mode='fcgi')
-	
-	- app.shell() provides some command-line integration
-		but for what?
-		perhaps running migrate
-	
-	- app.init_request(environ)
-		does all the very low level stuff
-	- app.handle_request(environ, start)
-		does the high level (application level) stuff
-	
-	- app.setup() is called automatically when .run is called. it also calls
-	  all the other setup functions (logging, db, view). this can be done either
-	  with a list of functions (app.setup_functions) or with an even system
-	  (things respond to 'nitrogen.setup' event with no args)
-	
 	- app.config is an extension of a dict
 		- config.from_object will pull all attribute that do not start with '_'
 	
