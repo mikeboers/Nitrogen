@@ -3,8 +3,24 @@
 RANDOM/NEW
 ==========
 
+- not_found_catcher:
+	abstract it away to generate the name of the template at exception time
+		'http_status/404_not_found.html', then
+		'http_status/404.html', then
+		'http_status/4xx.html', then
+		'http_status/generic.html',
+
+- ErrorAppMixin generally requires templates to get the job done
+		
 - consider switching to werkzeug's exceptions
 	- only if we stop using beaker for sessions... cause beaker requires paste
+	- they do not have redirection exceptions, but there is a redirect function
+	- abort is the general function for stopping due to an error. you pass it
+	  a status code. perhaps you could also pass it the text:
+		- abort(404, "Could not find it.")
+		- abort('not found', 'Could not find it.')
+		- abort.not_found('could not find it')
+		
 
 - the debug flag should only ever mean to turn on debugging (ie. logging
   exceptino reporting, and interactive debugger)
@@ -28,7 +44,10 @@ RANDOM/NEW
 	could return Request(content, code=whatever, headers=whatever)
 
 - nitrogen.App
-		
+	
+	- LoggingAppMixin automatically sets itself up if "log_auto_setup" is True
+	- Rename all mixins to have "Mixin" in the name
+	
 	- replaces the view_context
 		- app.flash(message, category)
 			these get appended to 'app.flash_messages' in the current session

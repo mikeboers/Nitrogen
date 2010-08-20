@@ -1,7 +1,15 @@
 
-from .db.core import DBApp
+from .db.app import DBAppMixin
+from .view.app import ViewAppMixin
+from .error import ErrorAppMixin
+from .logs import LoggingAppMixin
 
-class App(DBApp):
+class App(DBAppMixin, ViewAppMixin, ErrorAppMixin, LoggingAppMixin):
     pass
 
-del DBApp
+del DBAppMixin
+del ViewAppMixin
+del ErrorAppMixin
+del LoggingAppMixin
+
+from .route import ReRouter

@@ -8,7 +8,7 @@ from . import request
 from .webio import cookies
 from .wsgi.server import serve
 from nitrogen.http.encode import compressor
-from nitrogen.http.status import catch_any_status
+from nitrogen.http.status import not_found_catcher, catch_any_status
 
 class ConfigKeyError(KeyError):
     pass
@@ -22,20 +22,34 @@ class Config(dict):
             raise ConfigKeyError(name)
 
 
-class AppCore(object):
+class Core(object):
+    
+    base_config = {
+        'run_mode': 'socket',
+    }
     
     cookie_factory = None
     
     def __init__(self, *args, **kwargs):
-                
+        
+        # Build up the base config from all the base_configs on the mro chain.
         self.config = Config(**kwargs)
+        applied = set()
+        for cls in reversed(self.__class__.__mro__):
+            base = getattr(cls, 'base_config', None)
+            if base and id(base) not in applied:
+                self.config.update(base)
+                applied.add(id(base))
+        
         self._locals = []
         
+        # Setup primary routers.
         self._rerouter = route.ReRouter()
         self.routers = route.Chain([self._rerouter])
         
         # First level of middleware wrapping.
         app = self.routers
+        # app = not_found_catcher(app) # Ideally this will be changed into a more abstract version.
         app = catch_any_status(app)
         self.wsgi_app = app
         
@@ -59,12 +73,7 @@ class AppCore(object):
         for obj in self._locals:
             obj.__dict__.clear()
     
-    def setup(self, force=False):
-        if force or not self.__is_setup:
-            self._setup()
-            self.__is_setup = True
-
-    def _setup(self):
+    def setup(self):
         if not self.cookie_factory:
             if 'private_key' in self.config:
                 self.cookie_factory = cookies.SignedContainer.make_factory(self.config['private_key'])
@@ -98,13 +107,18 @@ class AppCore(object):
     def request(self):
         return self._local.request
     
-    def __call__(self, environ, start):
-        self.setup()
+    def init_request(self, environ):
+        if not self.__is_setup:
+            self.setup()
+            self.__is_setup = True
         self._clear_locals()
         self._local.environ = environ
         self._local.request = self.request_class(environ)
+        
+    def __call__(self, environ, start):
+        self.init_request(environ)
         return self._wsgi_app(environ, start)
     
-    def run(self, mode='socket', *args, **kwargs):
-        serve(mode, self, *args, **kwargs)
+    def run(self, mode=None, *args, **kwargs):
+        serve(mode or self.config['run_mode'], self, *args, **kwargs)
 

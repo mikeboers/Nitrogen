@@ -252,13 +252,17 @@ class Response(CommonCore):
     pre-build response cookies container."""
     
     # The request is depricated.
-    def __init__(self, headers=None, start=None):
+    def __init__(self, body=None, status=None, headers=None, start=None):
+        self.body = body
         self.wsgi_start = start
         self.headers = headers or []
         
-        self._status = '200 OK'
+        if status:
+            self.status = status
+        else:
+            self._status = '200 OK'
+        
         self._charset = 'utf-8'
-    
         if 'Content-Type' in self.headers:
             ctype, opts = wz.parse_options_header(self.headers['Content-Type'])
             self._charset = opts.get('charset')
@@ -350,35 +354,12 @@ class Response(CommonCore):
     def status(self, value):
         self._status = resolve_status(value)
 
-    
-    def build_headers(self, headers=None, exc_info=None, plain=None,
-        html=None, **kwargs):
-        """Start the wsgi return sequence.
-
-        If called with status, that status is resolved. If status is None, we
-        use the internal status.
-
-        If headers are supplied, they are sent after those that have been
-        added to self.headers.
-
-        """
-        # Deal with content-type overrides and properties.
-        if plain or html:
-            log.warning('Response.start html/plain kwargs are depreciated')
-            if html:
-                self.content_type = 'text/html'
-            else:
-                self.content_type = 'text/plain'
-        for k, v in kwargs.items():
-            if not hasattr(self, k):
-                raise ValueError('no request attribute %r' % k)
-            setattr(self, k, v)
-        headers = self.headers.allitems() + (list(headers) if headers is not None else [])
+    def build_headers(self, body=None):  
+        headers = self.headers.allitems()
         headers.extend(self.cookies.build_headers())
         return headers
         
-        
-    def start(self, status=None, *args, **kwargs):
+    def start(self, body=None, status=None, headers=None, environ=None, start_response=None, **kwargs):
         """Start the wsgi return sequence.
 
         If called with status, that status is resolved. If status is None, we
@@ -388,12 +369,29 @@ class Response(CommonCore):
         added to self.headers.
 
         """
-        if not self.wsgi_start:
-            raise ValueError('no WSGI start')
-        headers = self.build_headers(*args, **kwargs)
-        if status:
-            self.status = status
-        self.wsgi_start(self.status, headers)
+        body = body or self.body
+        headers = self.build_headers(body) + (list(headers) if headers else [])
+        (start_response or self.wsgi_start)(status or self.status, headers)
+    
+    def __call__(self, body=None, status=None, headers=None, **kwargs):
+        """Copy this request and set new properties to it."""
+        
+        copy = self.__class__(body or self.body, status or self.status, self.build_headers())
+        
+        for k, v in kwargs.items():
+            if not hasattr(copy, k):
+                raise ValueError('no response attribute %r' % k)
+            setattr(copy, k, v)
+        
+        return copy
+    
+    def call_as_wsgi(self, environ, start_response):
+        self.start(environ=environ, start_response=start_response)
+        if isinstance(self.body, basestring):
+            return [self.body]
+        elif self.body:
+            return self.body
+        return []
 
 
 
@@ -412,13 +410,29 @@ class Application(object):
         response = (cls.response_class or Response)(start=start)
         return request, response
     
+    def _handle_response(self, environ, start, response):
+        if isinstance(response, Response):
+            response = response.call_as_wsgi(environ, start)
+        if isinstance(response, basestring):
+            start('200 OK', [])
+            response = [response]
+        return response
+    
     def __call__(self, environ, start):
-        return self.app(*self._get_pair(environ, start))
+        return self._handle_response(
+            environ,
+            start,
+            self.app(*self._get_pair(environ, start))
+        )
     
     def __get__(self, instance, owner):
         if not instance:
             return self
-        return lambda environ, start: self.app(instance, *self._get_pair(environ, start))
+        return lambda environ, start: self._handle_response(
+            environ,
+            start,
+            self.app(instance, *self._get_pair(environ, start))
+        )
 
 
 as_request = Application

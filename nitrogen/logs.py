@@ -17,6 +17,9 @@ import multiprocessing
 import time
 
 
+from . import app
+
+
 base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(request_index)d ip:%(remote_addr)s %(name)s - %(message)s"
 
 
@@ -70,12 +73,15 @@ class ThreadLocalFormatter(logging.Formatter):
         
         return message
     
+    def init_request(self, environ):    
+        with self.request_count_lock:
+            self.request_count += 1
+            self.local_extra['request_index'] = self.request_count
+            self.local_extra['remote_addr'] = environ.get('REMOTE_ADDR')
+        
     def wsgi_setup(self, app):
         def ThreadLocalFormatter_wsgi_setup_app(environ, start):
-            with self.request_count_lock:
-                self.request_count += 1
-                self.local_extra['request_index'] = self.request_count
-                self.local_extra['remote_addr'] = environ['REMOTE_ADDR']
+            self.init_request(environ)
             return app(environ, start)
         return ThreadLocalFormatter_wsgi_setup_app
     
@@ -122,3 +128,24 @@ class FileHandler(logging.Handler):
         self.fh.flush()
 
 
+class LoggingAppMixin(app.Core):
+    
+    base_config = {
+        'log_format': base_format,
+    }
+    
+    def setup(self):
+        super(LoggingAppMixin, self).setup()
+        self.log_formatter = ThreadLocalFormatter()
+    
+    def init_request(self, environ):
+        super(LoggingAppMixin, self).init_request(environ)
+        self.log_formatter.init_request(environ)
+    
+    
+    
+    
+    
+    
+    
+    

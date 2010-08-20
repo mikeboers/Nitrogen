@@ -8,6 +8,7 @@ import logging
 
 from mako.exceptions import RichTraceback as MakoTraceback
 
+from . import app
 
 log = logging.getLogger(__name__)
 
@@ -244,6 +245,14 @@ def error_notifier(app, render=None, traceback=False, template='_500.tpl'):
                 yield '\n-->'
                     
     return inner
+
+
+
+class ErrorAppMixin(app.Core):
+    pass
+
+
+
 
 if __name__ == '__main__':
     import nose; nose.run(defaultTest=__name__)

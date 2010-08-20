@@ -6,8 +6,10 @@ from nitrogen.core import *
 
 from .app import app
 from .cookies import cookie_app
+from .response import response_app
 
 app.route('/cookies', cookie_app)
+app.route('/response', response_app)
 
 @app.route('/')
 def index(environ, start):
