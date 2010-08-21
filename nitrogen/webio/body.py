@@ -13,6 +13,14 @@ from multimap import MutableMultiMap
 
 
 def assert_body_cache(environ):
+    """Recieves the rest of the request's body into a StringIO object.
+    
+    Useful if we know that we want to process the body of the request mutliple
+    times, as we can simply seek to 0 when we want to process it again.
+    
+    Currently does not protect against massive requests.
+    
+    """
     stdin = environ['wsgi.input']
     # The OutputType here is just me being paranoid. Likely not nessesary.
     if not isinstance(stdin, (cstringio.InputType, io.StringIO, stringio.StringIO, cstringio.OutputType)):
@@ -45,7 +53,7 @@ ENVIRON_KEY = 'nitrogen.webio.body'
 
 def reject_factory(total_length, content_type, filename, file_length):
     """Do not accept files."""
-    raise ValueError('not accepting files')
+    raise ValueError('not accepting posted files')
 
 def stringio_factory(total_length, content_type, filename, file_length):
     return StringIO()
@@ -98,7 +106,7 @@ class FileWrapper(object):
 
 def parse_body(environ, stream_factory=None, charset=None, errors=None,
     max_form_memory_size=None, max_content_length=None, silent=False, environ_key=ENVIRON_KEY):
-    
+    """Parse the request body and cache it, returning the cache subsequently."""
     if environ_key not in environ:
         _, _, files = environ[environ_key] = wz.parse_form_data(environ,
             stream_factory=FileWrapper.wrap(stream_factory or reject_factory),
@@ -106,7 +114,7 @@ def parse_body(environ, stream_factory=None, charset=None, errors=None,
             errors=errors or ERRORS,
             max_form_memory_size=max_form_memory_size,
             max_content_length=max_content_length,
-            cls=MutableMultiMap,
+            cls=MultiMap,
             silent=silent
         )
         for file in files.itervalues():
