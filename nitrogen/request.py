@@ -102,7 +102,7 @@ class Request(CommonCore):
     @property
     def query(self):
         return parse_query(self.environ, charset=self.charset, errors=self.decode_errors)
-    get = query # Depreciated
+    get = query # Depricated.
     
     @wz.cached_property
     def cookies(self):
@@ -129,6 +129,7 @@ class Request(CommonCore):
             max_content_length=self.max_content_length,
             max_form_memory_size=self.max_form_memory_size,
         )
+    form = post # For Werkzeug's sake.
         
     @property
     def files(self):
@@ -160,31 +161,40 @@ class Request(CommonCore):
     
     # This one gets a little more attension because IE 6 will send us the
     # length of the previous request as an option to this header
-    if_modified_since = _environ_property('HTTP_IF_MODIFIED_SINCE', load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
-    if_unmodified_since = _environ_property('HTTP_IF_UNMODIFIED_SINCE', load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
+    if_modified_since = _environ_property('HTTP_IF_MODIFIED_SINCE',
+        load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
+    if_unmodified_since = _environ_property('HTTP_IF_UNMODIFIED_SINCE',
+        load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
     
     # Lots of pretty generic headers...
-    accept = _environ_property('HTTP_ACCEPT', load_func=lambda x: wz.parse_accept_header(x, wz.MIMEAccept))
-    accept_charset = _environ_property('HTTP_ACCEPT_CHARSET', load_func=lambda x: wz.parse_accept_header(x, wz.CharsetAccept))
-    accept_encoding = _environ_property('HTTP_ACCEPT_ENCODING', load_func=lambda x: wz.parse_accept_header(x, wz.Accept))
-    accept_language = _environ_property('HTTP_ACCEPT_LANGUAGE', load_func=lambda x: wz.parse_accept_header(x, wz.LanguageAccept))
-    authorization = _environ_property('HTTP_AUTHORIZATION', load_func=wz.parse_authorization_header) # This will be None for no header.
-    cache_control = _environ_property('HTTP_CACHE_CONTROL', load_func=wz.parse_cache_control_header)
+    accept = _environ_property('HTTP_ACCEPT',
+        load_func=lambda x: wz.parse_accept_header(x, wz.MIMEAccept))
+    accept_charset = _environ_property('HTTP_ACCEPT_CHARSET',
+        load_func=lambda x: wz.parse_accept_header(x, wz.CharsetAccept))
+    accept_encoding = _environ_property('HTTP_ACCEPT_ENCODING',
+        load_func=lambda x: wz.parse_accept_header(x, wz.Accept))
+    accept_language = _environ_property('HTTP_ACCEPT_LANGUAGE',
+        load_func=lambda x: wz.parse_accept_header(x, wz.LanguageAccept))
+    authorization = _environ_property('HTTP_AUTHORIZATION',
+        load_func=wz.parse_authorization_header) # This will be None for no header.
+    cache_control = _environ_property('HTTP_CACHE_CONTROL',
+        load_func=wz.parse_cache_control_header)
     date = _environ_property('HTTP_DATE', load_func=wz.parse_date)
     host = _environ_property('HTTP_HOST')
     
-    # Should be using etag objects
-    if_match = _environ_property('HTTP_IF_MATCH')
-    if_none_match = _environ_property('HTTP_IF_NONE_MATCH')
-    etag = _environ_property('HTTP_IF_NONE_MATCH') # Same as if_none_match, but I have used this name before. Still depreciated.
+    if_match = _environ_property('HTTP_IF_MATCH', load_func=wz.parse_etags)
+    if_none_match = _environ_property('HTTP_IF_NONE_MATCH', load_func=wz.parse_etags)
     
     path_info = _environ_property('PATH_INFO')
+    script_name = _environ_property('SCRIPT_NAME')
+    
     referer = _environ_property('HTTP_REFERER')
+    
     remote_addr = _environ_property('REMOTE_ADDR')
     remote_port = _environ_property('REMOTE_PORT', load_func=int)
     remote_user = _environ_property('REMOTE_USER')
-    script_name = _environ_property('SCRIPT_NAME')
-    user_agent = _environ_property('HTTP_USER_AGENT', load_func=wz.UserAgent, default='')
+    
+    user_agent = _environ_parser(wz.UserAgent)
     
     # WSGI stuff
     is_secure = _environ_property('wsgi.url_scheme', load_func=lambda x: x == 'https')
