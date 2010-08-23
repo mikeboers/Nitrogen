@@ -20,3 +20,4 @@
 /distribute-*
 
 /pip-log.txt
+/examples/sessions.sqlite

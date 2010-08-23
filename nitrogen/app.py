@@ -3,11 +3,11 @@ from threading import local as _local
 
 from werkzeug import cached_property
 
-from . import route
+from . import cookies
 from . import request
-from .webio import cookies
-from .wsgi.server import serve
-from nitrogen.http.encode import compressor
+from . import route
+from .serve import serve
+from nitrogen.compress import compressor
 from nitrogen.http.status import not_found_catcher, catch_any_status
 
 class ConfigKeyError(KeyError):
@@ -26,6 +26,7 @@ class Core(object):
     
     base_config = {
         'run_mode': 'socket',
+        'private_key': None,
     }
     
     cookie_factory = None
@@ -75,7 +76,7 @@ class Core(object):
     
     def setup(self):
         if not self.cookie_factory:
-            if 'private_key' in self.config:
+            if self.config.get('private_key'):
                 self.cookie_factory = cookies.SignedContainer.make_factory(self.config['private_key'])
             else:
                 self.cookie_factory = cookies.Container
@@ -101,7 +102,7 @@ class Core(object):
         # Do whatever middleware wrapping we need to do.
         app = self.wsgi_app
         app = compressor(app)
-        self._wsgi_app = app
+        self.wrapped_wsgi_app = app
     
     @property
     def request(self):
@@ -117,7 +118,7 @@ class Core(object):
         
     def __call__(self, environ, start):
         self.init_request(environ)
-        return self._wsgi_app(environ, start)
+        return self.wrapped_wsgi_app(environ, start)
     
     def run(self, mode=None, *args, **kwargs):
         serve(mode or self.config['run_mode'], self, *args, **kwargs)

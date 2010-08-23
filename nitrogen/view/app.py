@@ -6,6 +6,8 @@ import threading
 import logging
 
 import mako.lookup
+from mako.exceptions import MakoException
+from mako.template import Template
 
 from .defaults import context
 from .. import app
@@ -38,6 +40,10 @@ class ViewAppMixin(app.Core):
         template_path = template_path or []
         if isinstance(template_path, basestring):
             template_path = [template_path]
+        else:
+            template_path = list(template_path)
+        template_path.append(os.path.abspath(os.path.dirname(__name__) + '/../templates'))
+        
         self.lookup = mako.lookup.TemplateLookup(
             directories=template_path,
             input_encoding='utf-8'
@@ -72,20 +78,27 @@ class ViewAppMixin(app.Core):
         if hasattr(self._local, 'environ'):
             environ = self._local.environ
     
-    def render(self, template_name, **data):
+    def get_template(self, template):
+        try:
+            return lookup.get_template(template)
+        except MakoException as e:
+            return None
+    
+    def render(self, template, **data):
         """Find a template file and render it with the given keyword args.
         
         Searches on the current `self.path`.
         
         """
         
-        template = self.lookup.get_template(template_name)
+        if isinstance(template, basestring):
+            template = self.lookup.get_template(template)
         self._prep_data(data)
         return template.render_unicode(**data)
     
-    def render_string(self, template, **data):
+    def render_string(self, template_string, **data):
         """Render a string as a template with the given keyword args."""
-        template = mako.template.Template(template, lookup=self.lookup)
+        template = mako.template.Template(template_string, lookup=self.lookup)
         self._prep_data(data)
         return template.render_unicode(**data)
     

@@ -4,7 +4,7 @@ import os
 from nitrogen.wsgi.server import serve
 from nitrogen.core import *
 
-from .app import app
+from .app import app, Request, Response
 from .cookies import cookie_app
 from .response import response_app
 
@@ -22,6 +22,16 @@ def env(environ, start):
     for x in sorted(environ.items()):
         yield '%s: %r\n' % x
 
+@app.route('/session')
+@Request.application
+def do_session(request):
+    count = request.session.get('counter', 0) + 1
+    request.session['counter'] = count
+    request.session.save()
+    return Response('Counter: %d' % count)
+    
+    
+    
 @app.route('/request')
 def request(environ, start):
     

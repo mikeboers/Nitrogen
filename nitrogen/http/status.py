@@ -7,15 +7,28 @@ import re
 import logging
 from httplib import responses as _code_to_message
 
-from paste.httpexceptions import *
-from paste.httpexceptions import make_middleware
-
+from paste import httpexceptions as _httpexceptions
 from nitrogen.webio.headers import Headers
 
 log = logging.getLogger(__name__)
 
 
 _message_to_code = dict((v.lower(), k) for k, v in _code_to_message.items())
+
+
+# Retrieve all of the exceptions, and set them to both the HTTP prefixed, and
+# non-prefixed versions.
+StatusException = HTTPException = _httpexceptions.HTTPException
+Redirection = HTTPRedirection = _httpexceptions.HTTPRedirection
+for name in dir(_httpexceptions):
+    if not name.startswith('HTTP'):
+        continue
+    obj = getattr(_httpexceptions, name)
+    if not getattr(obj, 'code', None):
+        continue
+    globals()[name] = obj
+    globals()[name[4:]] = obj
+
 
 
 def code_to_message(code):
@@ -160,8 +173,6 @@ def status_resolver(app, canonicalize=False, strict=False):
         log('Status_resolver has been deprecated.')
         return app(environ, start)
     return _status_resolver
-
-
 
 
 def not_found_catcher(app, render):

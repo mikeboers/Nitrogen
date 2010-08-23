@@ -266,7 +266,7 @@ class Response(CommonCore, wz.Response):
     etag = wz.header_property('etag', read_only=False)
     
     def get_wsgi_headers(self, environ):
-        headers = list(super(Response, self).get_wsgi_headers(environ))
+        headers = super(Response, self).get_wsgi_headers(environ)
         headers.extend(self.cookies.build_headers())
         return headers
     
