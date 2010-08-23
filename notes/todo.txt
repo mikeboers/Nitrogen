@@ -1,59 +1,25 @@
 
 - MultiMap.lists() and iterlists()
 
-- Determine if calling the response (and/or the start method) should actually
-  mutate the response.
-  
-  I think it is quite reasonable for it to do so. I do not think I have ever
-  had any circumstances that would require it to not mutate.
-  
-  Perhaps a freeze/cook/bake method could turn the cookie dict into headers,
-  build etags, etc.
-  
-  Calling the response is just for convenience sake, baking it and then
-  returning itself.
 
-- Generally I would like the Response object to understand to change the
-  status message if I go ahead and change the status code, but is it ever
-  likely that I'm going to want to send a non standard status message?
-  
-  Wz stores the status as the full string, and if you set status_code it
-  changes the full status to match.
+- Extend the werkzeug Request/Response, and modify them to clean up the bits
+  I don't like. Make sure to document all of the changes I am making, and why.
 
-- Create a responder decorator, which adapts the output of a wsgi app into
-  something that conforms to the spec. Ie. calls a response object.
- 
-- Back to the age old question of if Requests should be mutable. Werkzeug does
-  not believe so (by default). Perhaps if I broke all my stuff down into a 
-  BaseRequest and a bunch of mixins, then I could have a MutableRequestMixin
-  which just sets all the data structure types. Unfortunately we also need to
-  keep stuff like the get and post mutable, which isn't really possible.
-
-- Make sure we get useragent, cache_control, and accept header objects even if
-  the header was not provided.
-
-- Perhaps we do not need a rewind_body_cache; change assert_body_cache to
-  cache_body or make_body_seekable, and then one can simply tell/seek on the
-  body at will.
-
-- assert body cache has no protection against massive requests
-
-- Should be using Wz etag functions on the Response.
-
-- Split up the content-type from the mimetype and mimetype-params (ie. charset). Do this on both the Request and Response. Response is handled around 1325 of wrappers.py; copy it.
-
-- Perhaps we can just use the werkzeug Request/Response, but modify them to 
-  make them work like mine:
     Request:
         - data structures
         - get parsing (provide args/get/query)
         - cookie parsing
-        - body caching
-        - body parsing: data structures, add post/form, _get_file_stream should return FileWrapped self.stream_factory
-        - encoding_errors instead of decode_errors (set to 'replace' by default)
+        - body caching (leave this in the webio.body module)
+        - body parsing:
+            - data structures
+            - add post/form
+            - _get_file_stream should return FileWrapped self.stream_factory
+        - encoding_errors instead of decode_errors (set to 'replace' by 
+          default)
         - the constructor should return the cached version (if it is the same
           type as requested)
         - remove Request.values, as it is sloppy
+    
     Response:
         - set_cookie and delete_cookie should be adjusted
         - figure out where to inject cookie headers. likely add to the end of
@@ -62,31 +28,48 @@
             call get_wsgi_response, and make sure to not send a content-length
             if the content is not actually set
             going to have to pass environ to it just to be safe
-        - as_html and as_text
+        - as_html and as_text (these are ugly, but I'm leaving them for
+          compatibility)
         - perhaps auto decode the body on access (or just have it not auto
           encode the body on setting it)
         - charset should update mimetype_params (it would also be nice if it
           can canonicalize the encoding name)
+    
+    - Document all the changes I have to make to keep it working with both
+      secrettrial5.com and gladioliworkbook.com (while trying to minimalize
+      it, of course).
+    
+    - @as_request must continue to be able to pass both the request and
+      response, however I COULD modify it so that it sees if the function can
+      take one or two arguments. However it would likely be cleaner to just
+      use @Request.application as Wz already provides.
 
-- Make sure that my cookies.Container.delete takes a path and domain
+    - Make sure we get useragent, cache_control, and accept header objects
+      even if the header was not provided.
+
+- Perhaps we do not need a rewind_body_cache; change assert_body_cache to
+  cache_body or make_body_seekable, and then one can simply tell/seek on the
+  body at will.
+
+- webio.body.assert_body_cache has no protection against massive requests
+
+- Make sure that my cookies.Container.expire takes a path and domain. Document
+  that it is called expire, and not delete. However, I will leave a
+  Response.delete_cookie for compatibilities sake (it will also be at
+  expire_cookie).
+
 - Cookies should be adjusted to take into account that we can set multiple
   cookies to the same name but with different path and domain. The dict access
   and .set method should delete everything of the same name, but a new 'add'
   method should not (ie. use append to the container).
 
-- Consider migrating most of the webio.body directly onto the request object.
+- wsgi.encode should autodetect if there is a charset in the content-type, and
+  use that. Otherwise it should add a utf-8 to the charset if the mimetype
+  starts with "text/".
 
-- Leave as_request the way it is, but start using Request.application
-
-- The Requst.shallow property is really nice.
-
-- Wz response handles the content encoding itself. I should be able to do this
-  too, if I start using the Response object to wrap around all content.
-
-
-- not_found_catcher:
-
-	abstract it away to generate the name of the template at exception time
+- not_found_catcher: 
+    
+    Abstract it to generate the name of the template. eg. "404 Not Found":
 		'http_status/404_not_found.html', then
 		'http_status/404.html', then
 		'http_status/4xx.html', then
@@ -96,36 +79,16 @@
     - See if I can find something that makes nice tracebacks for me. Either
       werkzeug or ... ?
 		
-- consider switching to werkzeug's exceptions
-	- only if we stop using beaker for sessions... cause beaker requires paste
-	- they do not have redirection exceptions, but there is a redirect function
+- Consider switching to werkzeug's exceptions
+	- they do not have redirection exceptions, but there is a redirect
+	  function
 	- abort is the general function for stopping due to an error. you pass it
 	  a status code. perhaps you could also pass it the text:
 		- abort(404, "Could not find it.")
 		- abort('not found', 'Could not find it.')
 		- abort.not_found('could not find it')
-		
+	- move all of this to nitrogen.http
 
-- the debug flag should only ever mean to turn on debugging (ie. logging
-  exceptino reporting, and interactive debugger)
-
-- consider doing what werkzeug does with it's request objects:
-
-    @Request.application
-    def application(request):
-        return Response("Hello %s!" % request.args.get('name', 'World!'))
-
-	Response is actually a wsgi application; if it has some content set and
-	you return the value of calling it then all the proper headers (ie, an etag
-	will be set)
-	
-	So now what actually keeps me from using werkzeug Request/Response?
-	Why does the request have to see the response, anyways?
-		- cookie config
-		
-	could use request.reponse.headers to set headers
-	could yield (200, <headers>) and then body pieces
-	could return Request(content, code=whatever, headers=whatever)
 
 - nitrogen.App
 	
