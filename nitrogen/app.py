@@ -90,8 +90,8 @@ class Core(object):
             cookie_factory=self.cookie_factory
         )
         self.as_request = type(
-            self.__class__.__name__ + 'RequestApplication',
-            (request.Application, ),
+            self.__class__.__name__ + 'RequestMiddleware',
+            (request.RequestMiddleware, ),
             dict(
                 request_class=self.request_class,
                 response_class=self.response_class,
