@@ -26,13 +26,8 @@
     - Document all the changes I have to make to keep it working with both
       secrettrial5.com and gladioliworkbook.com (while trying to minimalize
       it, of course).
-    
-    - @as_request must continue to be able to pass both the request and
-      response, however I COULD modify it so that it sees if the function can
-      take one or two arguments. However it would likely be cleaner to just
-      use @Request.application as Wz already provides.
 
-    - Make sure we get useragent, cache_control, and accept header objects
+    - Make sure we get useragent, cache_control, athorization, and accept header objects
       even if the header was not provided.
 
 - Perhaps we do not need a rewind_body_cache; change assert_body_cache to

@@ -216,12 +216,12 @@ def _mimetype_flag(spec):
     
     @property
     def prop(self):
-        return self.content_type == spec
+        return self.mimetype == spec
     @prop.setter
     def prop(self, value):
         if not value:
             raise ValueError('cannot be set to non-true value')        
-        self.content_type = spec
+        self.mimetype = spec
     return prop
 
 
@@ -249,59 +249,48 @@ def _autoupdate_header(name, load_func):
     return property(header_get, header_set)
 
 
-class Response(CommonCore):
+class Response(CommonCore, wz.Response):
     
-    """HTTP response abstraction.
+    """WSGI/HTTP response abstraction.
     
-    Need to pass the request this is connected to if you want to use the maybe
-    pre-build response cookies container."""
+    This is an extension of the Werkzeug Response class. I strongly feel that
+    there are a couple of things that it does not do optimally, and so I am
+    making those few changes here.
     
-    # The request is depricated.
-    def __init__(self, body=None, status=None, headers=None, start_response=None):
-        self.body = body
-        self._start_response = start_response
-        self.headers = headers or []
-        
-        if status:
-            self.status = status
-        else:
-            self._status = '200 OK'
-        
-        self._charset = 'utf-8'
-        if 'Content-Type' in self.headers:
-            ctype, opts = wz.parse_options_header(self.headers['Content-Type'])
-            self._charset = opts.get('charset')
-        else:
-            self.content_type = 'text/html'
+    Also, there are a couple changes to make this backwards compatible with my
+    own Response class, but those are depricated and noted where appropriate.
+    
+    See the docs for Werkzeug's Response class.
+    
+    """
+    
+    def __init__(self, *args, **kwargs):
+        self._start_response = kwargs.pop('start_response', None)
+        super(Response, self).__init__(*args, **kwargs)
     
     @wz.cached_property
     def cookies(self):
         return (self.cookie_factory or cookies.Container)()
     
-    @property
-    def headers(self):
-        return self._headers
+    def set_cookie(self, *args, **kwargs):
+        self.cookies.set(*args, **kwargs)
     
-    @headers.setter
-    def headers(self, value):
-        self._headers = value if isinstance(value, MutableHeaders) else MutableHeaders(value)
+    def expire_cookie(self, *args, **kwargs):
+        self.cookies.expire(*args, **kwargs)
+    delete_cookie = expire_cookie
     
+    # Depricated. Set mimetype directly instead.
     as_html = _mimetype_flag('text/html')
     as_text = _mimetype_flag('text/plain')
     as_json = _mimetype_flag('application/json')
     
-    date = wz.header_property('date', read_only=False, load_func=wz.parse_date, dump_func=wz.http_date)
-    
-    # Should be etag object.
+    # Depricated. Use set_etag or add_etag instead.
     etag = wz.header_property('etag', read_only=False)
     
-    expires = wz.header_property('expires', read_only=False, load_func=wz.parse_date, dump_func=wz.http_date)
-    last_modified = wz.header_property('last_modified', read_only=False, load_func=wz.parse_date, dump_func=wz.http_date)
-    location = wz.header_property('location', read_only=False)
-
-    cache_control = _autoupdate_header(name='cache_control', load_func=lambda x, on_update: wz.parse_cache_control_header(x, on_update, wz.ResponseCacheControl))
-    www_authenticate = _autoupdate_header(name='www_authenticate', load_func=wz.parse_www_authenticate_header)
-    
+    def get_wsgi_headers(self, environ):
+        headers = super(Response, self).get_wsgi_headers(environ)
+        headers.extend(self.cookies.build_headers())
+        return headers
     
     @property
     def _content_disposition(self):
@@ -327,46 +316,7 @@ class Response(CommonCore):
         else:
             raise ValueError('cant set filename for disposition %r' % cdisp)
         
-    @property
-    def content_type(self):
-        raw = self.headers.get('Content-Type')
-        if raw:
-            return wz.parse_options_header(raw)[0]
-    
-    @content_type.setter
-    def content_type(self, ctype):
-        if ctype is None:
-            self.headers.discard('Content-Type')
-        elif self._charset is not None:
-            self.headers['Content-Type'] = wzutil.get_content_type(ctype, self._charset)
-        else:
-            self.headers['Content-Type'] = ctype
-    
-    @property
-    def charset(self):
-        return self._charset
-    
-    @charset.setter
-    def charset(self, value):
-        self._charset = value
-        # Need to trigger rebuilding the header.
-        if 'Content-Type' in self.headers:
-            self.content_type = self.content_type
-    
-    @property
-    def status(self):
-        return self._status
-    
-    @status.setter
-    def status(self, value):
-        self._status = resolve_status(value)
-
-    def build_headers(self):  
-        headers = self.headers.allitems()
-        headers.extend(self.cookies.build_headers())
-        return headers
-        
-    def start(self, status=None, headers=None, environ=None, start_response=None, plain=None, html=None, **kwargs):
+    def start(self, status=None, headers=None, start_response=None, plain=None, html=None, **kwargs):
         """Start the wsgi return sequence. DEPRICATED
         
         Can be called just like the standard start_response, but you cal also
@@ -377,9 +327,9 @@ class Response(CommonCore):
         if plain or html:
             log.warning('Response.start html/plain kwargs are depreciated')
             if html:
-                self.content_type = 'text/html'
+                self.mimetype = 'text/html'
             else:
-                self.content_type = 'text/plain'
+                self.mimetype = 'text/plain'
         
         for k, v in kwargs.items():
             if not hasattr(self, k):
@@ -389,30 +339,8 @@ class Response(CommonCore):
         if status is not None:
             self.status = status
         
-        headers = self.build_headers() + (list(headers) if headers else [])
+        headers = self.headers.to_list(self.charset) + self.cookies.build_headers() + (list(headers) if headers else [])
         (start_response or self._start_response)(status or self.status, headers)
-    
-    def __call__(self, body=None, status=None, headers=None, **kwargs):
-        """Copy this request and set new properties to it."""
-        
-        copy = self.__class__(body or self.body, status or self.status, self.build_headers())
-        
-        for k, v in kwargs.items():
-            if not hasattr(copy, k):
-                raise ValueError('no response attribute %r' % k)
-            setattr(copy, k, v)
-        
-        return copy
-    
-    def call_as_wsgi(self, environ, start_response):
-        self.start(environ=environ, start_response=start_response)
-        if isinstance(self.body, basestring):
-            return [self.body]
-        elif self.body:
-            return self.body
-        return []
-
-
 
 
 class RequestMiddleware(object):
@@ -429,12 +357,11 @@ class RequestMiddleware(object):
         response = (cls.response_class or Response)(start_response=start_response)
         return request, response
     
-    def _handle_response(self, environ, start, response):
+    def _handle_response(self, environ, start_response, response):
         if isinstance(response, Response):
-            response = response.call_as_wsgi(environ, start)
-        if isinstance(response, basestring):
-            start('200 OK', [])
-            response = [response]
+            iter, status, headers = response.get_wsgi_response(environ)
+            start_response(status, headers)
+            response = iter
         return response
     
     def __call__(self, environ, start):
