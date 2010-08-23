@@ -51,14 +51,9 @@ class ApiRequest(ApiBase):
    
 class ApiResponse(ApiBase):
     
-    def __init__(self, response=None, **kwargs):
-        if response:
-            if not isinstance(response, Response):
-                response = Response(response)
-        self.raw = response
-        
+    def __init__(self, *args, **kwargs):
+        self.raw = Response(start_response=kwargs.pop('start_response', None))
         self.update(kwargs)
-        
         self.started = False
         self['status'] = 'ok'
     
@@ -136,7 +131,7 @@ def as_api(app):
         else:
             raise ValueError('as_api inner only accept 2 or 3 arguments')
         request = ApiRequest(environ)
-        response = ApiResponse(start)
+        response = ApiResponse(start_response=start)
         with response:
             if self:
                 app(self, request, response)
