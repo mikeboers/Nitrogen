@@ -7,8 +7,11 @@
 	status
 	
 	raise status.NotFound()
-	
-- Should be throwing a 413 if too much has been posted.
+
+- Write a better session.
+	max_age
+	regenerate ids
+	etc
 
 - Perhaps we do not need a rewind_body_cache; change assert_body_cache to
   cache_body or make_body_seekable, and then one can simply tell/seek on the
@@ -24,18 +27,16 @@
   and .set method should delete everything of the same name, but a new 'add'
   method should not (ie. use append to the container).
 
-- wsgi.encode should autodetect if there is a charset in the content-type, and
+- unicode.encoder should autodetect if there is a charset in the content-type, and
   use that. Otherwise it should add a utf-8 to the charset if the mimetype
   starts with "text/".
+
+  Could also just remove it.
 
 - not_found_catcher: 
     
     Abstract it to generate the name of the template. eg. "404 Not Found":
-		'http_status/404_not_found.html', then
-		'_404_not_found.html', then
-		'http_status/404.html', then
-		'http_status/4xx.html', then
-		'http_status/generic.html',
+		'status/404.html', then
 
 - ErrorAppMixin generally requires templates to get the job done.
     - See if I can find something that makes nice tracebacks for me. Either

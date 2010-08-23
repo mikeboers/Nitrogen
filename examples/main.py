@@ -3,6 +3,7 @@ import os
 
 from nitrogen.wsgi.server import serve
 from nitrogen.core import *
+from nitrogen.status import abort
 
 from .app import app, Request, Response
 from .cookies import cookie_app
@@ -11,6 +12,11 @@ from .response import response_app
 app.route('/cookies', cookie_app)
 app.route('/response', response_app)
 
+@app.route('/abort/{code:\d+}', _parsers=dict(code=int))
+@Request.application
+def do_abort(request):
+    abort(request.route['code'])
+    
 @app.route('/')
 def index(environ, start):
     start('200 OK', [])
@@ -29,9 +35,9 @@ def do_session(request):
     request.session['counter'] = count
     request.session.save()
     return Response('Counter: %d' % count)
-    
-    
-    
+
+
+
 @app.route('/request')
 def request(environ, start):
     
