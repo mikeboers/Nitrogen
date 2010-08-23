@@ -5,30 +5,31 @@ This is only here to be backwards compatible with my earlier sites.
 """
 
 
-def run_via(name, *args, **kwargs):
+def serve(type='fcgi', *args, **kwargs):
     import sys
     self = sys.modules[__name__]
-    name = 'run_via_' + name
+    name = 'serve_via_' + type
     runner = getattr(self, name)
     runner(*args, **kwargs)
+
     
-def run_via_cgi(app):
-    from .server.cgi import CGIServer
+def serve_via_cgi(app):
+    from .cgi import CGIServer
     CGIServer(app).run()
 
 
-def run_via_fcgi(app, **kwargs):
-    from .server.fcgi import FCGIServer
+def serve_via_fcgi(app, **kwargs):
+    from .fcgi import FCGIServer
     FCGIServer(app, **kwargs).run()
 
 
-def run_via_fcgi_fork(app, **kwargs):
-    from .server.fcgi import FCGIPreForkServer
+def serve_via_fcgi_fork(app, **kwargs):
+    from .fcgi import FCGIPreForkServer
     FCGIPreForkServer(app, **kwargs).run()
 
 
-def run_via_socket(app, host='', port=8000, once=False):
-    from .server.socket import SocketServer
+def serve_via_socket(app, host='', port=8000, once=False):
+    from .socket import SocketServer
     handler = SocketServer(app, host, port)
     if once:
         handler.handle_request()
@@ -50,6 +51,6 @@ if __name__ == '__main__':
     port = random.randrange(8000, 9000)
     print 'Starting on port %d.' % port
     
-    run_via_socket(app, port=port, once=True)
+    serve_via_socket(app, port=port, once=True)
 
 
