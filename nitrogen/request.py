@@ -82,11 +82,6 @@ class Request(CommonCore, wz.Request):
     # for more info.
     stream_factory = body.reject_factory
     
-    def __init__(self, environ, charset=None, decode_errors=None):
-        self.environ = environ
-        self.charset = charset
-        self.decode_errors = decode_errors
-    
     # Using my multiple-value-per-key mapping, as it retains more ordering
     # information.
     parameter_storage_class = MultiMap
@@ -127,14 +122,14 @@ class Request(CommonCore, wz.Request):
     
     @wz.cached_property
     def query(self):
-        return parse_query(self.environ, charset=self.charset, errors=self.decode_errors)
+        return parse_query(self.environ, charset=self.charset, errors=self.encoding_errors)
     get = query # Depricated.
     args = query # Werkzeug's name.
     
     # My cookies are much nicer. 
     @wz.cached_property
     def cookies(self):
-        raw = cookies.parse_cookies(self.environ, factory=self.cookie_factory, charset=self.charset, decode_errors=self.decode_errors)
+        raw = cookies.parse_cookies(self.environ, factory=self.cookie_factory, charset=self.charset, decode_errors=self.encoding_errors)
         # Throw it into an immutable container.
         return MultiMap((k, c.value) for k, c in raw.iterallitems())
     
@@ -165,7 +160,6 @@ class Request(CommonCore, wz.Request):
     
     route = _environ_property('wsgiorg.routing_args', load_func=lambda x: x[1])    
     
-    
     # These get a little more attension because IE 6 will send us the
     # length of the previous request as an option to this header.
     if_modified_since = _environ_property('HTTP_IF_MODIFIED_SINCE',
@@ -183,17 +177,9 @@ class Request(CommonCore, wz.Request):
     # Werkzeug only supplied the remote_addr.
     remote_port = _environ_property('REMOTE_PORT', load_func=int)
     
-    # authorization = _environ_property('HTTP_AUTHORIZATION',
-    #         load_func=wz.parse_authorization_header) # This will be None for no header.
-    # cache_control = _environ_property('HTTP_CACHE_CONTROL',
-    #     load_func=wz.parse_cache_control_header)
-    
     # Werkzeug supplies host, which includes the port if supplied.
     hostname = _environ_property('HTTP_HOST')
-    
-    # if_match = _environ_property('HTTP_IF_MATCH', load_func=wz.parse_etags)
-    # if_none_match = _environ_property('HTTP_IF_NONE_MATCH', load_func=wz.parse_etags)
-    
+        
     # Werkzeug does not supply these most basic of headers (likely because it
     # has much better high-level ones).
     path_info = _environ_property('PATH_INFO')
@@ -288,7 +274,7 @@ class Response(CommonCore, wz.Response):
     etag = wz.header_property('etag', read_only=False)
     
     def get_wsgi_headers(self, environ):
-        headers = super(Response, self).get_wsgi_headers(environ)
+        headers = list(super(Response, self).get_wsgi_headers(environ))
         headers.extend(self.cookies.build_headers())
         return headers
     
@@ -319,7 +305,7 @@ class Response(CommonCore, wz.Response):
     def start(self, status=None, headers=None, start_response=None, plain=None, html=None, **kwargs):
         """Start the wsgi return sequence. DEPRICATED
         
-        Can be called just like the standard start_response, but you cal also
+        Can be called just like the standard start_response, but you can also
         pass kwargs to be set as attributes before starting.
         """
         
@@ -336,11 +322,13 @@ class Response(CommonCore, wz.Response):
                 raise ValueError('no response attribute %r' % k)
             setattr(self, k, v)
         
-        if status is not None:
+        if isinstance(status, int):
+            self.status_code = status
+        elif status:
             self.status = status
         
         headers = self.headers.to_list(self.charset) + self.cookies.build_headers() + (list(headers) if headers else [])
-        (start_response or self._start_response)(status or self.status, headers)
+        (start_response or self._start_response)(self.status, headers)
 
 
 class RequestMiddleware(object):
