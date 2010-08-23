@@ -156,16 +156,10 @@ def resolve_status(status, canonicalize=False, strict=False):
 
 
 def status_resolver(app, canonicalize=False, strict=False):
-    """WSGI middleware which attempts to resolve whatever is sent as the
-    status object into a proper HTTP status.
-    
-    """
-    
-    def status_resolver_app(environ, start):
-        def status_resolver_start(status, headers, exc_info=None):
-            start(resolve_status(status, canonicalize=canonicalize, strict=strict), headers)
-        return app(environ, status_resolver_start)
-    return status_resolver_app
+    def _status_resolver(environ, start):
+        log('Status_resolver has been deprecated.')
+        return app(environ, start)
+    return _status_resolver
 
 
 
@@ -187,10 +181,8 @@ def not_found_catcher(app, render):
 
 
 def catch_any_status(app):
-    #log.debug("HERE")
-    def catch_any_status_app(environ, start):
-        #log.debug("HERE 2")
-        app_iter = None
+    def _catch_any_status(environ, start):
+        app_iter = []
         try:
             app_iter = iter(app(environ, start))
             yield next(app_iter)
@@ -207,22 +199,7 @@ def catch_any_status(app):
             for x in app_iter:
                 yield x
             
-    return catch_any_status_app
+    return _catch_any_status
 
 
-def test_status_resolver():
-    """Nose test, checking that plaintext is returned."""
 
-    from webtest import TestApp
-    
-    @status_resolver
-    def app(environ, start):
-        start(307, [('Content-Type', 'text-plain')])
-        yield 'Not found!'
-    app = TestApp(app)
-
-    res = app.get('/')
-    assert res.status == '307 Temporary Redirect', 'Status did not get resolved.'
-
-if __name__ == '__main__':
-    import nose; nose.run(defaultTest=__name__)
