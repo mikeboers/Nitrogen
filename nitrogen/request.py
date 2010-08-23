@@ -211,7 +211,7 @@ class Request(CommonCore):
 
 
 
-def _content_type_flag(spec):
+def _mimetype_flag(spec):
     """Build a property for quick setting of content types.
     
     You can only set these properties to be True. When you do so, the content-
@@ -262,9 +262,9 @@ class Response(CommonCore):
     pre-build response cookies container."""
     
     # The request is depricated.
-    def __init__(self, body=None, status=None, headers=None, start=None):
+    def __init__(self, body=None, status=None, headers=None, start_response=None):
         self.body = body
-        self.wsgi_start = start
+        self._start_response = start_response
         self.headers = headers or []
         
         if status:
@@ -276,6 +276,8 @@ class Response(CommonCore):
         if 'Content-Type' in self.headers:
             ctype, opts = wz.parse_options_header(self.headers['Content-Type'])
             self._charset = opts.get('charset')
+        else:
+            self.content_type = 'text/html'
     
     @wz.cached_property
     def cookies(self):
@@ -289,9 +291,9 @@ class Response(CommonCore):
     def headers(self, value):
         self._headers = value if isinstance(value, MutableHeaders) else MutableHeaders(value)
     
-    as_html = _content_type_flag('text/html')
-    as_text = _content_type_flag('text/plain')
-    as_json = _content_type_flag('application/json')
+    as_html = _mimetype_flag('text/html')
+    as_text = _mimetype_flag('text/plain')
+    as_json = _mimetype_flag('application/json')
     
     date = wz.header_property('date', read_only=False, load_func=wz.parse_date, dump_func=wz.http_date)
     
@@ -364,24 +366,36 @@ class Response(CommonCore):
     def status(self, value):
         self._status = resolve_status(value)
 
-    def build_headers(self, body=None):  
+    def build_headers(self):  
         headers = self.headers.allitems()
         headers.extend(self.cookies.build_headers())
         return headers
         
-    def start(self, body=None, status=None, headers=None, environ=None, start_response=None, **kwargs):
-        """Start the wsgi return sequence.
-
-        If called with status, that status is resolved. If status is None, we
-        use the internal status.
-
-        If headers are supplied, they are sent after those that have been
-        added to self.headers.
-
+    def start(self, status=None, headers=None, environ=None, start_response=None, plain=None, html=None, **kwargs):
+        """Start the wsgi return sequence. DEPRICATED
+        
+        Can be called just like the standard start_response, but you cal also
+        pass kwargs to be set as attributes before starting.
         """
-        body = body or self.body
-        headers = self.build_headers(body) + (list(headers) if headers else [])
-        (start_response or self.wsgi_start)(status or self.status, headers)
+        
+        # Deal with content-type overrides and properties.
+        if plain or html:
+            log.warning('Response.start html/plain kwargs are depreciated')
+            if html:
+                self.content_type = 'text/html'
+            else:
+                self.content_type = 'text/plain'
+        
+        for k, v in kwargs.items():
+            if not hasattr(self, k):
+                raise ValueError('no response attribute %r' % k)
+            setattr(self, k, v)
+        
+        if status is not None:
+            self.status = status
+        
+        headers = self.build_headers() + (list(headers) if headers else [])
+        (start_response or self._start_response)(status or self.status, headers)
     
     def __call__(self, body=None, status=None, headers=None, **kwargs):
         """Copy this request and set new properties to it."""
@@ -406,7 +420,7 @@ class Response(CommonCore):
 
 
 
-class Application(object):
+class RequestMiddleware(object):
     
     request_class = None
     response_class = None
@@ -415,9 +429,9 @@ class Application(object):
         self.app = app
     
     @classmethod
-    def _get_pair(cls, environ, start):
+    def _get_pair(cls, environ, start_response):
         request  = (cls.request_class  or Request )(environ)
-        response = (cls.response_class or Response)(start=start)
+        response = (cls.response_class or Response)(start_response=start_response)
         return request, response
     
     def _handle_response(self, environ, start, response):
@@ -444,8 +458,7 @@ class Application(object):
             self.app(instance, *self._get_pair(environ, start))
         )
 
-
-as_request = Application
+as_request = RequestMiddleware
 
 
 
