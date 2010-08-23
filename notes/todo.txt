@@ -6,19 +6,7 @@
   I don't like. Make sure to document all of the changes I am making, and why.
 
     Request:
-        - data structures
-        - get parsing (provide args/get/query)
-        - cookie parsing
         - body caching (leave this in the webio.body module)
-        - body parsing:
-            - data structures
-            - add post/form
-            - _get_file_stream should return FileWrapped self.stream_factory
-        - encoding_errors instead of decode_errors (set to 'replace' by 
-          default)
-        - the constructor should return the cached version (if it is the same
-          type as requested)
-        - remove Request.values, as it is sloppy
     
     Response:
         - set_cookie and delete_cookie should be adjusted

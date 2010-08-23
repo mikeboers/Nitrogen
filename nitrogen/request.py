@@ -58,88 +58,96 @@ class CommonCore(object):
     	return type(name, (cls, ) + extra_bases, namespace)
 
 
-class Request(CommonCore):
+class Request(CommonCore, wz.Request):
     
-    """WSGI/HTTP request abstraction class."""
+    """WSGI/HTTP request abstraction class.
     
-    # The total maximum length of a POST (or PUT) request, including form data
-    # and all files. See http://werkzeug.pocoo.org/documentation/0.6/http.html#werkzeug.parse_form_data
+    This is an extension of the Werkzeug Request class. I strongly feel that
+    there are a couple of things that it does not do optimally, and so I am
+    making those few changes here.
+    
+    Also, there are a couple changes to make this backwards compatible with my
+    own Request class, but those are depricated and noted where appropriate.
+    
+    """
+    
+    # Set a default max request length. This applied to both form data, and
+    # file uploads. See http://werkzeug.pocoo.org/documentation/0.6/http.html#werkzeug.parse_form_data
     # for more info.
     max_content_length = 2 * 1024 * 1028
     
-    # Maximum size for all form data to accept. See http://werkzeug.pocoo.org/documentation/0.6/http.html#werkzeug.parse_form_data
-    # for more info.
-    max_form_memory_size = None
-    
     # Function to use to create file objects at parse time. Defaults to
-    # rejecting all files. See http://werkzeug.pocoo.org/documentation/0.6/http.html#werkzeug.parse_form_data
+    # rejecting all files. There are more supplied in nitrogen.webio.body.
+    # See http://werkzeug.pocoo.org/documentation/0.6/http.html#werkzeug.parse_form_data
     # for more info.
-    stream_factory = None
+    stream_factory = body.reject_factory
     
     def __init__(self, environ, charset=None, decode_errors=None):
         self.environ = environ
         self.charset = charset
         self.decode_errors = decode_errors
     
-    method = _environ_property('REQUEST_METHOD', load_func=str.upper)
+    # Using my multiple-value-per-key mapping, as it retains more ordering
+    # information.
+    parameter_storage_class = MultiMap
+    
+    # Properties for quick method testing. Depricated.
     is_get = _environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'GET')
     is_post = _environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'POST')
     is_put = _environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'PUT')
     is_delete = _environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'DELETE')
     is_head = _environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'HEAD')
     
-    def assert_body_cache(self):
-        body.assert_body_cache(self.environ)
+    def _get_file_stream(self, total_content_length, content_type, filename=None,
+        content_length=None):
+        """Called to get a stream for the file upload.
+        
+        This must provide a file-like class with `read()`, `readline()`
+        and `seek()` methods that is both writeable and readable.
+        
+        The default implementation calls self.stream_factory with the given
+        arguments and wraps it in a webio.body.FileWrapper (to track the
+        amount written).
+        
+        The default self.stream_factory raises an exception (ie. does not
+        allow file uploads).
+        
+        """
+        
+        return body.FileWrapper(self.stream_factory(
+            total_content_length,
+            content_type,
+            filename,
+            content_length,
+        ))
     
-    def rewind_body_cache(self):
-        body.rewind_body_cache(self.environ)
+    # I am supplying this synonym for the Werkzeug property simply for
+    # backwards compatibility.
+    post = wz.Request.form
     
     @wz.cached_property
-    def headers(self):
-        return EnvironHeaders(self.environ)
-    
-    query_string = _environ_property('QUERY_STRING')
-    @property
     def query(self):
         return parse_query(self.environ, charset=self.charset, errors=self.decode_errors)
     get = query # Depricated.
+    args = query # Werkzeug's name.
     
+    # My cookies are much nicer. 
     @wz.cached_property
     def cookies(self):
         raw = cookies.parse_cookies(self.environ, factory=self.cookie_factory, charset=self.charset, decode_errors=self.decode_errors)
-        # This is immutable, because it does not reflect back to the environ at this time.
+        # Throw it into an immutable container.
         return MultiMap((k, c.value) for k, c in raw.iterallitems())
     
-    @property
-    def stream(self):
-        return body.parse_stream(self.environ,
-            charset=self.charset,
-            errors=self.decode_errors,
-            stream_factory=self.stream_factory,
-            max_content_length=self.max_content_length,
-            max_form_memory_size=self.max_form_memory_size,
-        )
-        
-    @property
-    def post(self):
-        return body.parse_post(self.environ,
-            charset=self.charset,
-            errors=self.decode_errors,
-            stream_factory=self.stream_factory,
-            max_content_length=self.max_content_length,
-            max_form_memory_size=self.max_form_memory_size,
-        )
-    form = post # For Werkzeug's sake.
-        
-    @property
-    def files(self):
-        return body.parse_files(self.environ,
-            charset=self.charset,
-            errors=self.decode_errors,
-            stream_factory=self.stream_factory,
-            max_content_length=self.max_content_length,
-            max_form_memory_size=self.max_form_memory_size,
-        )
+    
+    
+    body = _environ_property('wsgi.input')
+    
+    def assert_body_cache(self):
+        body.assert_body_cache(self.environ)
+    
+    # Depricated. Use request.body.seek(0) after caching it.
+    def rewind_body_cache(self):
+        body.rewind_body_cache(self.environ)
     
     session = _environ_property('beaker.session')
     
@@ -157,55 +165,42 @@ class Request(CommonCore):
     
     route = _environ_property('wsgiorg.routing_args', load_func=lambda x: x[1])    
     
-    body = _environ_property('wsgi.input')
     
-    # This one gets a little more attension because IE 6 will send us the
-    # length of the previous request as an option to this header
+    # These get a little more attension because IE 6 will send us the
+    # length of the previous request as an option to this header.
     if_modified_since = _environ_property('HTTP_IF_MODIFIED_SINCE',
         load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
     if_unmodified_since = _environ_property('HTTP_IF_UNMODIFIED_SINCE',
         load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
     
-    # Lots of pretty generic headers...
-    accept = _environ_property('HTTP_ACCEPT',
-        load_func=lambda x: wz.parse_accept_header(x, wz.MIMEAccept))
-    accept_charset = _environ_property('HTTP_ACCEPT_CHARSET',
-        load_func=lambda x: wz.parse_accept_header(x, wz.CharsetAccept))
-    accept_encoding = _environ_property('HTTP_ACCEPT_ENCODING',
-        load_func=lambda x: wz.parse_accept_header(x, wz.Accept))
-    accept_language = _environ_property('HTTP_ACCEPT_LANGUAGE',
-        load_func=lambda x: wz.parse_accept_header(x, wz.LanguageAccept))
-    authorization = _environ_property('HTTP_AUTHORIZATION',
-        load_func=wz.parse_authorization_header) # This will be None for no header.
-    cache_control = _environ_property('HTTP_CACHE_CONTROL',
-        load_func=wz.parse_cache_control_header)
-    date = _environ_property('HTTP_DATE', load_func=wz.parse_date)
-    host = _environ_property('HTTP_HOST')
+    # Depricated.
+    etag = _environ_property('HTTP_IF_NOT_MATCH')
     
-    if_match = _environ_property('HTTP_IF_MATCH', load_func=wz.parse_etags)
-    if_none_match = _environ_property('HTTP_IF_NONE_MATCH', load_func=wz.parse_etags)
+    # Werkzeug supplies referrer, which is the correct spelling, but I want
+    # this here for completeness.
+    referer = wz.Request.referrer
+        
+    # Werkzeug only supplied the remote_addr.
+    remote_port = _environ_property('REMOTE_PORT', load_func=int)
     
+    # authorization = _environ_property('HTTP_AUTHORIZATION',
+    #         load_func=wz.parse_authorization_header) # This will be None for no header.
+    # cache_control = _environ_property('HTTP_CACHE_CONTROL',
+    #     load_func=wz.parse_cache_control_header)
+    
+    # Werkzeug supplies host, which includes the port if supplied.
+    hostname = _environ_property('HTTP_HOST')
+    
+    # if_match = _environ_property('HTTP_IF_MATCH', load_func=wz.parse_etags)
+    # if_none_match = _environ_property('HTTP_IF_NONE_MATCH', load_func=wz.parse_etags)
+    
+    # Werkzeug does not supply these most basic of headers (likely because it
+    # has much better high-level ones).
     path_info = _environ_property('PATH_INFO')
     script_name = _environ_property('SCRIPT_NAME')
     
-    referer = _environ_property('HTTP_REFERER')
-    
-    remote_addr = _environ_property('REMOTE_ADDR')
-    remote_port = _environ_property('REMOTE_PORT', load_func=int)
-    remote_user = _environ_property('REMOTE_USER')
-    
-    user_agent = _environ_parser(wz.UserAgent)
-    
-    # WSGI stuff
-    is_secure = _environ_property('wsgi.url_scheme', load_func=lambda x: x == 'https')
-    is_multiprocess = _environ_property('wsgi.multiprocess')
-    is_multithread = _environ_property('wsgi.multithread')
-    is_run_once = _environ_property('wsgi.run_once')
-
-    # Not sent by every library, but atleast jQuery, prototype and Mochikit
-    # and probably some more.
-    is_xhr  = _environ_property('HTTP_X_REQUESTED_WITH', load_func=lambda x: x.lower() == 'xmlhttprequest', default='')
-    is_ajax = is_xhr
+    # Synonym. Likely better to use the original.
+    is_ajax = wz.Request.is_xhr
 
 
 
