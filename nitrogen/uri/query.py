@@ -470,16 +470,6 @@ class Query(MutableMultiMap):
                 return False
         return True
 
-
-
-
-ENVIRON_KEY = 'nitrogen.req.get'
-
-def parse_query(environ, charset=None, errors=None, key=ENVIRON_KEY):
-    """Return the query for this request."""
-    if key not in environ:
-        environ[key] = Query(environ.get('QUERY_STRING', ''), charset=charset, decode_errors=errors)
-    return environ[key]
     
     
 if __name__ == '__main__':

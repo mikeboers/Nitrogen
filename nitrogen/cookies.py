@@ -205,7 +205,7 @@ import werkzeug as wz
 import multimap
 
 # For signed cookies
-from ..uri.query import Query
+from .uri.query import Query
 
 log = logging.getLogger(__name__)
 

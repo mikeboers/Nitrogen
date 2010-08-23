@@ -6,12 +6,7 @@ routing, etc.
 
 """
 
-
-from cStringIO import StringIO
-import re
 import logging
-from cgi import parse_header
-import base64
 
 from webtest import TestApp
 import werkzeug as wz
@@ -19,15 +14,10 @@ import werkzeug.utils as wzutil
 
 from multimap import MultiMap
 
-from .http.status import resolve_status
-from .http.time import parse_http_time, format_http_time
-from .webio import request_params
-from .webio.query import parse_query
-from .webio.headers import parse_headers, MutableHeaders, EnvironHeaders
-from .webio import cookies
-from .webio import body
-from .route.core import get_route_history, get_route_data
-
+from . import body
+from . import cookies
+from .route.core import get_route_history
+from .uri.query import Query
 
 log = logging.getLogger(__name__)
 
@@ -122,18 +112,20 @@ class Request(CommonCore, wz.Request):
     
     @wz.cached_property
     def query(self):
-        return parse_query(self.environ, charset=self.charset, errors=self.encoding_errors)
+        return Query(self.query_string, charset=self.charset, decode_errors=self.encoding_errors)
     get = query # Depricated.
     args = query # Werkzeug's name.
     
     # My cookies are much nicer. 
+    raw_cookies = _environ_property('HTTP_COOKIE')
     @wz.cached_property
     def cookies(self):
-        raw = cookies.parse_cookies(self.environ, factory=self.cookie_factory, charset=self.charset, decode_errors=self.encoding_errors)
+        raw = self.cookie_factory(self.raw_cookies,
+            charset=self.charset,
+            decode_errors=self.encoding_errors
+        )
         # Throw it into an immutable container.
         return MultiMap((k, c.value) for k, c in raw.iterallitems())
-    
-    
     
     body = _environ_property('wsgi.input')
     
@@ -372,67 +364,3 @@ as_request = RequestMiddleware
 
 
 
-
-
-
-def test_request_get():
-    def app(environ, start):
-        req = Request(environ)
-        assert req.method == 'GET'
-        assert req.is_get
-        assert not req.is_post
-        assert req.get['key'] == 'value'
-
-        res = Response(start)
-        assert res.headers.content_type == 'text/html; charset=utf-8'
-        res.as_text = True
-        assert res.headers.content_type == 'text/plain; charset=utf-8'
-        res.start()
-
-        yield 'Hello, World!'
-
-    app = TestApp(request_params(app))
-    res = app.get('/?key=value')
-    assert res.headers['content-type'] == 'text/plain; charset=utf-8'
-
-def test_request_get_file():
-    def app(environ, start):
-        req = Request(environ)
-        res = Response(start)
-        res.filename = 'hello.txt'
-        assert res.headers.content_disposition == 'attachment; filename="hello.txt"'
-        res.filename = 'hello"world.quoted'
-        assert res.headers.content_disposition == 'attachment; filename="hello\\"world.quoted"'
-        
-        res.start()
-
-        yield 'Hello, World!'
-
-    app = TestApp(request_params(app))
-    res = app.get('/')
-
-def test_request_post_and_etag():
-    def app(environ, start):
-        req = Request(environ)
-        assert req.method == 'POST'
-        assert req.is_post
-        assert not req.is_get
-        assert len(req.get) == 0
-        assert req.post['key'] == 'value'
-        assert req.etag == 'etag_goes_here'
-
-        res = Response(start)
-        res.as_html = True
-        assert res.headers.content_type == 'text/html; charset=utf-8'
-        res.etag = 'new_etag'
-        res.start()
-
-        yield 'Hello, World!'
-
-    app = TestApp(request_params(app))
-    res = app.post('/', {'key': 'value'}, headers=[('if_none_match', 'etag_goes_here')])
-    assert res.headers['content-type'] == 'text/html; charset=utf-8'
-    assert res.headers['etag'] == 'new_etag'
-    
-if __name__ == '__main__':
-    import nose; nose.run(defaultTest=__name__)
