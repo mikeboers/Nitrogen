@@ -1,7 +1,13 @@
 
 - MultiMap.lists() and iterlists()
 
-    
+- What do we actually call the http status module?
+	httpstatus
+	http
+	status
+	
+	raise status.NotFound()
+	
 - Should be throwing a 413 if too much has been posted.
 
 - Perhaps we do not need a rewind_body_cache; change assert_body_cache to
@@ -26,6 +32,7 @@
     
     Abstract it to generate the name of the template. eg. "404 Not Found":
 		'http_status/404_not_found.html', then
+		'_404_not_found.html', then
 		'http_status/404.html', then
 		'http_status/4xx.html', then
 		'http_status/generic.html',
