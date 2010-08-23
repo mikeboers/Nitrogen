@@ -132,11 +132,35 @@ class LoggingAppMixin(app.Core):
     
     base_config = {
         'log_format': base_format,
+        'log_levels': {
+            '': logging.DEBUG,
+            'nitrogen.webio': logging.INFO,
+            'nitrogen.route': logging.WARNING,
+        },
+        'log_to_stderr': True,
+        'log_handlers': [],
     }
+    
+    def __init__(self, *args, **kwargs):
+        super(LoggingAppMixin, self).__init__(*args, **kwargs)
+        self._setup_handlers = []
     
     def setup(self):
         super(LoggingAppMixin, self).setup()
         self.log_formatter = ThreadLocalFormatter()
+        for name, level in self.config['log_levels'].items():
+            logging.getLogger(name).setLevel(level)
+        handlers = self.config['log_handlers'][:]
+        if self.config['log_to_stderr']:
+            handlers.append(logging.StreamHandler(sys.stderr))
+        root = logging.getLogger()
+        for handler in self._setup_handlers:
+            root.removeHandler(handler)
+        self._setup_handlers = handlers
+        for handler in handlers:
+            handler.setFormatter(self.log_formatter)
+            root.addHandler(handler)
+            
     
     def init_request(self, environ):
         super(LoggingAppMixin, self).init_request(environ)

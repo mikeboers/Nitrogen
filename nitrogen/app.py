@@ -25,6 +25,7 @@ class Config(dict):
 class Core(object):
     
     base_config = {
+        'root': '',
         'run_mode': 'socket',
         'private_key': None,
     }

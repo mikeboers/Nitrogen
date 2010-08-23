@@ -1,13 +1,15 @@
 
 - MultiMap.lists() and iterlists()
 
-- What do we actually call the http status module?
-	httpstatus
-	http
-	status
-	
-	raise status.NotFound()
+Need better names for App.wsgi_app and wrapped_wsgi_app.
 
+
+
+
+AppCore needs a root
+	templatemixin adds root + '/templates'
+	sessionmixin defaults to using it for data
+	
 - Write a better session.
 	max_age
 	regenerate ids
@@ -42,15 +44,6 @@
     - See if I can find something that makes nice tracebacks for me. Either
       werkzeug or ... ?
 		
-- Consider switching to werkzeug's exceptions
-	- they do not have redirection exceptions, but there is a redirect
-	  function
-	- abort is the general function for stopping due to an error. you pass it
-	  a status code. perhaps you could also pass it the text:
-		- abort(404, "Could not find it.")
-		- abort('not found', 'Could not find it.')
-		- abort.not_found('could not find it')
-	- move all of this to nitrogen.http
 
 
 - nitrogen.App

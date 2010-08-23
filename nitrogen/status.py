@@ -233,8 +233,8 @@ def not_found_catcher(app, render):
     return not_found_catcher_app
 
 
-def catch_any_status(app, lookup=None):
-    def _catch_any_status(environ, start):
+def middleware(app, lookup=None):
+    def _middleware(environ, start):
         app_iter = []
         try:
             app_iter = iter(app(environ, start))
@@ -245,7 +245,7 @@ def catch_any_status(app, lookup=None):
                 log.info('caught %d %s (to %r): %r' % (e.code, e.title, headers['location'], e.detail))
             else:
                 log.info('caught %d %s: %r' % (e.code, e.title, e.detail))
-            template = lookup and lookup('status/%d.html' % e.code)
+            template = lookup and (lookup('status/%d.html' % e.code) or lookup('status/generic.html'))
             if template:
                 start('%d %d' % (e.code, e.title), [('Content-Type', 'text/html; charset=utf-8')])
                 yield template.render_unicode(e=e).encode('utf8')
@@ -255,8 +255,7 @@ def catch_any_status(app, lookup=None):
         else:
             for x in app_iter:
                 yield x
-            
-    return _catch_any_status
+    return _middleware
 
-
+catch_any_status = middleware
 
