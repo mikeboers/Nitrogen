@@ -2,6 +2,7 @@
 - MultiMap.lists() and iterlists()
 
     
+- Should be throwing a 413 if too much has been posted.
 
 - Perhaps we do not need a rewind_body_cache; change assert_body_cache to
   cache_body or make_body_seekable, and then one can simply tell/seek on the
@@ -10,9 +11,7 @@
 - webio.body.assert_body_cache has no protection against massive requests
 
 - Make sure that my cookies.Container.expire takes a path and domain. Document
-  that it is called expire, and not delete. However, I will leave a
-  Response.delete_cookie for compatibilities sake (it will also be at
-  expire_cookie).
+  that it is called expire, and not delete.
 
 - Cookies should be adjusted to take into account that we can set multiple
   cookies to the same name but with different path and domain. The dict access
