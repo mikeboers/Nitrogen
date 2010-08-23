@@ -53,17 +53,21 @@ def request(environ, start):
     yield '\n'
 
     yield "EXTRA:\n"
+    yield '\taccept:\n'
+    yield '\t\tcharsets: %r\n' % req.accept_charsets
+    yield '\t\tencodings: %r\n' % req.accept_encodings
+    yield '\t\tlanguages: %r\n' % req.accept_languages
+    yield '\t\tmimetypes: %r\n' % req.accept_mimetypes
+    yield '\tauthorization: %r\n' % req.authorization
+    yield '\tcache_control: %r\n' % req.cache_control
+    yield '\t\tmax_age: %r\n' % req.cache_control.max_age
+    yield '\tif_match: %r\n' % req.if_match
+    yield '\tif_modified_since: %r\n' % req.if_modified_since
+    yield '\tif_none_match: %r\n' % req.if_none_match
     yield '\tuser_agent: %r\n' % req.user_agent
     yield '\t\tplatform: %r\n' % req.user_agent.platform
     yield '\t\tbrowser: %r\n' % req.user_agent.browser
     yield '\t\tversion: %r\n' % req.user_agent.version
-    yield '\taccept: %r\n' % req.accept
-    yield '\taccept_charset: %r\n' % req.accept_charset
-    yield '\taccept_encoding: %r\n' % req.accept_encoding
-    yield '\taccept_language: %r\n' % req.accept_language
-    yield '\tcache_control: %r\n' % req.cache_control
-    yield '\t\tmax_age: %r\n' % (req.cache_control and req.cache_control.max_age)
-    yield '\tif_modified_since: %r\n' % req.if_modified_since
     yield '\n'
 
     yield 'DONE'

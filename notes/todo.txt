@@ -1,34 +1,7 @@
 
 - MultiMap.lists() and iterlists()
 
-
-- Extend the werkzeug Request/Response, and modify them to clean up the bits
-  I don't like. Make sure to document all of the changes I am making, and why.
-
-    Request:
-        - body caching (leave this in the webio.body module)
     
-    Response:
-        - set_cookie and delete_cookie should be adjusted
-        - figure out where to inject cookie headers. likely add to the end of
-          the result of Response.get_wsgi_headers()
-        - make it work with the same .start method as before
-            call get_wsgi_response, and make sure to not send a content-length
-            if the content is not actually set
-            going to have to pass environ to it just to be safe
-        - as_html and as_text (these are ugly, but I'm leaving them for
-          compatibility)
-        - perhaps auto decode the body on access (or just have it not auto
-          encode the body on setting it)
-        - charset should update mimetype_params (it would also be nice if it
-          can canonicalize the encoding name)
-    
-    - Document all the changes I have to make to keep it working with both
-      secrettrial5.com and gladioliworkbook.com (while trying to minimalize
-      it, of course).
-
-    - Make sure we get useragent, cache_control, athorization, and accept header objects
-      even if the header was not provided.
 
 - Perhaps we do not need a rewind_body_cache; change assert_body_cache to
   cache_body or make_body_seekable, and then one can simply tell/seek on the

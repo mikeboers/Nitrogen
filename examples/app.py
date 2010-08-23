@@ -10,4 +10,5 @@ app = App(
 
 app.setup()
 
-as_request = app.as_request
+Request = app.request_class
+Response = app.response_class
