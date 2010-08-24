@@ -1,6 +1,44 @@
 
 - MultiMap.lists() and iterlists()
 
+- Make sure cookie containers will take the whole environment.
+- LiteMap.update should set everything simulaneously.
+
+- Make a lock manager:
+	handle = Lock('whatever')
+	handle.aquire()
+	handle.release()
+	with Lock('whatever'):
+		# do something
+	
+	Take a look at the various ways I was doing this before. Also look into
+	using shared memory.
+	
+	beaker seems to do this already, just not with the context manager. could
+	simply extend the NameLock to do this
+
+- App.make_cookie_factory(namespace='default')
+	return cookies with different namespaces; either prefixes on the keys or
+	prefixes on the signing key
+
+- write my own session (or adapt beaker):
+	- decide if we want to write/save on item access, or the whole thing at once
+	- no regards for mutable objects
+	- explicit save method will save everything, or just the keys you provide
+	- locks:
+		with session.lock():
+			blah blah
+		with session.lock('namespace'):
+			blah blah
+		
+		
+
+- write my own cache (or adapt beaker):
+	- make sure there is no pileup when it expires (ie how beaker handles it)
+
+- Query.sign should suffix all keys that look like r'(t|n|s|k)_*', and then strip
+  it out later; no possible collisions!
+	
 - Want to have nitrogen.query and nitrogen.body.form back into the environment
 
 	
