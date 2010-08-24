@@ -187,18 +187,26 @@ def exception_catcher(app, lookup=None, debug=False):
         
         log.info('caught %d %s: %r' % (e.code, e.title, e.detail))
         
+        text_report = format_report(environ, False) if debug else None
+        html_report = format_report(environ, True) if debug else None
+        
         template = lookup and (lookup('status/%d.html' % e.code) or lookup('status/generic.html'))
         if template:
             start('%d %d' % (e.code, e.title), [('Content-Type', 'text/html; charset=utf-8')])
             yield template.render_unicode(
                 exception=e,
-                text_report=format_report(environ, False) if debug else None,
-                html_report=format_report(environ, True) if debug else None,
+                text_report=text_report,
+                html_report=html_report,
             ).encode('utf8')
             return
             
         for x in e(environ, start):
             yield x
+        if debug:    
+            yield html_report
+            yield '<!-- This is the same error report but in plaintext.\n\n'
+            yield text_report
+            yield '\n-->'
 
     return _exception_catcher
 

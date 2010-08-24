@@ -9,6 +9,7 @@ app = App(
     session_type='ext:database',
     session_url='sqlite:///' + os.path.abspath(os.path.dirname(__file__) + '/sessions.sqlite'),
     session_lock_dir='/tmp/' + __name__,
+    debug=True,
 )
 
 Request = app.request_class
