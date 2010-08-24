@@ -16,7 +16,13 @@ app.route('/response', response_app)
 @Request.application
 def do_abort(request):
     abort(request.route['code'])
-    
+
+@app.route('/exception/{message:.+}')
+@Request.application
+def do_abort(request):
+    raise ValueError(request.route['message'])
+
+
 @app.route('/')
 def index(environ, start):
     start('200 OK', [])

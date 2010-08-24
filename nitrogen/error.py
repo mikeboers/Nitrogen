@@ -236,8 +236,7 @@ def error_notifier(app, render=None, traceback=False, template='_500.tpl'):
                             yield '\n-->\n'
                         return
                     except Exception as e:
-                        log.error('error while rendering error view', exc_info=sys.exc_info())
-                        pass
+                        log.error('Error while rendering error notification.', exc_info=sys.exc_info())
                 
                 yield html_report
                 yield '<!-- This is the same error report but in plaintext.\n\n'

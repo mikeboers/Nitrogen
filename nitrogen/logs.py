@@ -131,14 +131,12 @@ class FileHandler(logging.Handler):
 class LoggingAppMixin(app.Core):
     
     base_config = {
-        'log_format': base_format,
         'log_levels': {
             '': logging.DEBUG,
             'nitrogen.webio': logging.INFO,
             'nitrogen.route': logging.WARNING,
         },
-        'log_to_stderr': True,
-        'log_handlers': [],
+        'log_handlers': [logging.StreamHandler(sys.stderr)],
     }
     
     def __init__(self, *args, **kwargs):
@@ -151,8 +149,6 @@ class LoggingAppMixin(app.Core):
         for name, level in self.config['log_levels'].items():
             logging.getLogger(name).setLevel(level)
         handlers = self.config['log_handlers'][:]
-        if self.config['log_to_stderr']:
-            handlers.append(logging.StreamHandler(sys.stderr))
         root = logging.getLogger()
         for handler in self._setup_handlers:
             root.removeHandler(handler)

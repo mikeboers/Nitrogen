@@ -1,11 +1,39 @@
 
 - MultiMap.lists() and iterlists()
 
-Need better names for App.wsgi_app and wrapped_wsgi_app.
+- Derive a scheme for how the various app mixins will wrap an app. Keep in
+  mind that we need to have high-level and low-level support.
 
+	1. wsgi_app starts out as the router. When setup is called everything may
+	   wrap it some more.
+	
+	2. a build_middleware method collects all the middleware to apply, and a
+	   number representing the order it should be applied in
 
+- can remove all error output handling (I think)
+- error reports should be the traceback, and the environment
 
+- the exception_logger should work as it does now
+- the exception_notifier should catch all exceptions, and display non-HTTPExceptions
+  as a 500 Internal Server Error.
 
+  pass the prebuilt error_reports along with the new exception object to the
+  template
+
+error handling (as it is now)
+	catch_any_status
+	error_logger
+	error_notifier
+	error_logger, high level
+
+error handling should be the last thing done
+
+what do all the big frameworks do for error handling?
+	werkzeug
+	paste
+	pylons
+	
+	
 AppCore needs a root
 	templatemixin adds root + '/templates'
 	sessionmixin defaults to using it for data
@@ -47,9 +75,6 @@ AppCore needs a root
 
 
 - nitrogen.App
-	
-	- LoggingAppMixin automatically sets itself up if "log_auto_setup" is True
-	- Rename all mixins to have "Mixin" in the name
 	
 	- replaces the view_context
 		- app.flash(message, category)
