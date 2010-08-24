@@ -12,11 +12,13 @@ from .response import response_app
 app.route('/cookies', cookie_app)
 app.route('/response', response_app)
 
+@app.route('/abort', code=400)
 @app.route('/abort/{code:\d+}', _parsers=dict(code=int))
 @Request.application
 def do_abort(request):
     abort(request.route['code'])
 
+@app.route('/exception', message='Testing')
 @app.route('/exception/{message:.+}')
 @Request.application
 def do_abort(request):
