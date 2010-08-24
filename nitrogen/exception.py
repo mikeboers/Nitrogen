@@ -10,6 +10,7 @@ from mako.exceptions import RichTraceback as MakoTraceback
 
 from . import app
 from . import status
+from .headers import Headers
 
 log = logging.getLogger(__name__)
 
@@ -168,7 +169,10 @@ def exception_handler(app, get_template=None, debug=False):
         
         try:
             app_iter = iter(app(environ, start))
-            yield next(app_iter)
+            try:
+                yield next(app_iter)
+            except StopIteration:
+                pass
         except status.HTTPException as e:
             e.original = None
         except Exception as original:
@@ -208,7 +212,10 @@ def exception_handler(app, get_template=None, debug=False):
             except:
                 log.exception('Exception while building error page.')
             else:
-                start('%d %s' % (e.code, e.title), [('Content-Type', 'text/html; charset=utf-8')])
+                try:
+                    start('%d %s' % (e.code, e.title), [('Content-Type', 'text/html; charset=utf-8')])
+                except:
+                    pass
                 yield output
                 return
             
