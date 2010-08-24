@@ -243,7 +243,7 @@ class Response(CommonCore, wz.Response):
     """
     
     def __init__(self, *args, **kwargs):
-        self._start_response = kwargs.pop('start_response', None)
+        self._wsgi_start = kwargs.pop('start', None)
         super(Response, self).__init__(*args, **kwargs)
     
     @wz.cached_property
@@ -294,7 +294,7 @@ class Response(CommonCore, wz.Response):
         else:
             raise ValueError('cant set filename for disposition %r' % cdisp)
         
-    def start(self, status=None, headers=None, start_response=None, plain=None, html=None, **kwargs):
+    def start(self, status=None, headers=None, start=None, plain=None, html=None, **kwargs):
         """Start the wsgi return sequence. DEPRICATED
         
         Can be called just like the standard start_response, but you can also
@@ -320,7 +320,10 @@ class Response(CommonCore, wz.Response):
             self.status = status
         
         headers = self.headers.to_list(self.charset) + self.cookies.build_headers() + (list(headers) if headers else [])
-        (start_response or self._start_response)(self.status, headers)
+        (start or self._wsgi_start)(self.status, headers)
+    
+    def redirect(self, location, status=303, **kwargs):
+        self.start(status, location=location, **kwargs)
 
 
 class RequestMiddleware(object):
