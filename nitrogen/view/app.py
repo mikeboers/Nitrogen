@@ -48,8 +48,6 @@ class ViewAppMixin(app.Core):
         
         self.template_path.extend(template_path)
         
-        print self.template_path
-        
         self.view_globals = context.copy()
         self._view_locals = self.local()
         

@@ -98,6 +98,7 @@ class Core(object):
     TRANSPORT_LAYER = 2
     
     def register_middleware(self, priority, func, args=None, kwargs=None):
+        self._flattened_wsgi_app = None
         if isinstance(priority, (int, float)):
             priority = (priority, )
         if not isinstance(priority, tuple):
@@ -108,13 +109,16 @@ class Core(object):
         return self.wsgi_app(environ, start)
     
     def flatten_middleware(self):
-        middleware = sorted(self.middleware)
-        log.debug('Flattening middleware:')
-        app = self._call_wsgi_app
-        for priority, func, args, kwargs in middleware:
-            log.debug('%12r: %s' % (priority, func))
-            app = func(app, *args, **kwargs)
-        self._flattened_wsgi_app = app
+        if self._flattened_wsgi_app is None:
+            middleware = sorted(self.middleware)
+            log.debug('Flattening middleware:')
+            app = self._call_wsgi_app
+            for priority, func, args, kwargs in middleware:
+                log.debug('%12r: %s' % (priority, func))
+                app = func(app, *args, **kwargs)
+            self._flattened_wsgi_app = app
+        return self._flattened_wsgi_app
+        
         
     def cookie_factory(self, *args, **kwargs):
         if self.config.private_key_material:
@@ -161,18 +165,13 @@ class Core(object):
         self._clear_locals()
         self._local.environ = environ
         self._local.request = self.request_class(environ)
-    
-    def _auto_flatten_middleware(self):
-        if not self._flattened_wsgi_app:
-            self.flatten_middleware()
-        return self._flattened_wsgi_app
         
     def __call__(self, environ, start):
-        app = self._auto_flatten_middleware()
+        app = self.flatten_middleware()
         self.init_request(environ)
         return app(environ, start)
     
     def run(self, mode=None, *args, **kwargs):
-        self._auto_flatten_middleware()
+        self.flatten_middleware()
         serve(mode or self.config['run_mode'], self, *args, **kwargs)
 
