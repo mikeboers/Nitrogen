@@ -1,5 +1,4 @@
 
-- redirect causes sessions to not get saved
 
 - MultiMap.lists() and iterlists()
 
@@ -15,7 +14,7 @@
 	
 - Make a lock manager:
 	handle = Lock('whatever')
-	handle.aquire()
+	handle.acquire()
 	handle.release()
 	with Lock('whatever'):
 		# do something

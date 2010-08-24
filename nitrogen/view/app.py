@@ -118,14 +118,16 @@ class ViewAppMixin(app.Core):
         # Try to store them in the session (if it exists).
         session = self.request.session
         if session is not None:
-            session['_flash_messages'] = messages
+            if not messages:
+                del session['_flash_messages']
+            else:
+                session['_flash_messages'] = messages
             session.save()
             return
         
         self._local.__dict__['flash_messages'] = messages
         
     def get_flash_messages(self):
-        print 'getting messages'
         messages = self._get_flash_messages()
         self._set_flash_messages([])
         return messages
