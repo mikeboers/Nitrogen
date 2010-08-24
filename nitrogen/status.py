@@ -23,6 +23,8 @@ exceptions = {}
 
 class _Mixin(object):
     
+    # I am intensionally leaving the closing tags off here so that extra can
+    # be appended by whatever is calling the exception.
     html_template = (
     '<html>\r'
     '  <head><title>%(title)s</title></head>\r'
@@ -31,8 +33,6 @@ class _Mixin(object):
     '    <p>%(body)s</p>\r'
     '    <hr noshade>\r'
     '    <div align="right">%(server)s</div>\r'
-    '  </body>\r'
-    '</html>\r'
     )
     
     def html(self, environ):
