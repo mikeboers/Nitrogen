@@ -337,7 +337,11 @@ class RawContainer(multimap.MutableMultiMap):
         self.encode_errors = encode_errors
         self.decode_errors = decode_errors
         if input:
-            self.load(input)
+            try:
+                input = input['HTTP_COOKIE']
+            except (KeyError, TypeError):
+                pass
+            self.load(str(input))
     
     def blank_copy(self):
         return self.__class__(
