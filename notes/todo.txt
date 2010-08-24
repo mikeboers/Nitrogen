@@ -9,6 +9,13 @@
 	
 	2. a build_middleware method collects all the middleware to apply, and a
 	   number representing the order it should be applied in
+	
+	3. wsgi_app starts out as the router, and things may replace it at will.
+	   setup_wrap is called and is passed something representing the all to call,
+	   and must pass it off. wrapping takes place at init time
+	
+	4. wrap_wsgi_app(self, app) is called before every request to wrap it
+	
 
 - can remove all error output handling (I think)
 - error reports should be the traceback, and the environment

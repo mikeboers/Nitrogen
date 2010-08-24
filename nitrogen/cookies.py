@@ -588,8 +588,8 @@ def make_encrypted_container(entropy):
 
 
 class SignedContainer(Container):
-    def __init__(self, *args, **kwargs):
-        self.hmac_key = kwargs.pop('hmac_key')
+    def __init__(self, hmac_key, *args, **kwargs):
+        self.hmac_key = hmac_key
         Container.__init__(self, *args, **kwargs)
     
     def blank_copy(self):

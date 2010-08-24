@@ -11,7 +11,5 @@ app = App(
     session_lock_dir='/tmp/' + __name__,
 )
 
-app.setup()
-
 Request = app.request_class
 Response = app.response_class

@@ -1,3 +1,4 @@
+import os
 
 from beaker.middleware import SessionMiddleware
 

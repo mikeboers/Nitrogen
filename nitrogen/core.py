@@ -6,7 +6,13 @@ from .logs import LoggingAppMixin
 from .session import SessionAppMixin
 
 # Be careful about the order of these.
-class App(DBAppMixin, ViewAppMixin, SessionAppMixin, ErrorAppMixin, LoggingAppMixin):
+class App(
+    ViewAppMixin,
+    SessionAppMixin,
+    DBAppMixin,
+    LoggingAppMixin,
+    ErrorAppMixin
+):
     pass
 
 del DBAppMixin

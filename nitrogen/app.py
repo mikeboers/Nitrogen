@@ -9,6 +9,7 @@ from . import route
 from .serve import serve
 from nitrogen.compress import compressor
 from nitrogen.http.status import not_found_catcher, catch_any_status
+from nitrogen.unicode import encoder
 
 class ConfigKeyError(KeyError):
     pass
@@ -20,6 +21,12 @@ class Config(dict):
             return dict.__getitem__(self, name)
         except KeyError:
             raise ConfigKeyError(name)
+    
+    # def __getattribute__(self, name):
+    #     try:
+    #         return self[name]
+    #     except KeyError:
+    #         pass
 
 
 class Core(object):
@@ -30,57 +37,37 @@ class Core(object):
         'private_key': None,
     }
     
-    cookie_factory = None
-    
     def __init__(self, *args, **kwargs):
         
         # Build up the base config from all the base_configs on the mro chain.
-        self.config = Config(**kwargs)
+        config = {}
         applied = set()
         for cls in reversed(self.__class__.__mro__):
             base = getattr(cls, 'base_config', None)
             if base and id(base) not in applied:
-                self.config.update(base)
+                config.update(base)
                 applied.add(id(base))
+        config.update(kwargs)
+        self.config = Config(config)
         
+        # Need to keep track of all the thread-local objects, so we can reset
+        # them for every request.
         self._locals = []
         
         # Setup primary routers.
-        self._rerouter = route.ReRouter()
-        self.routers = route.Chain([self._rerouter])
+        self.primary_router = route.ReRouter()
+        self.routers = route.Chain([self.primary_router])
         
         # First level of middleware wrapping.
         app = self.routers
-        # app = not_found_catcher(app) # Ideally this will be changed into a more abstract version.
-        app = catch_any_status(app)
+        app = self.wrap_wsgi_application(app)
+        app = self.wrap_wsgi_framework(app)
+        app = self.wrap_wsgi_transport(app)
         self.wsgi_app = app
         
-        self.__is_setup = False
         self._local = self.local()
-    
-    @cached_property
-    def route(self):
-        return self._rerouter.register
-    
-    @cached_property
-    def url_for(self):
-        return self.routers.url_for
-    
-    def local(self):
-        obj = _local()
-        self._locals.append(obj)
-        return obj
-    
-    def _clear_locals(self):
-        for obj in self._locals:
-            obj.__dict__.clear()
-    
-    def setup(self):
-        if not self.cookie_factory:
-            if self.config.get('private_key'):
-                self.cookie_factory = cookies.SignedContainer.make_factory(self.config['private_key'])
-            else:
-                self.cookie_factory = cookies.Container
+        
+        # Build the base Request and Response classes we will use.
         self.request_class = request.Request.build_class(
             self.__class__.__name__ + 'Request',
             (),
@@ -91,35 +78,70 @@ class Core(object):
             (),
             cookie_factory=self.cookie_factory
         )
-        self.as_request = type(
-            self.__class__.__name__ + 'RequestMiddleware',
-            (request.RequestMiddleware, ),
-            dict(
-                request_class=self.request_class,
-                response_class=self.response_class,
-            )
-        )
-        
-        # Do whatever middleware wrapping we need to do.
-        app = self.wsgi_app
+    
+    def wrap_wsgi_application(self, app):
+        return app
+    
+    def wrap_wsgi_framework(self, app):
+        app = encoder(app)
+        app = catch_any_status(app)
+        # log/handle errors here
+        return app
+    
+    def wrap_wsgi_transport(self, app):    
         app = compressor(app)
-        self.wrapped_wsgi_app = app
+        return app
+        
+    
+    def cookie_factory(self, *args, **kwargs):
+        if self.config.get('private_key'):
+            return cookies.SignedContainer(self.config['private_key'], *args, **kwargs)
+        return cookies.Container(*args, **kwargs)
+        
+    @property
+    def route(self):
+        return self.primary_router.register
+    
+    @property
+    def url_for(self):
+        return self.routers.url_for
+    
+    def local(self):
+        """Return a managed thread-local object, reset for every request.
+        
+        This is nessesary to make sure that thread re-use does not poison our
+        local objects (which we assume to be clean every time).
+        
+        """
+        obj = _local()
+        self._locals.append(obj)
+        return obj
+    
+    def _clear_locals(self):
+        """Clear out all the thread-local objects that we control.
+        
+        This will be run before every request.
+        
+        """
+        for obj in self._locals:
+            obj.__dict__.clear()
     
     @property
     def request(self):
         return self._local.request
     
+    @property
+    def environ(self):
+        return self._local.environ
+    
     def init_request(self, environ):
-        if not self.__is_setup:
-            self.setup()
-            self.__is_setup = True
         self._clear_locals()
         self._local.environ = environ
         self._local.request = self.request_class(environ)
         
     def __call__(self, environ, start):
         self.init_request(environ)
-        return self.wrapped_wsgi_app(environ, start)
+        return self.wsgi_app(environ, start)
     
     def run(self, mode=None, *args, **kwargs):
         serve(mode or self.config['run_mode'], self, *args, **kwargs)
