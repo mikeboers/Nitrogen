@@ -163,8 +163,8 @@ logger = exception_logger
 
 
 
-def exception_catcher(app, get_template=None, debug=False):
-    def _exception_catcher(environ, start):
+def exception_handler(app, get_template=None, debug=False):
+    def _exception_handler(environ, start):
         
         try:
             app_iter = iter(app(environ, start))
@@ -224,9 +224,9 @@ def exception_catcher(app, get_template=None, debug=False):
             yield text_report
             yield '\n-->'
 
-    return _exception_catcher
+    return _exception_handler
 
-catcher = exception_catcher
+handler = exception_handler
 
 
 
@@ -235,7 +235,7 @@ class ExceptionAppMixin(app.Core):
     def __init__(self, *args, **kwargs):
         super(ExceptionAppMixin, self).__init__(*args, **kwargs)        
         self.register_middleware((self.FRAMEWORK_LAYER, 99), logger, None, dict(ignore=(status.HTTPException, )))
-        self.register_middleware((self.FRAMEWORK_LAYER, 100), catcher, None, dict(
+        self.register_middleware((self.FRAMEWORK_LAYER, 100), handler, None, dict(
             debug=self.config.debug,
             get_template=getattr(self, 'get_template', None),
         ))
