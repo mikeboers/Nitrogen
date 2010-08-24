@@ -1,5 +1,6 @@
 
 from threading import local as _local
+import logging
 
 from werkzeug import cached_property
 
@@ -8,25 +9,24 @@ from . import request
 from . import route
 from .serve import serve
 from nitrogen.compress import compressor
-from nitrogen.http.status import not_found_catcher, catch_any_status
+from nitrogen.status import not_found_catcher, catch_any_status
 from nitrogen.unicode import encoder
 
-class ConfigKeyError(KeyError):
-    pass
+
+log = logging.getLogger(__name__)
+
 
 class Config(dict):
     
-    def __getitem__(self, name):
+    def __getattribute__(self, name):
         try:
-            return dict.__getitem__(self, name)
+            return self[name]
         except KeyError:
-            raise ConfigKeyError(name)
-    
-    # def __getattribute__(self, name):
-    #     try:
-    #         return self[name]
-    #     except KeyError:
-    #         pass
+            pass
+        try:
+            return object.__getattribute__(self, name)
+        except AttributeError:
+            pass
 
 
 class Core(object):
@@ -34,19 +34,19 @@ class Core(object):
     base_config = {
         'root': '',
         'run_mode': 'socket',
-        'private_key': None,
+        'private_key_material': None,
     }
     
     def __init__(self, *args, **kwargs):
         
-        # Build up the base config from all the base_configs on the mro chain.
+        # Build up the base config from all the base_configs on the mro chain,
+        # along with everything supplied. This is slightly inefficient; meh.
         config = {}
-        applied = set()
         for cls in reversed(self.__class__.__mro__):
-            base = getattr(cls, 'base_config', None)
-            if base and id(base) not in applied:
-                config.update(base)
-                applied.add(id(base))
+            config.update(getattr(cls, 'base_config', {}))
+        for arg in args:
+            print arg
+            config.update(arg)
         config.update(kwargs)
         self.config = Config(config)
         
@@ -54,16 +54,32 @@ class Core(object):
         # them for every request.
         self._locals = []
         
-        # Setup primary routers.
+        # Setup initial routers. Use the primary router (or just the .route
+        # method) for simple apps, or append your own router to the routers
+        # list. Feel free to wrap .wsgi_app at will. It will be automatically
+        # wrapped by the AppMixins at every request.
         self.primary_router = route.ReRouter()
         self.routers = route.Chain([self.primary_router])
+        self.wsgi_app = self.routers
         
-        # First level of middleware wrapping.
-        app = self.routers
-        app = self.wrap_wsgi_application(app)
-        app = self.wrap_wsgi_framework(app)
-        app = self.wrap_wsgi_transport(app)
-        self.wsgi_app = app
+        # Setup middleware stack. This is a list of tuples; the second is a
+        # function to call that takes a WSGI app, and returns one. The first
+        # is a value (normally a tuple of ints) representing the priority;
+        # lower values will be wrapped first. Canonically:
+        #   (0, ): application layer.
+        #   (1, ): framework layer.
+        #   (2, ): transport layer.
+        # Within those layers you can specialize to push closer to front or
+        # end. ie.: (0, -10) will be very near the front of the app layer,
+        # while (2, 10) will be at the end of the transport layer.
+        #
+        # Use self.register_middleware to add to this list.
+        self.middleware = []
+        self._flattened_wsgi_app = None
+        
+        self.register_middleware((self.FRAMEWORK_LAYER, 0), encoder)
+        self.register_middleware((self.FRAMEWORK_LAYER, -10), catch_any_status)
+        self.register_middleware((self.TRANSPORT_LAYER, 10), compressor)
         
         self._local = self.local()
         
@@ -79,23 +95,32 @@ class Core(object):
             cookie_factory=self.cookie_factory
         )
     
-    def wrap_wsgi_application(self, app):
-        return app
+    APP_LAYER = 0
+    FRAMEWORK_LAYER = 1
+    TRANSPORT_LAYER = 2
     
-    def wrap_wsgi_framework(self, app):
-        app = encoder(app)
-        app = catch_any_status(app)
-        # log/handle errors here
-        return app
+    def register_middleware(self, priority, func, args=None, kwargs=None):
+        if isinstance(priority, (int, float)):
+            priority = (priority, )
+        if not isinstance(priority, tuple):
+            raise TypeError('priority must be a tuple; got %s %r' % (type(priority), priority))
+        self.middleware.append((priority, func, args or (), kwargs or {}))    
     
-    def wrap_wsgi_transport(self, app):    
-        app = compressor(app)
-        return app
+    def _call_wsgi_app(self, environ, start):
+        return self.wsgi_app(environ, start)
+    
+    def flatten_middleware(self):
+        middleware = sorted(self.middleware)
+        log.debug('Flattening middleware:')
+        app = self._call_wsgi_app
+        for priority, func, args, kwargs in middleware:
+            log.debug('%12r: %s(app, *%r, **%r)' % (priority, func, args, kwargs))
+            app = func(app, *args, **kwargs)
+        self._flattened_wsgi_app = app
         
-    
     def cookie_factory(self, *args, **kwargs):
-        if self.config.get('private_key'):
-            return cookies.SignedContainer(self.config['private_key'], *args, **kwargs)
+        if self.config.private_key_material:
+            return cookies.SignedContainer(self.config.private_key_material, *args, **kwargs)
         return cookies.Container(*args, **kwargs)
         
     @property
@@ -140,8 +165,10 @@ class Core(object):
         self._local.request = self.request_class(environ)
         
     def __call__(self, environ, start):
+        if not self._flattened_wsgi_app:
+            self.flatten_middleware()
         self.init_request(environ)
-        return self.wsgi_app(environ, start)
+        return self._flattened_wsgi_app(environ, start)
     
     def run(self, mode=None, *args, **kwargs):
         serve(mode or self.config['run_mode'], self, *args, **kwargs)

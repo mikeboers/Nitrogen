@@ -233,8 +233,8 @@ def not_found_catcher(app, render):
     return not_found_catcher_app
 
 
-def middleware(app, lookup=None):
-    def _middleware(environ, start):
+def catch_any_status(app, lookup=None):
+    def _catch_any_status(environ, start):
         app_iter = []
         try:
             app_iter = iter(app(environ, start))
@@ -255,7 +255,7 @@ def middleware(app, lookup=None):
         else:
             for x in app_iter:
                 yield x
-    return _middleware
+    return _catch_any_status
 
-catch_any_status = middleware
+middleware = catch_any_status
 

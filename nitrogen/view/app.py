@@ -27,7 +27,7 @@ class ViewAppMixin(app.Core):
         'template_path': []
     }
     
-    def __init__(self, template_path=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         """Constructor.
         
         Parameters:
@@ -35,26 +35,21 @@ class ViewAppMixin(app.Core):
             path -- Initial list of paths to look for templates in.
         
         """
-        super(ViewAppMixin, self).__init__(self, **kwargs)
-        
-        template_path = template_path or []
-        if isinstance(template_path, basestring):
-            template_path = [template_path]
-        else:
-            template_path = list(template_path)
-        template_path.append(os.path.abspath(os.path.dirname(__name__) + '/../templates'))
         
         self.lookup = mako.lookup.TemplateLookup(
-            directories=template_path,
+            directories=[],
             input_encoding='utf-8'
         )
         
+        super(ViewAppMixin, self).__init__(*args, **kwargs)
+        
+        template_path = list(self.config.template_path)
+        template_path.append(os.path.abspath(os.path.dirname(__name__) + '/../templates'))
+        
+        self.template_path.extend(template_path)
+        
         self.view_globals = context.copy()
         self._view_locals = self.local()
-    
-    def setup(self):
-        super(ViewAppMixin, self).setup()
-        self.template_path.append(os.path.dirname(os.path.abspath(__file__)))
         
     @property
     def template_path(self):

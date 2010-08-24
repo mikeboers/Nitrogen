@@ -142,10 +142,12 @@ class LoggingAppMixin(app.Core):
     def __init__(self, *args, **kwargs):
         super(LoggingAppMixin, self).__init__(*args, **kwargs)
         self._setup_handlers = []
+        if not self.config.log_formatter:
+            self.config['log_formatter'] = ThreadLocalFormatter()
+        self.setup_logging()
     
-    def setup(self):
-        super(LoggingAppMixin, self).setup()
-        self.log_formatter = ThreadLocalFormatter()
+    def setup_logging(self):
+        self.log_formatter = self.config.log_formatter
         for name, level in self.config['log_levels'].items():
             logging.getLogger(name).setLevel(level)
         handlers = self.config['log_handlers'][:]
@@ -156,7 +158,6 @@ class LoggingAppMixin(app.Core):
         for handler in handlers:
             handler.setFormatter(self.log_formatter)
             root.addHandler(handler)
-            
     
     def init_request(self, environ):
         super(LoggingAppMixin, self).init_request(environ)

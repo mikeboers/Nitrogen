@@ -12,6 +12,10 @@ from .session import Session
 
 from .. import app
 
+
+log = logging.getLogger(__name__)
+
+
 class DBAppMixin(app.Core):
     """A helper to contain the basic parts of a database connections.
     
@@ -29,21 +33,23 @@ class DBAppMixin(app.Core):
     
     def __init__(self, *args, **kwargs):
         super(DBAppMixin, self).__init__(*args, **kwargs)
-        self.engine = None
+        
+        self.engine = None        
         self.Session = sessionmaker(class_=Session, autocommit=False, autoflush=True)
         self.metadata = MetaData()
         self.Base = declarative_base(metadata=self.metadata)
-    
-    def setup(self):
-        super(DBAppMixin, self).setup()
-        if self.engine is None:
-            self.bind(self.config['db_bind'])
+        
+        if self.config.db_bind:
+            self.bind(self.config.db_bind, self.config.db_echo)
+        else:
+            self.bind('sqlite://', self.config.db_echo)
+            log.warning('Bound to temporary database; please supply db_bind.')
     
     def bind(self, engine, echo=False):
         """Bind to an engine or string."""
         
         if isinstance(engine, basestring):
-            engine = create_engine(engine, echo=echo)
+            engine = create_engine(engine, echo=bool(echo))
             
         self.engine = engine
         self.metadata.bind = engine
