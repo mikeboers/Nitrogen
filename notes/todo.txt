@@ -1,9 +1,18 @@
 
+- redirect causes sessions to not get saved
+
 - MultiMap.lists() and iterlists()
 
-- Make sure cookie containers will take the whole environment.
 - LiteMap.update should set everything simulaneously.
 
+- App.export_to
+	exports a lot of common things to a dict that you specify
+	
+- AuthAppMixin uses repoze.who and what
+	see if I can make a mixin so that permissions and groups are not cached
+		just clear out the loaded_sections if we can tell that stuff has been
+		updated
+	
 - Make a lock manager:
 	handle = Lock('whatever')
 	handle.aquire()
@@ -30,14 +39,12 @@
 			blah blah
 		with session.lock('namespace'):
 			blah blah
+	- id is regenerated constantly
 		
 		
 
 - write my own cache (or adapt beaker):
 	- make sure there is no pileup when it expires (ie how beaker handles it)
-
-- Query.sign should suffix all keys that look like r'(t|n|s|k)_*', and then strip
-  it out later; no possible collisions!
 	
 - Want to have nitrogen.query and nitrogen.body.form back into the environment
 

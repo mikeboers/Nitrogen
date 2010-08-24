@@ -45,6 +45,27 @@ def do_session(request):
     return Response('Counter: %d' % count)
 
 
+@app.route('/flash-show')
+def do_flash_show(environ, start):
+    print app.request.session
+    
+    msgs = app.get_flash_messages()
+    
+    response = Response(start=start)
+    response.start()
+    
+    yield '%d flash message(s)\n' % len(msgs)
+    for cls, message in msgs:
+        yield '%s: %r\n' % (cls, message)
+
+
+@app.route('/flash', message='Default message.')
+@app.route('/flash/{message:.+}')
+def do_flash(environ, start):
+    request = Request(environ)
+    response = Response(start=start)
+    app.flash(request.route['message'])    
+    response.redirect('/flash-show')
 
 @app.route('/request')
 def request(environ, start):
