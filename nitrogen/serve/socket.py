@@ -11,8 +11,14 @@ class SocketServer(object):
         return _make_server(self.host, self.port, self.app)
 
     def run_once(self):
-        self.make_server().handle_request()
+        try:
+            self.make_server().handle_request()
+        except KeyboardInterrupt:
+            pass
 
     def run(self):
         print 'Running on %s:%s.' % (self.host, self.port)
-        self.make_server().serve_forever()
+        try:
+            self.make_server().serve_forever()
+        except KeyboardInterrupt:
+            pass
