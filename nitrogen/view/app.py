@@ -44,9 +44,11 @@ class ViewAppMixin(app.Core):
         super(ViewAppMixin, self).__init__(*args, **kwargs)
         
         template_path = list(self.config.template_path)
-        template_path.append(os.path.abspath(os.path.dirname(__name__) + '/../templates'))
+        template_path.append(os.path.abspath(os.path.dirname(__file__) + '/../templates'))
         
         self.template_path.extend(template_path)
+        
+        print self.template_path
         
         self.view_globals = context.copy()
         self._view_locals = self.local()
@@ -75,7 +77,7 @@ class ViewAppMixin(app.Core):
     
     def get_template(self, template):
         try:
-            return lookup.get_template(template)
+            return self.lookup.get_template(template)
         except MakoException as e:
             return None
     

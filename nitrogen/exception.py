@@ -163,7 +163,7 @@ logger = exception_logger
 
 
 
-def exception_catcher(app, lookup=None, debug=False):
+def exception_catcher(app, get_template=None, debug=False):
     def _exception_catcher(environ, start):
         try:
             app_iter = iter(app(environ, start))
@@ -190,15 +190,22 @@ def exception_catcher(app, lookup=None, debug=False):
         text_report = format_report(environ, False) if debug else None
         html_report = format_report(environ, True) if debug else None
         
-        template = lookup and (lookup('status/%d.html' % e.code) or lookup('status/generic.html'))
+        template = get_template and (get_template('status/%d.html' % e.code) or get_template('status/generic.html'))
+        
         if template:
-            start('%d %d' % (e.code, e.title), [('Content-Type', 'text/html; charset=utf-8')])
-            yield template.render_unicode(
-                exception=e,
-                text_report=text_report,
-                html_report=html_report,
-            ).encode('utf8')
-            return
+            try:
+                output = template.render_unicode(
+                    exception=e,
+                    environ=environ,
+                    text_report=text_report,
+                    html_report=html_report,
+                ).encode('utf8')
+            except:
+                log.exception('Exception while building error page.')
+            else:
+                start('%d %s' % (e.code, e.title), [('Content-Type', 'text/html; charset=utf-8')])
+                yield output
+                return
             
         for x in e(environ, start):
             yield x
@@ -284,9 +291,12 @@ error_notifier = exception_notifier
 class ExceptionAppMixin(app.Core):
     
     def __init__(self, *args, **kwargs):
-        super(ExceptionAppMixin, self).__init__(*args, **kwargs)
+        super(ExceptionAppMixin, self).__init__(*args, **kwargs)        
         self.register_middleware((self.FRAMEWORK_LAYER, 99), logger, None, dict(ignore=(status.HTTPException, )))
-        self.register_middleware((self.FRAMEWORK_LAYER, 100), catcher, None, dict(debug=self.config.debug))
+        self.register_middleware((self.FRAMEWORK_LAYER, 100), catcher, None, dict(
+            debug=self.config.debug,
+            get_template=getattr(self, 'get_template', None),
+        ))
         
 
 
