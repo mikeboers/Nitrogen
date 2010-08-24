@@ -217,45 +217,10 @@ def status_resolver(app, canonicalize=False, strict=False):
     return _status_resolver
 
 
-def not_found_catcher(app, render):
-    """Displays the _404.tpl template along with a "404 Not Found" status if a
-    HTTPNotFound is thrown within the app that it wraps. This error is
-    normally thrown by routers.
-    """
-    def not_found_catcher_app(environ, start):
-        try:
-            for x in app(environ, start):
-                yield x
-        except HTTPNotFound as e:
-            log.info('caught HTTPNotFound: %r' % e.detail)
-            start('404 Not Found', [('Content-Type', 'text/html')])
-            yield render('_404.tpl')
-    return not_found_catcher_app
-
-
+# Depricated
 def catch_any_status(app, lookup=None):
-    def _catch_any_status(environ, start):
-        app_iter = []
-        try:
-            app_iter = iter(app(environ, start))
-            yield next(app_iter)
-        except HTTPException, e:
-            if isinstance(e, HTTPRedirection):
-                headers = Headers(e.headers)
-                log.info('caught %d %s (to %r): %r' % (e.code, e.title, headers['location'], e.detail))
-            else:
-                log.info('caught %d %s: %r' % (e.code, e.title, e.detail))
-            template = lookup and (lookup('status/%d.html' % e.code) or lookup('status/generic.html'))
-            if template:
-                start('%d %d' % (e.code, e.title), [('Content-Type', 'text/html; charset=utf-8')])
-                yield template.render_unicode(e=e).encode('utf8')
-            for x in e(environ, start):
-                yield x
-            return
-        else:
-            for x in app_iter:
-                yield x
-    return _catch_any_status
+    from .exception import catcher
+    return catcher(app, lookup=lookup)
 
-middleware = catch_any_status
+
 

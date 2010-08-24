@@ -1,9 +1,9 @@
 
 from .db.app import DBAppMixin
-from .view.app import ViewAppMixin
-from .error import ErrorAppMixin
+from .error import ExceptionAppMixin
 from .logs import LoggingAppMixin
 from .session import SessionAppMixin
+from .view.app import ViewAppMixin
 
 # Be careful about the order of these.
 class App(
@@ -11,15 +11,15 @@ class App(
     SessionAppMixin,
     DBAppMixin,
     LoggingAppMixin,
-    ErrorAppMixin
+    ExceptionAppMixin
 ):
     pass
 
 del DBAppMixin
-del ViewAppMixin
-del ErrorAppMixin
+del ExceptionAppMixin
 del LoggingAppMixin
 del SessionAppMixin
+del ViewAppMixin
 
 
 from .route import ReRouter

@@ -9,7 +9,6 @@ from . import request
 from . import route
 from .serve import serve
 from nitrogen.compress import compressor
-from nitrogen.status import not_found_catcher, catch_any_status
 from nitrogen.unicode import encoder
 
 
@@ -78,8 +77,7 @@ class Core(object):
         self._flattened_wsgi_app = None
         
         self.register_middleware((self.FRAMEWORK_LAYER, 0), encoder)
-        self.register_middleware((self.FRAMEWORK_LAYER, -10), catch_any_status)
-        self.register_middleware((self.TRANSPORT_LAYER, 10), compressor)
+        self.register_middleware((self.TRANSPORT_LAYER, 1000), compressor)
         
         self._local = self.local()
         
@@ -114,7 +112,7 @@ class Core(object):
         log.debug('Flattening middleware:')
         app = self._call_wsgi_app
         for priority, func, args, kwargs in middleware:
-            log.debug('%12r: %s(app, *%r, **%r)' % (priority, func, args, kwargs))
+            log.debug('%12r: %s' % (priority, func))
             app = func(app, *args, **kwargs)
         self._flattened_wsgi_app = app
         
@@ -163,13 +161,18 @@ class Core(object):
         self._clear_locals()
         self._local.environ = environ
         self._local.request = self.request_class(environ)
-        
-    def __call__(self, environ, start):
+    
+    def _auto_flatten_middleware(self):
         if not self._flattened_wsgi_app:
             self.flatten_middleware()
+        return self._flattened_wsgi_app
+        
+    def __call__(self, environ, start):
+        app = self._auto_flatten_middleware()
         self.init_request(environ)
-        return self._flattened_wsgi_app(environ, start)
+        return app(environ, start)
     
     def run(self, mode=None, *args, **kwargs):
+        self._auto_flatten_middleware()
         serve(mode or self.config['run_mode'], self, *args, **kwargs)
 

@@ -1,21 +1,7 @@
 
 - MultiMap.lists() and iterlists()
 
-- Derive a scheme for how the various app mixins will wrap an app. Keep in
-  mind that we need to have high-level and low-level support.
-
-	1. wsgi_app starts out as the router. When setup is called everything may
-	   wrap it some more.
-	
-	2. a build_middleware method collects all the middleware to apply, and a
-	   number representing the order it should be applied in
-	
-	3. wsgi_app starts out as the router, and things may replace it at will.
-	   setup_wrap is called and is passed something representing the all to call,
-	   and must pass it off. wrapping takes place at init time
-	
-	4. wrap_wsgi_app(self, app) is called before every request to wrap it
-	
+- Want to have nitrogen.query and nitrogen.body.form back into the environment
 
 - can remove all error output handling (I think)
 - error reports should be the traceback, and the environment
@@ -34,6 +20,11 @@ error handling (as it is now)
 	error_logger, high level
 
 error handling should be the last thing done
+	- let the status errors go all the way back up the chain
+	the last things should be:
+		- exception_logger
+			ignores HTTPExceptions
+		- exception_notifier
 
 what do all the big frameworks do for error handling?
 	werkzeug
