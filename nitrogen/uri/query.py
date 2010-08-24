@@ -191,7 +191,7 @@ Easy signatures!
     >>> query[u'nonce'] = '12345'
     >>> query.sign('this is the key', add_nonce=False, add_time=False)
     >>> str(query)
-    'v=value&nonce=12345&_s=vDNuaJjAEWVg7Q3atnC_nA'
+    'v=value&nonce=12345&s=vDNuaJjAEWVg7Q3atnC_nA'
 
     >>> query.verify('this is the key')
     True
@@ -201,7 +201,7 @@ Easy signatures!
     >>> query = Query('v=somevalue')
     >>> query.sign('another_key')
     >>> str(query) # doctest:+ELLIPSIS
-    'v=somevalue&_t=...&_n=...&_s=...'
+    'v=somevalue&t=...&n=...&s=...'
     >>> query.verify('another_key')
     True
     >>> query.verify('bad key')
@@ -214,10 +214,10 @@ Easy signatures!
     ValueError: signature is too old
 
     >>> query = Query(v='value')
-    >>> query['_n'] = '123abc'
+    >>> query['n'] = '123abc'
     >>> query.sign('key', max_age=60, add_time=True, add_nonce=False)
     >>> str(query) # doctest: +ELLIPSIS
-    'v=value&_n=123abc&_t=...&_x=...&_s=...'
+    'v=value&n=123abc&t=...&x=...&s=...'
     >>> query.verify('key')
     True
     >>> query.verify('not the key')
@@ -239,6 +239,8 @@ import hmac
 import base64
 import math
 import struct
+import re
+
 
 from multimap import MutableMultiMap
 
@@ -381,39 +383,43 @@ class Query(MutableMultiMap):
         value = 'A' * (6 - len(value)) + str(value) + '=='
         return struct.unpack('>I', base64.urlsafe_b64decode(value))[0]
     
-    TIME_KEY = '_t'
-    SIG_KEY = '_s'
-    NONCE_KEY = '_n'
-    EXPIRY_KEY = '_x'
+    TIME_KEY = 't'
+    SIG_KEY = 's'
+    NONCE_KEY = 'n'
+    EXPIRY_KEY = 'x'
     
     def sign(self, key, hasher=None, max_age=None, add_time=None, add_nonce=True,
-        nonce_bits=128, time_key=TIME_KEY, sig_key=SIG_KEY, nonce_key=NONCE_KEY,
-        expiry_key=EXPIRY_KEY):
+        nonce_bits=128):
 
         # encode_time = lambda x: str(int(x))
         # encode_time = lambda x: '%.2f' % x
         # encode_time = self._encode_float
         encode_time = self._encode_int
-
+        
+        # key_pattern = r'^(%s)_*$' % '|'.join((self.TIME_KEY, self.SIG_KEY, self.NONCE_KEY, self.EXPIRY_KEY))
+        # for key in list(reversed(sorted(self))):
+        #     if re.match(key_pattern, key):
+        #         self[key + '_'] = self[key]
+        #         del self[key]
+                
         if add_time or (add_time is None and max_age is None):
-            self[time_key] = encode_time(time.time())
+            self[self.TIME_KEY] = encode_time(time.time())
         if max_age is not None:
-            self[expiry_key] = encode_time(time.time() + max_age)
+            self[self.EXPIRY_KEY] = encode_time(time.time() + max_age)
         if add_nonce:
-            self[nonce_key] = base64.urlsafe_b64encode(
+            self[self.NONCE_KEY] = base64.urlsafe_b64encode(
                 hashlib.sha256(os.urandom(1024)).digest())[
                     :int(math.ceil(nonce_bits / 6))]
         
         copy = self.copy()
-        copy.discard(sig_key)
+        copy.discard(self.SIG_KEY)
         copy.sort()
-        self[sig_key] = copy._signature(key, hasher)
+        self[self.SIG_KEY] = copy._signature(key, hasher)
 
-    def verify(self, key, hasher=None, max_age=None, time_key = TIME_KEY,
-        sig_key=SIG_KEY, nonce_key=NONCE_KEY, expiry_key=EXPIRY_KEY, strict=False):
+    def verify(self, key, hasher=None, max_age=None, strict=False):
 
         # Make sure there is a sig.
-        if sig_key not in self:
+        if self.SIG_KEY not in self:
             return False
 
         # decode_time = int
@@ -423,13 +429,13 @@ class Query(MutableMultiMap):
 
         # Make sure it is good.
         copy = self.copy()
-        del copy[sig_key]
+        del copy[self.SIG_KEY]
         copy.sort()
         
         # We are comparing every character explicitly. This is so that all of
         # the failure cases take exactly the same amount of time. Don't try
         # to "clean" this up or you might introduce a timing attack.
-        old_sig = self[sig_key]
+        old_sig = self[self.SIG_KEY]
         new_sig = copy._signature(key, hasher)
         if len(old_sig) != len(new_sig):
             if strict:
@@ -444,9 +450,9 @@ class Query(MutableMultiMap):
             return False
 
         # Make sure the built in expiry time is okay.
-        if expiry_key in self:
+        if self.EXPIRY_KEY in self:
             try:
-                expiry_time = decode_time(self[expiry_key])
+                expiry_time = decode_time(self[self.EXPIRY_KEY])
             except struct.error:
                 if strict:
                     raise ValueError('bad expiry time')
@@ -457,9 +463,9 @@ class Query(MutableMultiMap):
                 return False
 
         # Make sure it isnt too old.
-        if max_age is not None and time_key in self:
+        if max_age is not None and self.TIME_KEY in self:
             try:
-                creation_time = decode_time(self[time_key])
+                creation_time = decode_time(self[self.TIME_KEY])
             except struct.error:
                 if strict:
                     raise ValueError('bad creation time')
