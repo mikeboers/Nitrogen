@@ -165,6 +165,7 @@ logger = exception_logger
 
 def exception_catcher(app, get_template=None, debug=False):
     def _exception_catcher(environ, start):
+        
         try:
             app_iter = iter(app(environ, start))
             yield next(app_iter)
@@ -187,8 +188,12 @@ def exception_catcher(app, get_template=None, debug=False):
         
         log.info('caught %d %s: %r' % (e.code, e.title, e.detail))
         
-        text_report = format_report(environ, False) if debug else None
-        html_report = format_report(environ, True) if debug else None
+        try:
+            text_report = format_report(environ, False) if debug else None
+            html_report = format_report(environ, True) if debug else None
+        except:
+            text_report = html_report = None
+            log.exception('Exception while formating error report.')
         
         template = get_template and (get_template('status/%d.html' % e.code) or get_template('status/generic.html'))
         
@@ -209,8 +214,12 @@ def exception_catcher(app, get_template=None, debug=False):
             
         for x in e(environ, start):
             yield x
-        if debug:    
+            
+        # Need to break these out like this incase there was an issue while
+        # building them.
+        if html_report:    
             yield html_report
+        if text_report:
             yield '<!-- This is the same error report but in plaintext.\n\n'
             yield text_report
             yield '\n-->'
@@ -219,73 +228,6 @@ def exception_catcher(app, get_template=None, debug=False):
 
 catcher = exception_catcher
 
-
-
-
-def exception_notifier(app, render=None, traceback=False, template='_500.tpl'):
-    """WSGI middleware to display a template to the client in case of error.
-
-    If on a development server (server.is_dev is True), the template will also
-    be passed the environment, the error, traceback, and caught output.    
-    
-    Note that this must buffer then entire response to work effectively.
-    Note that this middleware does NOT rethrow the caught error.
-    
-    """
-    
-    class _exception_notifier(object):
-        
-        def __init__(self, environ, start):
-            self.environ = environ
-            self.start = start
-            self.output = []
-            self.status = None
-            self.headers = None
-        
-        def _exception_notifier_start(self, status, headers, exc_info=None):
-            self.status = status
-            self.headers = headers
-            if exc_info:
-                logging.error(exc_info)
-                
-        def __iter__(self):
-            try:
-                for x in app(self.environ, self.error_notifier_start):
-                    self.output.append(x)
-                self.start(self.status, self.headers or [])
-                for x in self.output:
-                    yield x
-            except Exception as e:
-                
-                text_report = format_report(self.environ, self.output)
-                html_report = format_report(self.environ, self.output, html=True)
-                
-                try:
-                    self.start('500 Internal Server Error', [('Content-Type',
-                        'text/html; charset=UTF-8')])
-                except:
-                    pass
-                
-                if render:
-                    try:
-                        yield render(template, html_report=html_report if
-                            traceback else None).encode('utf8')
-                        if traceback:
-                            yield '\n<!--\n\n'
-                            yield text_report
-                            yield '\n-->\n'
-                        return
-                    except Exception as e:
-                        log.error('Error while rendering error notification.', exc_info=sys.exc_info())
-                
-                yield html_report
-                yield '<!-- This is the same error report but in plaintext.\n\n'
-                yield text_report
-                yield '\n-->'
-                    
-    return _exception_notifier
-
-error_notifier = exception_notifier
 
 
 class ExceptionAppMixin(app.Core):
