@@ -52,7 +52,7 @@ class ApiRequest(ApiBase):
 class ApiResponse(ApiBase):
     
     def __init__(self, *args, **kwargs):
-        self.raw = Response(start_response=kwargs.pop('start_response', None))
+        self.raw = Response(start=kwargs.pop('start_response', None))
         self.update(kwargs)
         self.started = False
         self['status'] = 'ok'

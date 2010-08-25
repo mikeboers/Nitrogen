@@ -605,17 +605,10 @@ class SignedContainer(Container):
     # def _unquote(self, value):
     #     return value[1:-1]
     
-    SIG_KEYS = dict(
-        nonce_key='n',
-        sig_key='s',
-        time_key='t',
-        expiry_key='x'
-    )
-    
     def _dumps(self, name, cookie):
         value = Container._dumps(self, name, cookie)
         query = Query(dict(name=name, value=value), charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
-        query.sign(self.hmac_key, max_age=cookie.max_age, add_time=True, **self.SIG_KEYS)
+        query.sign(self.hmac_key, max_age=cookie.max_age, add_time=True)
         del query['value']
         del query['name']
         return value + ':' + str(query)
@@ -628,7 +621,7 @@ class SignedContainer(Container):
         query = Query(query, charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
         query['value'] = value
         query['name'] = name
-        if query.verify(self.hmac_key, **self.SIG_KEYS):
+        if query.verify(self.hmac_key):
             return value
     
     @classmethod

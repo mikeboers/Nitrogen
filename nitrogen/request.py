@@ -243,7 +243,7 @@ class Response(CommonCore, wz.Response):
     """
     
     def __init__(self, *args, **kwargs):
-        self._wsgi_start = kwargs.pop('start', None)
+        self._wsgi_start = kwargs.pop('start_response', None) or kwargs.pop('start', None)
         super(Response, self).__init__(*args, **kwargs)
     
     @wz.cached_property

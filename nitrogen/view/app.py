@@ -58,7 +58,8 @@ class ViewAppMixin(object):
         super(ViewAppMixin, self).export_to(map)
         map.update(
             render=self.render,
-            get_template=self.get_template
+            get_template=self.get_template,
+            flash=self.flash,
         )
     
     @property
@@ -127,7 +128,7 @@ class ViewAppMixin(object):
         session = self.request.session
         if session is not None:
             if not messages:
-                del session['_flash_messages']
+                session.pop('_flash_messages', None)
             else:
                 session['_flash_messages'] = messages
             session.save()
