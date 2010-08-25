@@ -13,5 +13,4 @@ app = App(
     debug=True,
 )
 
-Request = app.request_class
-Response = app.response_class
+app.export_to(globals())

@@ -337,7 +337,7 @@ class RequestMiddleware(object):
     @classmethod
     def _get_pair(cls, environ, start_response):
         request  = (cls.request_class  or Request )(environ)
-        response = (cls.response_class or Response)(start_response=start_response)
+        response = (cls.response_class or Response)(start=start_response)
         return request, response
     
     def _handle_response(self, environ, start_response, response):

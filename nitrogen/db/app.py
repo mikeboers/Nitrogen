@@ -10,13 +10,12 @@ from sqlalchemy.orm import sessionmaker
 from .declarative import declarative_base
 from .session import Session
 
-from .. import app
 
 
 log = logging.getLogger(__name__)
 
 
-class DBAppMixin(app.Core):
+class DBAppMixin(object):
     """A helper to contain the basic parts of a database connections.
     
     By default this also uses the nitrogen extended Session (with locking) and
@@ -44,6 +43,15 @@ class DBAppMixin(app.Core):
         else:
             self.bind('sqlite://', self.config.db_echo)
             log.warning('Bound to temporary database; please supply db_bind.')
+    
+    def export_to(self, map):
+        super(DBAppMixin, self).export_to(map)
+        map.update(
+            engine=self.engine,
+            Session=self.Session,
+            metadata=self.metadata,
+            Base=self.Base
+        )
     
     def bind(self, engine, echo=False):
         """Bind to an engine or string."""

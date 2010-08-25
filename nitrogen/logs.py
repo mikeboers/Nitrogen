@@ -17,8 +17,6 @@ import multiprocessing
 import time
 
 
-from . import app
-
 
 base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(request_index)d ip:%(remote_addr)s %(name)s - %(message)s"
 
@@ -128,7 +126,7 @@ class FileHandler(logging.Handler):
         self.fh.flush()
 
 
-class LoggingAppMixin(app.Core):
+class LoggingAppMixin(object):
     
     base_config = {
         'log_levels': {

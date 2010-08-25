@@ -10,9 +10,9 @@ from mako.exceptions import MakoException
 from mako.template import Template
 
 from .defaults import context
-from .. import app
 
-class ViewAppMixin(app.Core):
+
+class ViewAppMixin(object):
     """Environment for working with views/templates.
     
     Attributes:
@@ -53,6 +53,14 @@ class ViewAppMixin(app.Core):
         
         self._warned_no_session = False
         
+    
+    def export_to(self, map):
+        super(ViewAppMixin, self).export_to(map)
+        map.update(
+            render=self.render,
+            get_template=self.get_template
+        )
+    
     @property
     def template_path(self):
         return self.lookup.directories

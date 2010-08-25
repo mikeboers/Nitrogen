@@ -6,7 +6,6 @@ import threading
 import beaker.session
 import beaker.middleware
 
-from . import app
 
 
 log = logging.getLogger(__name__)
@@ -85,7 +84,7 @@ beaker.session.SessionObject     = SessionObject
 beaker.session.SessionMiddleware = SessionMiddleware
 
 
-class SessionAppMixin(app.Core):
+class SessionAppMixin(object):
     
     def __init__(self, *args, **kwargs):
         super(SessionAppMixin, self).__init__(*args, **kwargs)

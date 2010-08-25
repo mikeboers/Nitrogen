@@ -8,7 +8,6 @@ import logging
 
 from mako.exceptions import RichTraceback as MakoTraceback
 
-from . import app
 from . import status
 from .headers import Headers
 
@@ -237,7 +236,7 @@ handler = exception_handler
 
 
 
-class ExceptionAppMixin(app.Core):
+class ExceptionAppMixin(object):
     
     def __init__(self, *args, **kwargs):
         super(ExceptionAppMixin, self).__init__(*args, **kwargs)        
