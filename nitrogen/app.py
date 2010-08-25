@@ -44,7 +44,6 @@ class Core(object):
         for cls in reversed(self.__class__.__mro__):
             config.update(getattr(cls, 'base_config', {}))
         for arg in args:
-            print arg
             config.update(arg)
         config.update(kwargs)
         self.config = Config(config)
@@ -82,18 +81,45 @@ class Core(object):
         self._local = self.local()
         
         # Build the base Request and Response classes we will use.
-        self.request_class = request.Request.build_class(
-            self.__class__.__name__ + 'Request',
-            (),
-            cookie_factory=self.cookie_factory
-        )
-        self.response_class = request.Response.build_class(
-            self.__class__.__name__ + 'Response',
-            (),
-            cookie_factory=self.cookie_factory
+        self.Request = self.build_request_class()
+        self.Response = self.build_response_class()
+    
+    def _make_class_builder(base, name=None):
+        name = name or base.__name__
+        def builder(self):
+            bases = []
+            for cls in self.__class__.__mro__:
+                mixin = getattr(cls, name + 'Mixin', None)
+                if mixin and mixin not in bases:
+                    bases.append(mixin)
+            bases.append(base)
+            cls = type(self.__class__.__name__ + name, tuple(bases), {})
+            return cls
+        return builder
+    
+    _build_request_class = _make_class_builder(request.Request)
+    _build_response_class = _make_class_builder(request.Response)
+    
+    del _make_class_builder
+        
+    def build_request_class(self):
+        cls = self._build_request_class()
+        cls.cookie_factory = self.cookie_factory
+        return cls
+    
+    def build_response_class(self):
+        cls = self._build_response_class()
+        cls.cookie_factory = self.cookie_factory
+        return cls
+    
+    def export_to(self, map):
+        map.update(
+            Request=self.Request,
+            Response=self.Response,
+            route=self.route,
         )
     
-    APP_LAYER = 0
+    APP_LAYER = APPLICATION_LAYER = 0
     FRAMEWORK_LAYER = 1
     TRANSPORT_LAYER = 2
     
@@ -164,7 +190,7 @@ class Core(object):
     def init_request(self, environ):
         self._clear_locals()
         self._local.environ = environ
-        self._local.request = self.request_class(environ)
+        self._local.request = self.Request(environ)
         
     def __call__(self, environ, start):
         app = self.flatten_middleware()
