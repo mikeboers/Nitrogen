@@ -1,4 +1,20 @@
 
+- api could use some love
+
+	no need for seperate request and response objects: just pass in a request
+	object, and whatever is returned will be json dumped
+	
+	the request could have a .abort method which throws an error
+		throw a status exception; the error_message is the detail
+	
+	no need for all the complicated status checking; the status is automatically
+	set to "ok" or "error" depending on if an excpetion was caught
+
+	@Api.application
+	def do_something(request):
+		return {'id': request['id']}
+	
+
 
 - MultiMap.lists() and iterlists()
 

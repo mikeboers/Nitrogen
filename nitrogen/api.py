@@ -3,7 +3,7 @@ import json
 import logging
 import datetime
 
-from request import Request, Response
+from .request import Request, Response
 
 
 INTERNAL_ERROR = 'internal server error'
@@ -37,8 +37,8 @@ class ApiRequest(ApiBase):
     def __init__(self, request):
         if not isinstance(request, Request):
             request = Request(request)
+            
         self.raw = request
-        
         self.update(self.raw.get)
         self.update(self.raw.post)
         
