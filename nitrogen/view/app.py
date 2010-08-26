@@ -6,7 +6,7 @@ import threading
 import logging
 
 import mako.lookup
-from mako.exceptions import MakoException
+from mako.exceptions import TopLevelLookupException as MakoLookupError
 from mako.template import Template
 
 from .defaults import context
@@ -87,7 +87,7 @@ class ViewAppMixin(object):
     def get_template(self, template):
         try:
             return self.lookup.get_template(template)
-        except MakoException as e:
+        except MakoLookupError as e:
             return None
     
     def render(self, template, **data):
