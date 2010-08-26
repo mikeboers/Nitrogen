@@ -28,6 +28,20 @@ class Config(dict):
             pass
 
 
+def class_builder(base, name=None):
+    name = name or base.__name__
+    def builder(self):
+        bases = []
+        for cls in self.__class__.__mro__:
+            mixin = getattr(cls, name + 'Mixin', None)
+            if mixin and mixin not in bases:
+                bases.append(mixin)
+        bases.append(base)
+        cls = type(self.__class__.__name__ + name, tuple(bases), {})
+        return cls
+    return builder
+
+
 class Core(object):
     
     base_config = {
@@ -84,23 +98,8 @@ class Core(object):
         self.Request = self.build_request_class()
         self.Response = self.build_response_class()
     
-    def _make_class_builder(base, name=None):
-        name = name or base.__name__
-        def builder(self):
-            bases = []
-            for cls in self.__class__.__mro__:
-                mixin = getattr(cls, name + 'Mixin', None)
-                if mixin and mixin not in bases:
-                    bases.append(mixin)
-            bases.append(base)
-            cls = type(self.__class__.__name__ + name, tuple(bases), {})
-            return cls
-        return builder
-    
-    _build_request_class = _make_class_builder(request.Request)
-    _build_response_class = _make_class_builder(request.Response)
-    
-    del _make_class_builder
+    _build_request_class = class_builder(request.Request)
+    _build_response_class = class_builder(request.Response)
         
     def build_request_class(self):
         cls = self._build_request_class()

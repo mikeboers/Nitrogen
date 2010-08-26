@@ -1,0 +1,37 @@
+<%page args="form" />
+<%
+    import os
+    nonce = os.urandom(4).encode('hex')
+    form_id = 'form-%s' % nonce
+%>
+<ol id="${form_id}" class="form-fields">
+  % for field in form:
+    <li class="state-${"error" if field.errors else "ok"}">
+      <div class="label">
+        ${field.label()}
+        % if field.flags.optional:
+          <span class="optional">(optional)</span>
+        % elif field.flags.required:
+          <span class="required">(required)</span>
+        % endif
+        % if field.errors:
+          <ol class="errors">
+            ${'\n'.join('<li>[ %s ]</li>' % error for error in field.errors)}
+          </ol>
+        % endif
+      </div>
+      <div class="field type-${field.type}">${field()}</div>
+      % if field.type == 'MarkdownField':
+        <script>jQuery(function($) {
+          if ($.markdownEditor)
+            $(${json('#%s #%s' % (form_id, field.name))}).markdownEditor();
+        })</script>
+      % elif field.type in ('DateField', 'DateTimeField'):
+        <script>jQuery(function($) {
+          if ($.autodate)
+            $(${json('#%s #%s' % (form_id, field.name))}).autodate({type:${field.type[:-5].lower()|json}});
+        })</script>
+      %endif
+    </li>
+  % endfor
+</ol>
