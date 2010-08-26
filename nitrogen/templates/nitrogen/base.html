@@ -1,0 +1,25 @@
+<%!
+
+	page_title = ''
+
+%>
+<html>
+	<head>
+		% if self.attr.page_title:
+			<title>${self.attr.page_title|h}</title>
+		% else:
+			<% page_title = capture(self.page_title).strip() %>\
+			% if page_title:
+				<title>${page_title}</title>
+			% endif
+		% endif
+		${next.head()}
+	</head>
+	<body>
+		${next.body()}
+	</body>
+</html>
+${next.post_html()}
+<%def name="head()"></%def>
+<%def name="page_title()"></%def>
+<%def name="post_html()"></%def>

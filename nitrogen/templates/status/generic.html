@@ -1,24 +1,25 @@
-<html>
-  <head><title>${exception.code}: ${exception.title|h}</title></head>
-  <body>
-    <h1>${exception.code}: ${exception.title|h}</h1>
-    <p>${exception.explanation|h}</p>
-	% if exception.detail:
+<%inherit file="/nitrogen/base.html" />
+<%def name="page_title()">${exception.code}: ${exception.title|h}</%def>
+
+<h1>${page_title()}</h1>
+<p>${exception.explanation|h}</p>
+% if exception.detail:
 	<p><em>${exception.detail|h}</em></p>
-	% endif
-	% if exception.comment:
+% endif
+% if exception.comment:
 	<!-- ${exception.comment} -->
-	% endif
-    <hr noshade>
-	% if html_report:
+% endif
+<hr noshade>
+% if html_report:
 	${html_report}
 	<hr noshade>
-	% endif
-    <div align="right">${environ['SERVER_NAME']|h}</div>
-  </body>
-</html>
+% endif
+<div align="right">${environ['SERVER_NAME']|h}</div>
+
+<%def name="post_html()">
 % if text_report:
 <!--
 ${text_report}
 -->
 % endif
+</%def>

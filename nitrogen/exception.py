@@ -198,7 +198,7 @@ def exception_handler(app, get_template=None, debug=False):
             text_report = html_report = None
             log.exception('Exception while formating error report.')
         
-        template = get_template and (get_template('status/%d.html' % e.code) or get_template('status/generic.html'))
+        template = get_template and (get_template('/status/%d.html' % e.code) or get_template('/status/generic.html'))
         
         if template:
             try:
