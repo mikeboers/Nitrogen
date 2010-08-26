@@ -3,14 +3,7 @@ from wtforms import *
 from wtforms.ext.sqlalchemy.orm import model_form
 import wtforms
 
-
-__all__ = dir()
-
-
 from . import app
-
-
-__all__.extend(['MarkdownField'])
 
 
 class MarkdownField(TextAreaField):
