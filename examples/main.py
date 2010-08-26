@@ -4,6 +4,7 @@ import os
 from nitrogen.wsgi.server import serve
 from nitrogen.core import *
 from nitrogen.status import abort
+from nitrogen.api import ApiRequest as Api
 
 from .app import app, Request, Response
 from .cookies import cookie_app
@@ -24,7 +25,19 @@ def do_abort(request):
 def do_abort(request):
     raise ValueError(request.route['message'])
 
+@app.route('/api/reflect')
+@Api.application
+def do_api_reflect(request):
+    response = dict(request.query)
+    response.update(request.post)
+    return response
 
+@app.route('/api/error')
+@Api.application
+def do_api_error(request):
+    request['id']
+    request.abort(400, 'This is the message.')
+    
 @app.route('/')
 def index(environ, start):
     start('200 OK', [])

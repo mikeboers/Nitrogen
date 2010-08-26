@@ -6,10 +6,13 @@ import re
 from multimap import MultiMap
 
 from .request import Request
-from .api import as_api
+from .api import ApiRequest
 
 
 log = logging.getLogger(__name__)
+
+
+as_api = ApiRequest.application
 
 
 class CRUD(object):
@@ -32,35 +35,33 @@ class CRUD(object):
         self.form_template = form_template
     
     @as_api
-    def __call__(self, req, res):
-        with res:
-            method = req['method']
-            handler = getattr(self, 'handle_%s' % method, None)
-            if not handler:
-                raise ApiError('no api method %r' % method)
-            handler(req, res)
-        return res
+    def __call__(self, request):
+        method = request['method']
+        handler = getattr(self, 'handle_%s' % method, None)
+        if not handler:
+            request.error('no api method %r' % method)
+        return handler(request)
 
-    def handle_get(self, req, res):
-        
-        id_ = int(req['id'])
-        
-        s = self.Session()
-        obj = s.query(self.model).get(id_)
+    # def handle_get(self, request, response):
+    #     
+    #     id_ = int(request['id'])
+    #     
+    #     s = self.Session()
+    #     obj = s.query(self.model).get(id_)
+    # 
+    #     if not obj:
+    #         raise ApiError("could not find object %d" % id_)
+    # 
+    #     for key in self.keys:
+    #         response[key] = getattr(obj, key)
 
-        if not obj:
-            raise ApiError("could not find object %d" % id_)
+    def handle_get_form(self, request):
 
-        for key in self.keys:
-            res[key] = getattr(obj, key)
-
-    def handle_get_form(self, req, res):
-
-        id_ = req.get('id')
+        id_ = request.get('id')
         try:
             id_ = int(id_) if id_ else None
         except:
-            raise ApiError("bad id")
+            request.error("bad id")
         
         s = self.Session()
         if id_:
@@ -71,47 +72,53 @@ class CRUD(object):
         else:
             form = self.form_class()
 
-        res['form'] = self.render(self.form_template, form=form)
+        return dict(form=
+            self.render(self.form_template, form=form)
+        )
 
-    def handle_submit_form(self, req, res):
-
-        id_ = req.get('id')
+    def handle_submit_form(self, request):
+        
+        response = {}
+        
+        id_ = request.get('id')
         try:
             id_ = int(id_) if id_ else None
         except:
-            raise ApiError("Bad id.")
+            request.error("bad id")
         
         s = self.Session()
         model = None  
         if id_:
             model = s.query(self.model).get(id_)
             if not model:
-                raise ApiError("could not find object %d" % id_)
+                request.error("could not find object %d" % id_)
         else:
             model = self.model()
-        form = self.form_class(MultiMap(req))
-        res['valid'] = valid = form.validate()
+        form = self.form_class(MultiMap(request.form))
+        response['valid'] = valid = form.validate()
         
         if not valid:
-            res['form'] = self.render(self.form_template, form=form)
+            response['form'] = self.render(self.form_template, form=form)
         else:
             form.populate_obj(model)
             if not model.id: 
                 s.add(model)
             s.commit()
 
-            res['id'] = model.id
+            response['id'] = model.id
             data = {}
-            for key in req:
+            for key in request.form:
                 m = re.match(r'^partial_kwargs\[(.+?)\]$', key)
                 if m:
-                    data[m.group(1)] = req[key]
+                    data[m.group(1)] = request[key]
             data[self.partial_key] = model
             data.update(self.partial_kwargs)
-            res['partial'] = self.render(self.partial, **data)
+            response['partial'] = self.render(self.partial, **data)
+        
+        return response
 
-    def handle_delete(self, req, res):
-        id_ = req['id']
+    def handle_delete(self, request):
+        id_ = request['id']
         s = self.Session()
         obj = s.query(self.model).get(id_)
         if not obj:
@@ -119,8 +126,8 @@ class CRUD(object):
         obj.delete()
         s.commit()
 
-    def handle_order(self, req, res):
-        order = [int(x) for x in req['order'].split(',')]
+    def handle_order(self, request):
+        order = [int(x) for x in request['order'].split(',')]
 
         # Remove dummy (zero) ids.
         order = filter(None, order)

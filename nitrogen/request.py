@@ -113,7 +113,6 @@ class Request(CommonCore, wz.Request):
     @wz.cached_property
     def query(self):
         return Query(self.query_string, charset=self.charset, decode_errors=self.encoding_errors)
-    get = query # Depricated.
     args = query # Werkzeug's name.
     
     # My cookies are much nicer. 

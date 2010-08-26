@@ -2,11 +2,11 @@
 import json
 import logging
 import datetime
+import collections
 
 from .request import Request, Response
+from . import status
 
-
-INTERNAL_ERROR = 'internal server error'
 
 log = logging.getLogger(__name__)
 
@@ -14,10 +14,15 @@ log = logging.getLogger(__name__)
 class ApiError(Exception):
     pass
 
+
 class ApiKeyError(KeyError, ApiError):
     pass
+      
 
-class ApiBase(dict):
+            
+class ApiRequest(Request, collections.Mapping): 
+    
+    response_class = Response
     
     def log_message(self):
         return '\n'.join([self.__class__.__name__] + [
@@ -25,61 +30,36 @@ class ApiBase(dict):
         
     def log(self, logger=None, level=logging.INFO):
         (logger or log).log(level, self.log_message())
-      
-
     
-class ApiRequest(ApiBase):
-    
-    """WSGI API request helper class.
-    
-    """
-    
-    def __init__(self, request):
-        if not isinstance(request, Request):
-            request = Request(request)
-            
-        self.raw = request
-        self.update(self.raw.get)
-        self.update(self.raw.post)
-        
     def __getitem__(self, key):
         try:
-            return dict.__getitem__(self, key)
-        except KeyError as e:
-            raise ApiKeyError(key)
+            return self.query[key]
+        except KeyError:
+            pass
+        try:
+            return self.post[key]
+        except KeyError:
+            pass
+        raise ApiKeyError(key)
+    
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+    
+    def __iter__(self):
+        visited = set()
+        for x in self.query.keys():
+            visited.add(x)
+            yield x
+        for x in self.form.keys():
+            if x not in visited:
+                yield x
+    
+    def __len__(self):
+        return len(list(self))
 
-   
-class ApiResponse(ApiBase):
-    
-    def __init__(self, *args, **kwargs):
-        self.raw = Response(start=kwargs.pop('start_response', None))
-        self.update(kwargs)
-        self.started = False
-        self['status'] = 'ok'
-    
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, traceback):
-        if type:
-            self['status'] = 'error'
-            if type is ApiKeyError:
-                self['error'] = 'missing request argument %r' % value.args[0]
-            elif type is ApiError:
-                self['error'] = value.args[0]
-            else:
-                log.error('exception during api handling', exc_info=(type, value, traceback))
-                self['error'] = INTERNAL_ERROR
-        return True
-        
-    def start(self, code=None):
-        if code is None:
-            code = 200 if self.get('status') == 'ok' else 500
-        # self.raw.content_type = 'application/json'    
-        self.raw.content_type = 'text/plain'
-        self.raw.start(code)
-        self.started = True
-    
     def json_default(self, value):
         if isinstance(value, datetime.date):
             ret = {}
@@ -88,58 +68,39 @@ class ApiResponse(ApiBase):
             return ret
         raise TypeError()
 
-    def encode(self, obj=None, indent=4, sort_keys=True):
-        return json.dumps(obj or dict(self), indent=indent, sort_keys=sort_keys, default=self.json_default)
+    def encode(self, obj, indent=4, sort_keys=True):
+        return json.dumps(obj, indent=indent, sort_keys=sort_keys, default=self.json_default)
     
-    def __iter__(self):
-        
-        status = self.get('status')
-        error  = self.get('error')
-        
-        if status == 'error':
-            if not error:
-                log.error('error status with no error')
-                error = INTERNAL_ERROR
-        elif status != 'ok':
-            log.error('bad status %r' % status)
-            status = 'error'
-            error = INTERNAL_ERROR
-                
-        if not self.started:
-            self.start()
-        
-        if status == 'ok':
-            return iter([self.encode()])
-        
-        # log.info(repr(status))
-        # log.info(repr(error))
-        
-        log.warning('api error %r' % error)
-        return iter([self.encode({
-            'status': status,
-            'error': error
-        })])
-        
-        
-def as_api(app):
-    def inner(*args):
-        if len(args) == 2:
-            self = None
-            environ, start = args
-        elif len(args) == 3:
-            self, environ, start = args
-        else:
-            raise ValueError('as_api inner only accept 2 or 3 arguments')
-        request = ApiRequest(environ)
-        response = ApiResponse(start_response=start)
-        with response:
-            if self:
-                app(self, request, response)
-            else:
-                app(request, response)
-        return response    
-    return inner
-
-
-
+    abort = staticmethod(status.abort)
+    redirect = staticmethod(status.redirect)
+    error = staticmethod(lambda *args: status.abort(400, *args))
+    
+    @classmethod
+    def application(cls, func):
+        def _application(*args):
+            environ = args[-2]
+            start   = args[-1]
+            request = cls(environ)
+            try:
+                body = func(*(args[:-2] + (request, )))
+                code = 200
+            except ApiKeyError as e:
+                body = 'missing argument %r' % e.args[0]
+                code = 400
+            except status.HTTPRedirection as e:
+                raise # This will get handled down the stack.
+            except status.HTTPException as e:
+                body = e.detail or e.title
+                code = e.code
+            except Exception as e:
+                log.exception('Error during Api.application.')
+                body = 'internal server error'
+                code = 500
+            
+            body = request.encode(body)
+            cls.response_class(start=start).start(code)
+            return body
+            
+        return _application
+    
 
