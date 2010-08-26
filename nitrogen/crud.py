@@ -17,11 +17,20 @@ as_api = ApiRequest.application
 
 class CRUD(object):
     
-    def __init__(self, Session, model_class, form_class, **kwargs):
+    model_class = None
+    form_class = None
+    
+    model_template=None
+    model_view_kwargs={}
+    model_view_key=None
+    form_template='/form.html'
+    form_view_kwargs={}
+    form_view_key='form'
+    render=None
+    
+    def __init__(self, Session, **kwargs):
         
         self.Session = Session
-        self.model_class = model_class
-        self.form_class = form_class
         
         # For backwards compatibility.
         for oldkey, newkey in dict(
@@ -32,16 +41,8 @@ class CRUD(object):
             if oldkey in kwargs:
                 kwargs[newkey] = kwargs.pop(oldkey)
         
-        for name, default in dict(
-            model_template=None,
-            model_view_kwargs={},
-            model_view_key=None,
-            form_template='/form.html',
-            form_view_kwargs={},
-            form_view_key='form',
-            render=None,
-        ).items():
-            setattr(self, name, kwargs.get(name, default))
+        self.__dict__.update(kwargs)
+    
     
     def _build_render_generic(name):
         template_attr = name + '_template'
