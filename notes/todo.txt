@@ -1,27 +1,30 @@
 
-- api could use some love
 
-	no need for seperate request and response objects: just pass in a request
-	object, and whatever is returned will be json dumped
-	
-	the request could have a .abort method which throws an error
-		throw a status exception; the error_message is the detail
-	
-	no need for all the complicated status checking; the status is automatically
-	set to "ok" or "error" depending on if an excpetion was caught
+- new router that uses string.format symantics
+	{name:format}
+	{id:d}
 
-	@Api.application
-	def do_something(request):
-		return {'id': request['id']}
+- add string conversion options to ReRouter:
+	{name!int:\d+} will do auto-conversions
+
+- ReRouter parsers and formatters should not be prefixed with underscores
+	@register(r'/route/{id:\d+}', parsers=dict(id=int)
+	@register(r'/route, defaults=dict(id=0))
+
+- PatternRouter
+	will do any of the RawReRouter (ReRouter), ReRouter (PatternRouter), FormatRouter (new string.format)
 	
+	methods:
+		router.match
+		router.pattern
+		router.format
+	
+	router.register takes a type kwarg (one of 're', 'pattern', 'format')
 
 
 - MultiMap.lists() and iterlists()
 
 - LiteMap.update should set everything simulaneously.
-
-- App.export_to
-	exports a lot of common things to a dict that you specify
 	
 - AuthAppMixin uses repoze.who and what
 	see if I can make a mixin so that permissions and groups are not cached
@@ -68,10 +71,6 @@ AppCore needs a root
 	templatemixin adds root + '/templates'
 	sessionmixin defaults to using it for data
 	
-- Write a better session.
-	max_age
-	regenerate ids
-	etc
 
 - Perhaps we do not need a rewind_body_cache; change assert_body_cache to
   cache_body or make_body_seekable, and then one can simply tell/seek on the
@@ -93,112 +92,33 @@ AppCore needs a root
 
   Could also just remove it.
 
-- not_found_catcher: 
-    
-    Abstract it to generate the name of the template. eg. "404 Not Found":
-		'status/404.html', then
-
-- ErrorAppMixin generally requires templates to get the job done.
-    - See if I can find something that makes nice tracebacks for me. Either
-      werkzeug or ... ?
-		
 
 
 - nitrogen.App
 	
-	- replaces the view_context
-		- app.flash(message, category)
-			these get appended to 'app.flash_messages' in the current session
-			app.get_flashed_messages returns that list and clears it out
-	
-	- setup up sessions automatically
-	
-	- incorporates the logging
-	
-	- app.wsgi_app is the actual wsgi app that gets called. One can wrap this
-	  at will. It is likely in our interests to have two sets of middleware
-	  stacks, as the compressor should come really really late in the game
-		- low level: (app.wsgi_init)
-			compressor
-			encoder (utf8 encoder)
-			one level of error catching/handling
-			model/view local reset (this is replaced anyways)
-			global local reset
-		- high level: (app.wsgi_app)
-			prep_view_context
-			catch_status_exceptions
-			cookie.setup_factory
-			authentication (this can be added by an application)
-	
-	- app.config is an extension of a dict
-		- config.from_object will pull all attribute that do not start with '_'
 	
 	- text blobs are actually a mixin!
 		- registers it's own MapRouter
 		- adds to the app.view_globals
 	
-	- make it incredibly extensible:
-		- textblobs are an extension (respond to __textblob)
 			register __textblob in the master MapRouter
 			they have their own template path
 				within that path they are 'ext-textblob/textblob.html'
 			they serve the javascript files themselves
 				use FileRouter, which just serves files from a directory
 				lift the stuff behind this directly from flask
-		- session is an extension
-		- imgsizer
-			register _imgsizer in the master MapRouter
-			use werkzeug.is_resource_modified just for the last_modified header
-		
-		- all of these are classes that extend AppCore and use super properly
-	
-	- somehow need to be able to specify cookies to set/delete before the
-	  container is set, because that will come from the environ["nitrogen.cookie.build_header"]
-		- app will have it's own Response and Request classes; perhaps we could
-		  extend those to know what cookie_factory we want to use
-			app.cookie_factory could be a method which uses app.config['private_key']
-			
-			app.request_class = Request.build_class('AppRequest', cookie_factory=self.cookie_factory)
-				@classmethod
-				CommonCore.build_class(cls, name, extra_bases=(), **dict):
-					return type(name, (cls, ) + extra_bases, dict)
-			app.response_class = Response.build_class(cookie_factory=self.cookie_factory)
 	
 	
-	nitrogen.core contains imports to all these fun things:
-		- App from nitrogen.app
-		- abort raises an exception, from http.status
-		- redirect raises a redicrection exception
-	
-	- app.export_onto(__import__(__name__))
-		- exports a LOT of the properties into modulespace
 		
 	
 	
 
 - see if I really have to add an IP and such to logs on my own: perhaps
   the logs that I pipe into apache stderr get that sort of thing added on
-- look really closely at flask
-    I can roughly approximate everything that flask is going by having a
-    nitrogen.app.App class which wraps together all the db/template/config
-    stuff
-    
-    If I want my framework to be as easy to start using, then I will have to
-    have sensible defaults for everything.
-    
-        from nitrogen import App
-        app = App(__name__)
-        
-        @app.route('/')
-        def index(req, res):
-            return 'Hello, world!'
-    
-    How much do I really need to keep holding onto WSGI? There are only a couple
-    cases that I really need to keep going that way: repoze.who and repoze.what
-        
+
 
 - nitrogen.route.ReRouter could have some builtin types:
-    @router.register(r'/photos/{photo_id}')
+    @router.register(r'/photos/{photo_id:d}')
     this could make sure that photo_id matches r'\d+', and gets casted to/from
     an integer
 

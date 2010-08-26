@@ -17,22 +17,61 @@ as_api = ApiRequest.application
 
 class CRUD(object):
     
-    def __init__(self, Session, render, model_class, form_class, partial, partial_key,
-        partial_kwargs=None, keys=None, table=None, form_template='_form.html.mako'):
+    def __init__(self, Session, model_class, form_class, **kwargs):
         
         self.Session = Session
-        self.render = render
+        self.model_class = model_class
+        self.form_class = form_class
         
-        self.model = self.model_class = model_class
-        self.form = self.form_class = form_class
+        # For backwards compatibility.
+        for oldkey, newkey in dict(
+            partial='model_template',
+            partial_kwargs='model_view_kwargs',
+            partial_key='model_view_key',
+        ).items():
+            if oldkey in kwargs:
+                kwargs[newkey] = kwargs.pop(oldkey)
         
-        self.partial = partial
-        self.partial_key = partial_key
-        self.partial_kwargs = partial_kwargs or {}
-        
-        self.table = table or model_class.__table__
-        self.keys = keys or [c.name for c in self.table.c]
-        self.form_template = form_template
+        for name, default in dict(
+            model_template=None,
+            model_view_kwargs={},
+            model_view_key=None,
+            form_template='/form.html',
+            form_view_kwargs={},
+            form_view_key='form',
+            render=None,
+        ).items():
+            setattr(self, name, kwargs.get(name, default))
+    
+    def _build_render_generic(name):
+        template_attr = name + '_template'
+        kwargs_attr = name + '_view_kwargs'
+        key_attr = name + '_view_key'
+        def render_object_generic(self, obj, **kwargs):
+            if not self.render:
+                raise ValueError('no render function')
+            template = getattr(self, template_attr)
+            kwargs.update(getattr(self, kwargs_attr))
+            kwargs[getattr(self, key_attr)] = obj
+            return self.render(template, **kwargs)
+        return render_object_generic
+    
+    def _build_render(name):
+        generic_attr = 'render_%s_generic' % name
+        def render_object(self, obj, **kwargs):
+            if hasattr(obj, 'render'):
+                return getattr(obj, 'render')(**kwargs)
+            return getattr(self, generic_attr)(obj, **kwargs)
+        return render_object
+            
+    render_model_generic = _build_render_generic('model')
+    render_model = _build_render('model')
+    
+    render_form_generic = _build_render_generic('form')
+    render_form = _build_render('form')
+    
+    del _build_render_generic
+    del _build_render
     
     @as_api
     def __call__(self, request):
@@ -47,7 +86,7 @@ class CRUD(object):
     #     id_ = int(request['id'])
     #     
     #     s = self.Session()
-    #     obj = s.query(self.model).get(id_)
+    #     obj = s.query(self.model_class).get(id_)
     # 
     #     if not obj:
     #         raise ApiError("could not find object %d" % id_)
@@ -65,16 +104,14 @@ class CRUD(object):
         
         s = self.Session()
         if id_:
-            obj = s.query(self.model).get(id_)
+            obj = s.query(self.model_class).get(id_)
             if not obj:
                 raise ApiError("could not find object %d" % id_)
             form = self.form_class(obj=obj)
         else:
             form = self.form_class()
 
-        return dict(form=
-            self.render(self.form_template, form=form)
-        )
+        return dict(form=self.render_form(form))
 
     def handle_submit_form(self, request):
         
@@ -89,16 +126,17 @@ class CRUD(object):
         s = self.Session()
         model = None  
         if id_:
-            model = s.query(self.model).get(id_)
+            model = s.query(self.model_class).get(id_)
             if not model:
                 request.error("could not find object %d" % id_)
         else:
-            model = self.model()
+            model = self.model_class()
         form = self.form_class(MultiMap(request.form))
         response['valid'] = valid = form.validate()
         
         if not valid:
-            response['form'] = self.render(self.form_template, form=form)
+            response['form'] = self.render_form(form)
+        
         else:
             form.populate_obj(model)
             if not model.id: 
@@ -111,16 +149,15 @@ class CRUD(object):
                 m = re.match(r'^partial_kwargs\[(.+?)\]$', key)
                 if m:
                     data[m.group(1)] = request[key]
-            data[self.partial_key] = model
-            data.update(self.partial_kwargs)
-            response['partial'] = self.render(self.partial, **data)
+            
+            response['partial'] = self.render_model(model, **data)
         
         return response
 
     def handle_delete(self, request):
         id_ = request['id']
         s = self.Session()
-        obj = s.query(self.model).get(id_)
+        obj = s.query(self.model_class).get(id_)
         if not obj:
             raise ApiError("could not find object %d" % id_)
         obj.delete()
@@ -133,7 +170,7 @@ class CRUD(object):
         order = filter(None, order)
 
         # Grab all of the items that we are dealing with.
-        items = self.session.query(self.model).filter(self.model.id.in_(order)).all()
+        items = self.session.query(self.model_class).filter(self.model_class.id.in_(order)).all()
 
         # Make sure that we have them all.
         if len(items) != len(order):

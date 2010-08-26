@@ -37,7 +37,7 @@ class ApiRequest(Request, collections.Mapping):
         except KeyError:
             pass
         try:
-            return self.post[key]
+            return self.form[key]
         except KeyError:
             pass
         raise ApiKeyError(key)
