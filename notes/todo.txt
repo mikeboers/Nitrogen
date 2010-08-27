@@ -1,4 +1,5 @@
 
+- update_base_config method
 
 - determine how to manage schema for textblobs
 	- figure out how to embed migrate repo into nitrogen and not have it be a

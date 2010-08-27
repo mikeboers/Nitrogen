@@ -17,7 +17,7 @@ from multimap import MultiMap
 from . import body
 from . import cookies
 from .route.core import get_route_history
-from .uri.query import Query
+from .uri import query
 
 log = logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ class Request(CommonCore, wz.Request):
     
     @wz.cached_property
     def query(self):
-        return Query(self.query_string, charset=self.charset, decode_errors=self.encoding_errors)
+        return query.FrozenQuery.from_environ(self.environ, charset=self.charset, decode_errors=self.encoding_errors)
     args = query # Werkzeug's name.
     
     # My cookies are much nicer. 

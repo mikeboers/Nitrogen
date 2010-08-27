@@ -81,6 +81,10 @@ def do_flash(environ, start):
 def request(environ, start):
     
     req = app.request
+    
+    # just to get these into the environ
+    req.query
+    
     start('200 ok', [])
 
     yield "This is %s req!\n\n" % req.method
