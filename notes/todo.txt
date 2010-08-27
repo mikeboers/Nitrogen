@@ -1,5 +1,7 @@
 
-- update_base_config method
+- setup_config method
+
+- environ and request should be LocalProxy objects
 
 - determine how to manage schema for textblobs
 	- figure out how to embed migrate repo into nitrogen and not have it be a

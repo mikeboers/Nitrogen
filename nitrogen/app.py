@@ -49,23 +49,10 @@ def build_inheritance_mixin_class(parent_class, base, name=None):
 
 class Core(object):
     
-    base_config = {
-        'root': '',
-        'run_mode': 'socket',
-        'private_key_material': None,
-    }
-    
     def __init__(self, *args, **kwargs):
         
-        # Build up the base config from all the base_configs on the mro chain,
-        # along with everything supplied. This is slightly inefficient; meh.
-        config = {}
-        for cls in reversed(self.__class__.__mro__):
-            config.update(getattr(cls, 'base_config', {}))
-        for arg in args:
-            config.update(arg)
-        config.update(kwargs)
-        self.config = Config(config)
+        self.setup_config(kwargs)
+        self.config = Config(kwargs)
         
         # Setup initial routers. Use the primary router (or just the .route
         # method) for simple apps, or append your own router to the routers
@@ -97,6 +84,11 @@ class Core(object):
         
         Core.RequestMixin.cookie_factory = self.cookie_factory
         Core.ResponseMixin.cookie_factory = self.cookie_factory
+        
+    def setup_config(self, config):
+        config.setdefault('root', '')
+        config.setdefault('runmode', 'socket')
+        config.setdefault('private_key_material', None)
     
     # These are stubs for us to add on to in the __init__ method.
     class RequestMixin(object): pass

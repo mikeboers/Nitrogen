@@ -128,15 +128,18 @@ class FileHandler(logging.Handler):
 
 class LoggingAppMixin(object):
     
-    base_config = {
-        'log_levels': {
+    def setup_config(self, config):
+        super(LoggingAppMixin, self).setup_config(config)
+        
+        levels = config.setdefault('log_levels', {})
+        for name, level in {
             '': logging.DEBUG,
             'nitrogen.webio': logging.INFO,
             'nitrogen.route': logging.WARNING,
-        },
-        'log_handlers': [logging.StreamHandler(sys.stderr)],
-    }
-    
+        }.items():
+            levels.setdefault(name, level)
+        config.setdefault('log_handlers', []).append(logging.StreamHandler(sys.stderr))
+            
     def __init__(self, *args, **kwargs):
         super(LoggingAppMixin, self).__init__(*args, **kwargs)
         self._setup_handlers = []

@@ -82,7 +82,7 @@ def request(environ, start):
     
     req = app.request
     
-    # just to get these into the environ
+    # Get these cached into the environ.
     req.query
     
     start('200 ok', [])
