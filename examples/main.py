@@ -102,8 +102,8 @@ def request(environ, start):
         yield "\t%s: %r\n" % (k, v)
     yield '\n'
 
-    yield "GET:\n"
-    for k, v in sorted(req.get.items()):
+    yield "QUERY:\n"
+    for k, v in sorted(req.query.items()):
         yield "\t%s: %r\n" % (k, v)
     yield '\n'
 

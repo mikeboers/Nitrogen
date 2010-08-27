@@ -1,4 +1,6 @@
 
+import werkzeug as wz
+
 from wtforms import *
 from wtforms.ext.sqlalchemy.orm import model_form
 import wtforms
@@ -12,19 +14,16 @@ class MarkdownField(TextAreaField):
 
 class FormAppMixin(object):
     
-    _build_form_class = app.class_builder(Form, 'Form')
-    def build_form_class(self):
-        cls = self._build_form_class()
-        cls._app = self
-        return cls
-    
     class FormMixin(object):
         def render(self):
             return self._app.render('/form.html', form=self)
+    
+    build_form_class = lambda self: app.build_inheritance_mixin_class(self, Form, 'Form')
+    Form = wz.cached_property(build_form_class)
         
     def __init__(self, *args, **kwargs):
+        FormAppMixin.FormMixin._app = self
         super(FormAppMixin, self).__init__(*args, **kwargs)
-        self.Form = self.build_form_class()
     
     def export_to(self, map):
         super(FormAppMixin, self).export_to(map)

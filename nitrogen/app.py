@@ -28,18 +28,23 @@ class Config(dict):
             pass
 
 
-def class_builder(base, name=None):
+def build_inheritance_mixin_class(parent_class, base, name=None):
+    """Make a class from mixins in the inheritence chain of a parent class.
+    
+    Works backwards down the MRO of a parent class, collecting unique mixin
+    classes named after the base object. Eg. if extending a Request class, this
+    will look for RequestMixin classes.
+    
+    """
     name = name or base.__name__
-    def builder(self):
-        bases = []
-        for cls in self.__class__.__mro__:
-            mixin = getattr(cls, name + 'Mixin', None)
-            if mixin and mixin not in bases:
-                bases.append(mixin)
-        bases.append(base)
-        cls = type(self.__class__.__name__ + name, tuple(bases), {})
-        return cls
-    return builder
+    bases = []
+    for cls in parent_class.__class__.__mro__:
+        mixin = getattr(cls, name + 'Mixin', None)
+        if mixin and mixin not in bases:
+            bases.append(mixin)
+    bases.append(base)
+    cls = type(parent_class.__class__.__name__ + name, tuple(bases), {})
+    return cls
 
 
 class Core(object):
@@ -61,10 +66,6 @@ class Core(object):
             config.update(arg)
         config.update(kwargs)
         self.config = Config(config)
-        
-        # Need to keep track of all the thread-local objects, so we can reset
-        # them for every request.
-        self._locals = []
         
         # Setup initial routers. Use the primary router (or just the .route
         # method) for simple apps, or append your own router to the routers
@@ -94,22 +95,18 @@ class Core(object):
         
         self._local = self.local()
         
-        # Build the base Request and Response classes we will use.
-        self.Request = self.build_request_class()
-        self.Response = self.build_response_class()
+        Core.RequestMixin.cookie_factory = self.cookie_factory
+        Core.ResponseMixin.cookie_factory = self.cookie_factory
     
-    _build_request_class = class_builder(request.Request)
-    _build_response_class = class_builder(request.Response)
-        
-    def build_request_class(self):
-        cls = self._build_request_class()
-        cls.cookie_factory = self.cookie_factory
-        return cls
+    # These are stubs for us to add on to in the __init__ method.
+    class RequestMixin(object): pass
+    class ResponseMixin(object): pass
     
-    def build_response_class(self):
-        cls = self._build_response_class()
-        cls.cookie_factory = self.cookie_factory
-        return cls
+    build_request_class = lambda self: build_inheritance_mixin_class(self, request.Request)
+    Request = cached_property(build_request_class)
+    
+    build_response_class = lambda self: build_inheritance_mixin_class(self, request.Response)
+    Response = cached_property(build_response_class)
     
     def export_to(self, map):
         map.update(
@@ -166,7 +163,7 @@ class Core(object):
         
         """
         obj = _local()
-        self._locals.append(obj)
+        self.__dict__.setdefault('_locals', []).append(obj)
         return obj
     
     def _clear_locals(self):
@@ -175,7 +172,7 @@ class Core(object):
         This will be run before every request.
         
         """
-        for obj in self._locals:
+        for obj in getattr(self, '_locals', ()):
             obj.__dict__.clear()
     
     @property

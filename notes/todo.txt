@@ -1,9 +1,4 @@
 
-- app class builder should not be destroyed
-- Request/Response should be properties
-- build_base_config(map) should build the base config, not some mro thing
-
-- viewmixin should init the gloals/locals before calling super
 
 - determine how to manage schema for textblobs
 	- figure out how to embed migrate repo into nitrogen and not have it be a
