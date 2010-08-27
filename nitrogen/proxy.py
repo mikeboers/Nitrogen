@@ -40,7 +40,6 @@ class ProxyMeta(type):
         return special_method
     
 
-
 class Proxy(object):
     """"""
     __metaclass__ = ProxyMeta
@@ -61,6 +60,7 @@ class Proxy(object):
     def __repr__(self):
         obj = self.__proxy_func__()
         return '<Proxy of %r at 0x%x by %r>' % (obj, id(obj), self.__proxy_name__)
+
 
 if __name__ == '__main__':
     from threading import local

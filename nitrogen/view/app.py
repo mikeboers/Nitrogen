@@ -49,7 +49,7 @@ class ViewAppMixin(object):
         super(ViewAppMixin, self).__init__(*args, **kwargs)
         
         template_path = list(self.config.template_path)
-        template_path.append(os.path.abspath(os.path.dirname(__file__) + '/../templates'))
+        template_path.append(os.path.abspath(os.path.dirname(__file__) + '/../../templates'))
         
         self.template_path.extend(template_path)
         
