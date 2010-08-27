@@ -1,0 +1,21 @@
+<%
+	editable = edit_mode and (not predicate or is_met(predicate))
+	crud_data = {
+		'id': blob.id,
+		'url': '/__textblob/' + (type_ or 'text'),
+		'deleteable': False,
+	}
+%>\
+<div id="textblob-${blob.name|urlify_name}" class="textblob ${" textblob-" + type_ if type_ else ""}${" crudable" if editable else ""}"\
+% if editable:
+ data-crud="${json(crud_data)|h}"\
+% endif
+>
+	% if type_ == 'markdown':
+	  ${markdown(blob.content)}
+	% elif type_ == 'html':
+	  ${blob.content}
+	% else:
+	  <p>${blob.content|h}</p>
+	% endif
+</div>

@@ -6,11 +6,13 @@ from .forms import FormAppMixin
 from .imgsizer import ImgSizerAppMixin
 from .logs import LoggingAppMixin
 from .session import SessionAppMixin
+from .textblobs import TextBlobAppMixin
 from .view.app import ViewAppMixin
 
 # Be careful about the order of these.
 class App(
     ImgSizerAppMixin, # Must be before View
+    TextBlobAppMixin, # Must be before Form
     FormAppMixin, # Must be before View
     ViewAppMixin,
     SessionAppMixin,
@@ -28,6 +30,7 @@ del FormAppMixin
 del ImgSizerAppMixin
 del LoggingAppMixin
 del SessionAppMixin
+del TextBlobAppMixin
 del ViewAppMixin
 
 from .route import ReRouter

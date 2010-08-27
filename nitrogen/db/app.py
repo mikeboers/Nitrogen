@@ -31,12 +31,13 @@ class DBAppMixin(object):
     """
     
     def __init__(self, *args, **kwargs):
-        super(DBAppMixin, self).__init__(*args, **kwargs)
         
         self.engine = None        
         self.Session = sessionmaker(class_=Session, autocommit=False, autoflush=True)
         self.metadata = MetaData()
         self.Base = declarative_base(metadata=self.metadata)
+        
+        super(DBAppMixin, self).__init__(*args, **kwargs)
         
         if self.config.db_bind:
             self.bind(self.config.db_bind, self.config.db_echo)
