@@ -5,7 +5,10 @@ from wtforms import *
 from wtforms.ext.sqlalchemy.orm import model_form
 import wtforms
 
+from nitrogen.recaptcha import RecaptchaField
+
 from . import app
+
 
 
 class MarkdownField(TextAreaField):
@@ -24,7 +27,14 @@ class FormAppMixin(object):
     def __init__(self, *args, **kwargs):
         FormAppMixin.FormMixin._app = self
         super(FormAppMixin, self).__init__(*args, **kwargs)
-    
+        
+        RecaptchaField.remote_addr = lambda *args: self.request.remote_addr
+        
+        # Monkey patch!
+        #recaptcha_validators.request = self.request
+        #recaptcha_validators.current_app = self
+        #recaptcha_widgets.current_app = self
+        
     def export_to(self, map):
         super(FormAppMixin, self).export_to(map)
         map['Form'] = self.Form

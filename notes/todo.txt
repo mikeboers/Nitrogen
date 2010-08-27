@@ -1,5 +1,10 @@
 
+- move login.html to nitrogen
 
+- change private_key_material to secret_key
+
+- lift recaptcha from flask-wtf
+	going to have to copy and fix it
 - determine how to manage schema for textblobs
 	- figure out how to embed migrate repo into nitrogen and not have it be a
       pain in the ass to get back out
