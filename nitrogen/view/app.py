@@ -23,9 +23,9 @@ class ViewAppMixin(object):
     
     """
     
-    def setup_config(self, config):
-        super(ViewAppMixin, self).setup_config(config)
-        config.setdefault('template_path', [])
+    def setup_config(self):
+        super(ViewAppMixin, self).setup_config()
+        self.config.setdefault('template_path', [])
     
     def __init__(self, *args, **kwargs):
         """Constructor.

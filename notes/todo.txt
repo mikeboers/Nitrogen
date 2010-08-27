@@ -1,5 +1,4 @@
 
-- setup_config method
 
 - environ and request should be LocalProxy objects
 

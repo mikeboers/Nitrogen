@@ -26,6 +26,13 @@ class Config(dict):
             return object.__getattribute__(self, name)
         except AttributeError:
             pass
+    
+    def setdefaults(self, **kwargs):
+        results = {}
+        for name, default in kwargs.iteritems():
+            results[name] = self.setdefault(name, default)
+        return results
+            
 
 
 def build_inheritance_mixin_class(parent_class, base, name=None):
@@ -51,8 +58,8 @@ class Core(object):
     
     def __init__(self, *args, **kwargs):
         
-        self.setup_config(kwargs)
         self.config = Config(kwargs)
+        self.setup_config()
         
         # Setup initial routers. Use the primary router (or just the .route
         # method) for simple apps, or append your own router to the routers
@@ -85,10 +92,12 @@ class Core(object):
         Core.RequestMixin.cookie_factory = self.cookie_factory
         Core.ResponseMixin.cookie_factory = self.cookie_factory
         
-    def setup_config(self, config):
-        config.setdefault('root', '')
-        config.setdefault('runmode', 'socket')
-        config.setdefault('private_key_material', None)
+    def setup_config(self):
+        self.config.setdefaults(
+            root='',
+            runmode='socket',
+            private_key_material=None
+        )
     
     # These are stubs for us to add on to in the __init__ method.
     class RequestMixin(object): pass

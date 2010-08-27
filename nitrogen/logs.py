@@ -128,8 +128,9 @@ class FileHandler(logging.Handler):
 
 class LoggingAppMixin(object):
     
-    def setup_config(self, config):
-        super(LoggingAppMixin, self).setup_config(config)
+    def setup_config(self):
+        super(LoggingAppMixin, self).setup_config()
+        config = self.config
         
         levels = config.setdefault('log_levels', {})
         for name, level in {
