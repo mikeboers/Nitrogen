@@ -1,9 +1,16 @@
 
+import logging
+
 from sqlalchemy import *
+from sqlalchemy.exc import NoSuchTableError
 
 from .app import build_inheritance_mixin_class
 from .crud import CRUD
 from .forms import *
+
+
+log = logging.getLogger(__name__)
+
 
 class TextBlobAppMixin(object):
     
@@ -12,10 +19,15 @@ class TextBlobAppMixin(object):
     def __init__(self, *args, **kwargs):
         super(TextBlobAppMixin, self).__init__(*args, **kwargs)
         
-        class Mixin(self.Base):
-            __table__ = Table('textblobs', self.metadata, autoload=True)
-            _app = self
-        self.TextBlob = build_inheritance_mixin_class(self.__class__, Mixin, 'TextBlob')
+        try:
+            class Mixin(self.Base):
+                __table__ = Table('textblobs', self.metadata, autoload=True)
+                _app = self
+            self.TextBlob = build_inheritance_mixin_class(self.__class__, Mixin, 'TextBlob')
+            
+        except NoSuchTableError:
+            log.warning('Table does not exist. Please upgrade database.')
+            self.TextBlob = None
         
         class MarkdownForm(self.Form):
             content = MarkdownField('Content')
