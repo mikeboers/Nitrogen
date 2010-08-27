@@ -34,42 +34,37 @@ class LocalProxyMeta(type):
     @staticmethod
     def make_special_proxy(name):
         def special_method(self, *args, **kwargs):
-            return getattr(self._object, name)(*args, **kwargs)
+            return getattr(getattr(self.__proxy_local__, self.__proxy_name__), name)(*args, **kwargs)
+        special_method.__name__ = '__proxied_' + name[2:]
         return special_method
     
     
 class LocalProxy(object):
     
     __metaclass__ = LocalProxyMeta
+    __slots__ = ('__proxy_local__', '__proxy_name__')
     
     def __init__(self, local, name):
-        self._local = local
-        self._name = name
+        self.__proxy_local__ = local
+        self.__proxy_name__ = name
     
-    @property
-    def _object(self):
-        return getattr(self._local, self._name)
-    
-    def __getattribute__(self, name):
-        if name.startswith('_'):
-            return super(LocalProxy, self).__getattribute__(name)
-        return getattr(self._object, name)
+    def __getattr__(self, name):
+        return getattr(getattr(self.__proxy_local__, self.__proxy_name__), name)
     
     def __setattr__(self, name, value):
-        if name.startswith('_'):
+        if name.startswith('__proxy_'):
             super(LocalProxy, self).__setattr__(name, value)
         else:
-            setattr(self._object, name, value)
+            setattr(getattr(self.__proxy_local__, self.__proxy_name__), name, value)
         
     def __repr__(self):
-        return '<LocalProxy of %r at 0x%x by %r>' % (self._object, id(self._object), self._name)
+        obj = getattr(self.__proxy_local__, self.__proxy_name__)
+        return '<LocalProxy of %r at 0x%x by %r>' % (obj, id(obj), self.__proxy_name__)
 
 if __name__ == '__main__':
     from threading import local
     l = local()
     l.test = []
     x = LocalProxy(l, 'test')
-    x.append(1)
-    print x
-    print repr(x)
-    print x.pop()
+    print x.__dict__
+    print x.append
