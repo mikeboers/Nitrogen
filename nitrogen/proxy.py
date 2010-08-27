@@ -22,14 +22,15 @@ _special_method_names = set(('__abs__', '__add__', '__and__',
     '__truediv__', '__unicode__', '__xor__'))
     
 
-class LocalProxyMeta(type):
+class ProxyMeta(type):
+    """Create all the special methods for the Proxy class."""
     
     def __new__(mcls, name, bases, ns):
         for name in _special_method_names:
             if name in ns:
                 continue
             ns[name] = mcls.make_special_proxy(name)
-        return super(LocalProxyMeta, mcls).__new__(mcls, name, bases, ns)
+        return super(ProxyMeta, mcls).__new__(mcls, name, bases, ns)
     
     @staticmethod
     def make_special_proxy(name):
@@ -40,9 +41,9 @@ class LocalProxyMeta(type):
     
 
 
-class LocalProxy(object):
-    
-    __metaclass__ = LocalProxyMeta
+class Proxy(object):
+    """"""
+    __metaclass__ = ProxyMeta
     __slots__ = ('__proxy_func__')
     
     def __init__(self, func):
@@ -53,18 +54,18 @@ class LocalProxy(object):
     
     def __setattr__(self, name, value):
         if name == '__proxy_func__':
-            super(LocalProxy, self).__setattr__(name, value)
+            super(Proxy, self).__setattr__(name, value)
         else:
             setattr(self.__proxy_func__(), name, value)
         
     def __repr__(self):
         obj = self.__proxy_func__()
-        return '<LocalProxy of %r at 0x%x by %r>' % (obj, id(obj), self.__proxy_name__)
+        return '<Proxy of %r at 0x%x by %r>' % (obj, id(obj), self.__proxy_name__)
 
 if __name__ == '__main__':
     from threading import local
     l = local()
     l.test = []
-    x = LocalProxy(l, 'test')
+    x = Proxy(l, 'test')
     print x.__dict__
     print x.append

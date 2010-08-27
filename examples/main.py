@@ -81,6 +81,7 @@ def do_flash(environ, start):
 def do_request(environ, start):
     
     # Get these cached into the environ.
+    # request = Request(environ)
     request.query
     
     start('200 ok', [])
