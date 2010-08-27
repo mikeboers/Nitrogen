@@ -45,7 +45,7 @@ def build_inheritance_mixin_class(parent_class, base, name=None):
     """
     name = name or base.__name__
     bases = []
-    for cls in parent_class.__class__.__mro__:
+    for cls in parent_class.__mro__:
         mixin = getattr(cls, name + 'Mixin', None)
         if mixin and mixin not in bases:
             bases.append(mixin)
@@ -104,11 +104,11 @@ class Core(object):
     class RequestMixin(object): pass
     class ResponseMixin(object): pass
     
-    build_request_class = lambda self: build_inheritance_mixin_class(self, request.Request)
-    Request = cached_property(build_request_class)
+    build_request_class = lambda self: build_inheritance_mixin_class(self.__class__, request.Request)
+    Request = cached_property(build_request_class, name='Request')
     
-    build_response_class = lambda self: build_inheritance_mixin_class(self, request.Response)
-    Response = cached_property(build_response_class)
+    build_response_class = lambda self: build_inheritance_mixin_class(self.__class__, request.Response)
+    Response = cached_property(build_response_class, name='Response')
     
     def export_to(self, map):
         map.update(
