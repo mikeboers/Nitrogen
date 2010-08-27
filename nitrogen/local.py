@@ -34,31 +34,31 @@ class LocalProxyMeta(type):
     @staticmethod
     def make_special_proxy(name):
         def special_method(self, *args, **kwargs):
-            return getattr(getattr(self.__proxy_local__, self.__proxy_name__), name)(*args, **kwargs)
+            return getattr(self.__proxy_func__(), name)(*args, **kwargs)
         special_method.__name__ = '__proxied_' + name[2:]
         return special_method
     
-    
+
+
 class LocalProxy(object):
     
     __metaclass__ = LocalProxyMeta
-    __slots__ = ('__proxy_local__', '__proxy_name__')
+    __slots__ = ('__proxy_func__')
     
-    def __init__(self, local, name):
-        self.__proxy_local__ = local
-        self.__proxy_name__ = name
+    def __init__(self, func):
+        self.__proxy_func__ = func
     
     def __getattr__(self, name):
-        return getattr(getattr(self.__proxy_local__, self.__proxy_name__), name)
+        return getattr(self.__proxy_func__(), name)
     
     def __setattr__(self, name, value):
-        if name.startswith('__proxy_'):
+        if name == '__proxy_func__':
             super(LocalProxy, self).__setattr__(name, value)
         else:
-            setattr(getattr(self.__proxy_local__, self.__proxy_name__), name, value)
+            setattr(self.__proxy_func__(), name, value)
         
     def __repr__(self):
-        obj = getattr(self.__proxy_local__, self.__proxy_name__)
+        obj = self.__proxy_func__()
         return '<LocalProxy of %r at 0x%x by %r>' % (obj, id(obj), self.__proxy_name__)
 
 if __name__ == '__main__':

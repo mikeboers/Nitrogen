@@ -87,8 +87,8 @@ class Core(object):
         self.register_middleware((self.FRAMEWORK_LAYER, 0), encoder)
         self.register_middleware((self.TRANSPORT_LAYER, 1000), compressor)
         
-        self._local = self.local()
-        self.request = LocalProxy(self._local, 'request')
+        self._local = _local = self.local()
+        self.request = LocalProxy(lambda: _local.request)
         
         Core.RequestMixin.cookie_factory = self.cookie_factory
         Core.ResponseMixin.cookie_factory = self.cookie_factory
