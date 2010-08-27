@@ -242,7 +242,7 @@ import struct
 import re
 
 
-from multimap import MutableMultiMap
+from multimap import MutableMultiMap, MultiMap
 
 from .transcode import unicoder, decode as _decode, encode as _encode, CHARSET, ENCODE_ERRORS, DECODE_ERRORS
 
@@ -283,7 +283,7 @@ def unparse(pairs, charset=None, errors=None):
     return u'&'.join(ret)
 
 
-class Query(MutableMultiMap):
+class QueryMixin(object):
     
     def __init__(self, input=None, charset=None, decode_errors=None, encode_errors=None, **kwargs):
         self.charset = charset
@@ -291,13 +291,22 @@ class Query(MutableMultiMap):
         self.decode_errors = decode_errors
         if isinstance(input, basestring):
             input = parse(input, self.charset, self.decode_errors)
+        
         if input is not None:
-            MutableMultiMap.__init__(self, input)
+            super(QueryMixin, self).__init__(input)
         else:
-            MutableMultiMap.__init__(self)
+            super(QueryMixin, self).__init__()
+        
         for k, v in kwargs.iteritems():
             self[k] = v
-
+    
+    @classmethod
+    def from_environ(cls, environ, *args, **kwargs):
+        key = __name__ + '.' + cls.__name__
+        if key not in environ:
+            environ[key] = cls(environ.get('QUERY_STRING', ''), *args, **kwargs)
+        return environ[key]
+        
     def __str__(self):
         return unparse(self._pairs)
 
@@ -476,7 +485,13 @@ class Query(MutableMultiMap):
                 return False
         return True
 
-    
+
+class Query(QueryMixin, MutableMultiMap):
+    pass
+
+class FrozenQuery(QueryMixin, MultiMap):
+    pass
+
     
 if __name__ == '__main__':
     import nose; nose.run(defaultTest=__name__)
