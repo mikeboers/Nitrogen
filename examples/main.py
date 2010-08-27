@@ -6,7 +6,7 @@ from nitrogen.core import *
 from nitrogen.status import abort
 from nitrogen.api import ApiRequest as Api
 
-from .app import app, Request, Response
+from .app import *
 from .cookies import cookie_app
 from .response import response_app
 
@@ -72,61 +72,59 @@ def do_flash_show(environ, start):
 @app.route('/flash', message='Default message.')
 @app.route('/flash/{message:.+}')
 def do_flash(environ, start):
-    app.flash(Request(environ).route['message'])    
+    app.flash(request.route['message'])    
     Response().redirect('/flash-show', start=start)
     return []
 
 
 @app.route('/request')
-def request(environ, start):
-    
-    req = app.request
+def do_request(environ, start):
     
     # Get these cached into the environ.
-    req.query
+    request.query
     
     start('200 ok', [])
 
-    yield "This is %s req!\n\n" % req.method
+    yield "This is %s request!\n\n" % request.method
 
     yield 'ENVIRON:\n'
-    for k, v in sorted(req.environ.items()):
+    for k, v in sorted(request.environ.items()):
         if k in ('nitrogen.headers', 'HTTP_IF_NONE_MATCH'):
             v = '-'
         yield "\t%s: %r\n" % (k, v)
     yield '\n'
 
     yield "HEADERS:\n"
-    for k, v in sorted(req.headers.items()):
+    for k, v in sorted(request.headers.items()):
         yield "\t%s: %r\n" % (k, v)
     yield '\n'
 
     yield "COOKIES:\n"
-    for k, v in sorted(req.cookies.items()):
+    for k, v in sorted(request.cookies.items()):
         yield "\t%s: %r\n" % (k, v)
     yield '\n'
 
     yield "QUERY:\n"
-    for k, v in sorted(req.query.items()):
+    for k, v in sorted(request.query.items()):
         yield "\t%s: %r\n" % (k, v)
     yield '\n'
 
     yield "EXTRA:\n"
     yield '\taccept:\n'
-    yield '\t\tcharsets: %r\n' % req.accept_charsets
-    yield '\t\tencodings: %r\n' % req.accept_encodings
-    yield '\t\tlanguages: %r\n' % req.accept_languages
-    yield '\t\tmimetypes: %r\n' % req.accept_mimetypes
-    yield '\tauthorization: %r\n' % req.authorization
-    yield '\tcache_control: %r\n' % req.cache_control
-    yield '\t\tmax_age: %r\n' % req.cache_control.max_age
-    yield '\tif_match: %r\n' % req.if_match
-    yield '\tif_modified_since: %r\n' % req.if_modified_since
-    yield '\tif_none_match: %r\n' % req.if_none_match
-    yield '\tuser_agent: %r\n' % req.user_agent
-    yield '\t\tplatform: %r\n' % req.user_agent.platform
-    yield '\t\tbrowser: %r\n' % req.user_agent.browser
-    yield '\t\tversion: %r\n' % req.user_agent.version
+    yield '\t\tcharsets: %r\n' % request.accept_charsets
+    yield '\t\tencodings: %r\n' % request.accept_encodings
+    yield '\t\tlanguages: %r\n' % request.accept_languages
+    yield '\t\tmimetypes: %r\n' % request.accept_mimetypes
+    yield '\tauthorization: %r\n' % request.authorization
+    yield '\tcache_control: %r\n' % request.cache_control
+    yield '\t\tmax_age: %r\n' % request.cache_control.max_age
+    yield '\tif_match: %r\n' % request.if_match
+    yield '\tif_modified_since: %r\n' % request.if_modified_since
+    yield '\tif_none_match: %r\n' % request.if_none_match
+    yield '\tuser_agent: %r\n' % request.user_agent
+    yield '\t\tplatform: %r\n' % request.user_agent.platform
+    yield '\t\tbrowser: %r\n' % request.user_agent.browser
+    yield '\t\tversion: %r\n' % request.user_agent.version
     yield '\n'
 
     yield 'DONE'

@@ -10,7 +10,7 @@ from . import route
 from .serve import serve
 from nitrogen.compress import compressor
 from nitrogen.unicode import encoder
-
+from nitrogen.local import LocalProxy
 
 log = logging.getLogger(__name__)
 
@@ -88,6 +88,7 @@ class Core(object):
         self.register_middleware((self.TRANSPORT_LAYER, 1000), compressor)
         
         self._local = self.local()
+        self.request = LocalProxy(self._local, 'request')
         
         Core.RequestMixin.cookie_factory = self.cookie_factory
         Core.ResponseMixin.cookie_factory = self.cookie_factory
@@ -114,9 +115,10 @@ class Core(object):
             Request=self.Request,
             Response=self.Response,
             route=self.route,
+            request=self.request,
         )
     
-    APP_LAYER = APPLICATION_LAYER = 0
+    APPLICATION_LAYER = 0
     FRAMEWORK_LAYER = 1
     TRANSPORT_LAYER = 2
     
@@ -176,17 +178,8 @@ class Core(object):
         for obj in getattr(self, '_locals', ()):
             obj.__dict__.clear()
     
-    @property
-    def request(self):
-        return self._local.request
-    
-    @property
-    def environ(self):
-        return self._local.environ
-    
     def init_request(self, environ):
         self._clear_locals()
-        self._local.environ = environ
         self._local.request = self.Request(environ)
         
     def __call__(self, environ, start):
