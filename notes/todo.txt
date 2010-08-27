@@ -1,5 +1,14 @@
 
+- app class builder should not be destroyed
+- Request/Response should be properties
+- build_base_config(map) should build the base config, not some mro thing
 
+- viewmixin should init the gloals/locals before calling super
+
+- determine how to manage schema for textblobs
+	- figure out how to embed migrate repo into nitrogen and not have it be a
+      pain in the ass to get back out
+	
 - new router that uses string.format symantics
 	{name:format}
 	{id:d}

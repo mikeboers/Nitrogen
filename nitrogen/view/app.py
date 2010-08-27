@@ -36,10 +36,15 @@ class ViewAppMixin(object):
         
         """
         
+        # Need to set these up before calling the super so that other things
+        # have access to them.
         self.lookup = mako.lookup.TemplateLookup(
             directories=[],
             input_encoding='utf-8'
         )
+        self.view_globals = context.copy()
+        self._view_locals = self.local()
+        
         
         super(ViewAppMixin, self).__init__(*args, **kwargs)
         
@@ -48,8 +53,6 @@ class ViewAppMixin(object):
         
         self.template_path.extend(template_path)
         
-        self.view_globals = context.copy()
-        self._view_locals = self.local()
         
         self._warned_no_session = False
         
