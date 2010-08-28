@@ -1,7 +1,15 @@
 
+
 - move login.html to nitrogen
 
 - del cookies['key']: should it expire or delete from this collection?
+
+    It should remove it from the collection. .expire will actually expire it.
+
+- cookies should be able to fully encode the key as well as the value
+
+- SerialView should also wrap around getlist and other multimap methods if
+  they exist.
 	
 - new router that uses string.format symantics
 	{name:format}
