@@ -1,18 +1,47 @@
 
 import os
+import logging
 
 from nitrogen.wsgi.server import serve
 from nitrogen.core import *
 from nitrogen.status import abort
 from nitrogen.api import ApiRequest as Api
+from nitrogen.forms import *
 
 from .app import *
 from .cookies import cookie_app
 from .response import response_app
 
+
+log = logging.getLogger(__name__)
+
+
 app.route('/cookies', cookie_app)
 app.route('/response', response_app)
 
+@app.route('/captcha')
+@Request.application
+def do_captcha(request):
+    
+    class CaptchaForm(Form):
+        
+        name = TextField()
+        captcha = RecaptchaField(
+            private_key='6LdCprwSAAAAALD_xUJfPSp0uG-prJFLydoZJ-Ro',
+            public_key='6LdCprwSAAAAALonrXY3m6LtMEEVh4ZVZi0pZ04n',
+        )
+    
+    if request.is_post:
+        form = CaptchaForm(request.form)
+        valid = form.validate()
+        log.debug('valid: %r' % valid)
+    else:
+        form = CaptchaForm()
+        
+    html = '<form method="POST">%s<br /><input type="submit"></form>' % form.render()
+    return Response(html, mimetype='text/html')
+    
+    
 @app.route('/abort', code=400)
 @app.route('/abort/{code:\d+}', _parsers=dict(code=int))
 @Request.application
@@ -110,7 +139,7 @@ def do_request(environ, start):
         yield "\t%s: %r\n" % (k, v)
     yield '\n'
 
-    yield "EXTRA:\n"
+    yield "PARSED HEADERS:\n"
     yield '\taccept:\n'
     yield '\t\tcharsets: %r\n' % request.accept_charsets
     yield '\t\tencodings: %r\n' % request.accept_encodings
@@ -127,7 +156,33 @@ def do_request(environ, start):
     yield '\t\tbrowser: %r\n' % request.user_agent.browser
     yield '\t\tversion: %r\n' % request.user_agent.version
     yield '\n'
-
+    
+    yield 'Extra\n'
+    for name in sorted('''
+        host
+        host_url
+        is_behind_proxy
+        is_multiprocess
+        is_multithread
+        is_run_once
+        is_secure
+        is_xhr
+        method
+        path
+        query_string
+        remote_addr
+        remote_user
+        script_root
+        url
+        url_root
+        referrer
+        date
+        script_name
+        path_info
+    '''.strip().split()):
+        yield '\t%s: %r\n' % (name, getattr(request, name))
+    yield '\n'
+    
     yield 'DONE'
 
 

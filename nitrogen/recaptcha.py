@@ -74,17 +74,23 @@ class RecaptchaField(Field):
     
     widget = None
     challenge = None
+    private_key = None
+    public_key=None
+    use_ssl = False
+    options = None
     
     # error message if recaptcha validation fails
     recaptcha_error = None
 
     def __init__(self, label='', validators=None, **kwargs):
-        self.private_key=kwargs.pop('private_key')
+        for name in 'public_key', 'private_key', 'use_ssl', 'options':
+            if name in kwargs:
+                setattr(self, name, kwargs.pop(name))
         self.widget = RecaptchaWidget(
-            public_key=kwargs.pop('public_key'),
+            public_key=self.public_key,
             private_key=self.private_key,
-            use_ssl=kwargs.pop('use_ssl', False),
-            options=kwargs.pop('options', {})
+            use_ssl=self.use_ssl,
+            options=self.options or {}
         )
         validators = validators or [RecaptchaValidator()]
         super(RecaptchaField, self).__init__(label, validators, **kwargs)
