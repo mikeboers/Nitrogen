@@ -8,7 +8,6 @@ routing, etc.
 
 import logging
 
-from webtest import TestApp
 import werkzeug as wz
 import werkzeug.utils as wzutil
 
