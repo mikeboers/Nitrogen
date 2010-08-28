@@ -176,13 +176,19 @@ class Core(object):
         return obj
     
     def init_request(self, environ):
-        self.local_mananger.cleanup()
         self._local.request = self.Request(environ)
+    
+    def finish_request(self):
+        self.local_manager.cleanup()
         
     def __call__(self, environ, start):
         app = self.flatten_middleware()
         self.init_request(environ)
-        return app(environ, start)
+        try:
+            for x in app(environ, start):
+                yield x
+        finally:
+            self.finish_request()
     
     def run(self, mode=None, *args, **kwargs):
         self.flatten_middleware()
