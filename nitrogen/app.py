@@ -97,7 +97,7 @@ class Core(object):
         self.config.setdefaults(
             root='',
             runmode='socket',
-            private_key_material=None
+            private_key=None
         )
     
     # These are stubs for us to add on to in the __init__ method.
@@ -146,8 +146,8 @@ class Core(object):
         
         
     def cookie_factory(self, *args, **kwargs):
-        if self.config.private_key_material:
-            return cookies.SignedContainer(self.config.private_key_material, *args, **kwargs)
+        if self.config.private_key:
+            return cookies.SignedContainer(self.config.private_key, *args, **kwargs)
         return cookies.Container(*args, **kwargs)
         
     @property

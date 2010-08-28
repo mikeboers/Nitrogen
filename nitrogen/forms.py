@@ -2,6 +2,7 @@
 import werkzeug as wz
 
 from wtforms import *
+from wtforms import validators
 from wtforms.ext.sqlalchemy.orm import model_form
 import wtforms
 

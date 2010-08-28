@@ -25,11 +25,8 @@ def do_captcha(request):
     
     class CaptchaForm(Form):
         
-        name = TextField()
-        captcha = RecaptchaField(
-            private_key='6LdCprwSAAAAALD_xUJfPSp0uG-prJFLydoZJ-Ro',
-            public_key='6LdCprwSAAAAALonrXY3m6LtMEEVh4ZVZi0pZ04n',
-        )
+        name = TextField(validators=[validators.Required()])
+        captcha = RecaptchaField('Verify you are human')
     
     if request.is_post:
         form = CaptchaForm(request.form)

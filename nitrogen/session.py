@@ -103,9 +103,9 @@ class SessionAppMixin(object):
             
         opts['key'] = opts.get('key', 'session_id')
         
-        if not self.config.private_key_material:
-            log.warning('Session cookies will not be signed. Please set private_key_material.')
-        secret = self.config.private_key_material
+        if not self.config.private_key:
+            log.warning('Session cookies will not be signed. Please set private_key.')
+        secret = self.config.private_key
         secret = 'session-' + secret if secret else None
         opts['secret'] = secret
         
