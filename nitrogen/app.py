@@ -1,5 +1,4 @@
 
-from threading import local as _local
 import logging
 
 from werkzeug import cached_property
@@ -11,6 +10,7 @@ from .serve import serve
 from nitrogen.compress import compressor
 from nitrogen.unicode import encoder
 from nitrogen.proxy import Proxy
+from nitrogen import local
 
 log = logging.getLogger(__name__)
 
@@ -87,8 +87,8 @@ class Core(object):
         self.register_middleware((self.FRAMEWORK_LAYER, 0), encoder)
         self.register_middleware((self.TRANSPORT_LAYER, 1000), compressor)
         
-        self._local = _local = self.local()
-        self.request = Proxy(lambda: _local.request)
+        self._local = self.local()
+        self.request = self._local('request')
         
         Core.RequestMixin.cookie_factory = self.cookie_factory
         Core.ResponseMixin.cookie_factory = self.cookie_factory
@@ -158,6 +158,12 @@ class Core(object):
     def url_for(self):
         return self.routers.url_for
     
+    @property
+    def local_manager(self):
+        # This is a property so we can access it without calling __init__
+        self.__dict__['local_mananger'] = obj = local.LocalManager()
+        return obj
+    
     def local(self):
         """Return a managed thread-local object, reset for every request.
         
@@ -165,21 +171,12 @@ class Core(object):
         local objects (which we assume to be clean every time).
         
         """
-        obj = _local()
+        obj = self.local_manager.local()
         self.__dict__.setdefault('_locals', []).append(obj)
         return obj
     
-    def _clear_locals(self):
-        """Clear out all the thread-local objects that we control.
-        
-        This will be run before every request.
-        
-        """
-        for obj in getattr(self, '_locals', ()):
-            obj.__dict__.clear()
-    
     def init_request(self, environ):
-        self._clear_locals()
+        self.local_mananger.cleanup()
         self._local.request = self.Request(environ)
         
     def __call__(self, environ, start):
