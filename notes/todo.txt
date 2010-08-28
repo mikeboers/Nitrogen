@@ -1,7 +1,7 @@
 
 - move login.html to nitrogen
 
-
+- del cookies['key']: should it expire or delete from this collection?
 	
 - new router that uses string.format symantics
 	{name:format}

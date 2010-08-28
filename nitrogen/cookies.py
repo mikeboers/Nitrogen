@@ -77,7 +77,7 @@ Expire some cookies:
     >>> del cookies['key3']
     >>> del cookies['already1']
     >>> cookies
-    <cookies.Container:{'key1': 'value1' 'key2': 'value2'}>
+    <nitrogen.cookies.Container:{'key1': 'value1' 'key2': 'value2'}>
     
     >>> # Expiring headers will be sent.
     >>> cookies.build_headers()
@@ -162,7 +162,7 @@ Signed cookies:
     >>> signed['key'] = 'value'
     >>> encoded = signed.build_headers()[0][1]
     >>> encoded # doctest:+ELLIPSIS
-    'key="_=value&_t=...&_n=...&_s=..."; Path=/'
+    'key="value:t=...&n=...&s=..."; Path=/'
     
     >>> verified = SignedClass(encoded)
     >>> verified['key'].value
@@ -178,13 +178,28 @@ Signed cookies:
     >>> signed.set('key', 'this expires', max_age=10)
     >>> encoded = signed.build_headers()[0][1]
     >>> encoded # doctest:+ELLIPSIS
-    'key="_=this+expires&_x=...&_n=...&_s=..."; Max-Age=10; Path=/'
+    'key="this expires:t=...&x=...&n=...&s=..."; Max-Age=10; Path=/'
     
     >>> verified = SignedClass(encoded)
     >>> verified['key'].value
     u'this expires'
+
+
+
+Prefixes:
+
+    >>> cookies = Container(prefix='prefix:')
+    >>> cookies['key'] = 'value'
+    >>> cookies.build_headers()[0][1]
+    'prefix:key=value; Path=/'
+    
+    >>> cookies = Container('key=value2; prefix:key=value', prefix='prefix:')
+    >>> cookies['key'].value
+    u'value'
     
     """
+
+
 
 
 #
@@ -330,12 +345,13 @@ class RawContainer(multimap.MutableMultiMap):
     
     cookie_class = Cookie
     
-    def __init__(self, input=None, defaults=None, charset=None, encode_errors=None, decode_errors=None):
+    def __init__(self, input=None, defaults=None, charset=None, encode_errors=None, decode_errors=None, prefix=None):
         multimap.MutableMultiMap.__init__(self)
         self.charset = charset
         self.defaults = defaults or {}
         self.encode_errors = encode_errors
         self.decode_errors = decode_errors
+        self.prefix = str(prefix or '')
         if input:
             try:
                 input = input['HTTP_COOKIE']
@@ -376,7 +392,8 @@ class RawContainer(multimap.MutableMultiMap):
                 # (Does anyone care?)
                 if cookie:
                     cookie[key[1:]] = value
-            else:
+            elif key.startswith(self.prefix):
+                key = key[len(self.prefix):]
                 value = self._unquote(value)
                 value = self._loads(key, value)
                 if value is not None:
@@ -520,7 +537,7 @@ class RawContainer(multimap.MutableMultiMap):
     def build_header(self, name, cookie, header="Set-Cookie"):
         """Build the header tuple for a given cookie."""
         result = []
-        result.append("%s=%s" % (name, self._quote('' if cookie.expired else self._dumps(name, cookie))))
+        result.append("%s%s=%s" % (self.prefix, name, self._quote('' if cookie.expired else self._dumps(name, cookie))))
         for key in sorted(_ATTRIBUTES):
             name = _ATTRIBUTES[key]
             value = getattr(cookie, key)
@@ -608,7 +625,7 @@ class SignedContainer(Container):
     def _dumps(self, name, cookie):
         value = Container._dumps(self, name, cookie)
         query = Query(dict(name=name, value=value), charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
-        query.sign(self.hmac_key, max_age=cookie.max_age, add_time=True)
+        query.sign(self.prefix + self.hmac_key, max_age=cookie.max_age, add_time=True)
         del query['value']
         del query['name']
         return value + ':' + str(query)
@@ -621,12 +638,12 @@ class SignedContainer(Container):
         query = Query(query, charset=self.charset, encode_errors=self.encode_errors, decode_errors=self.decode_errors)
         query['value'] = value
         query['name'] = name
-        if query.verify(self.hmac_key):
-            return value
+        if query.verify(self.prefix + self.hmac_key):
+            return value.decode(self.charset or CHARSET)
     
     @classmethod
     def make_factory(cls, hmac_key):
-        return functools.partial(cls, hmac_key=hmac_key)
+        return functools.partial(cls, hmac_key)
 
 
 class JsonContainer(SignedContainer):
