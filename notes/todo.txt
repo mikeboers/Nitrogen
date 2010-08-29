@@ -6,8 +6,6 @@
 
     It should remove it from the collection. .expire will actually expire it.
 
-- cookies should be able to fully encode the key as well as the value
-
 - SerialView should also wrap around getlist and other multimap methods if
   they exist.
 	

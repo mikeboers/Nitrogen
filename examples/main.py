@@ -1,6 +1,7 @@
 
 import os
 import logging
+import time
 
 from nitrogen.wsgi.server import serve
 from nitrogen.core import *
@@ -18,6 +19,14 @@ log = logging.getLogger(__name__)
 
 app.route('/cookies', cookie_app)
 app.route('/response', response_app)
+
+@app.route('/stream')
+def do_stream(environ, start):
+    start('200 OK', [])
+    for i in range(50):
+        yield '%d ' % i
+        time.sleep(0.1)
+    
 
 @app.route('/captcha')
 @Request.application
