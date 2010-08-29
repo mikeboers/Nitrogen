@@ -150,12 +150,13 @@ class Request(CommonCore, wz.Request):
     
     route = _environ_property('wsgiorg.routing_args', load_func=lambda x: x[1])    
     
-    # These get a little more attension because IE 6 will send us the
-    # length of the previous request as an option to this header.
-    # if_modified_since = _environ_property('HTTP_IF_MODIFIED_SINCE',
-    #     load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
-    # if_unmodified_since = _environ_property('HTTP_IF_UNMODIFIED_SINCE',
-    #     load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
+    # These get a little more attension because Netscape extended HTTP/1.0 to
+    # add the length of the previous request as an option to this header. IE 6
+    # does this too.
+    if_modified_since = _environ_property('HTTP_IF_MODIFIED_SINCE',
+        load_func=lambda x: wz.parse_date((x or '').split(';', 1)[0]))
+    if_unmodified_since = _environ_property('HTTP_IF_UNMODIFIED_SINCE',
+        load_func=lambda x: wz.parse_date((x or '').split(';', 1)[0]))
     
     # Depricated.
     etag = _environ_property('HTTP_IF_NOT_MATCH')
