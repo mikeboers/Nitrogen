@@ -182,7 +182,7 @@ def exception_handler(app, get_template=None, debug=False):
                 yield x
             return
         
-        if isinstance(e, status.HTTPRedirection):
+        if isinstance(e, status.Move):
             headers = Headers(e.headers)
             log.info('caught %d %s (to %r): %r' % (e.code, e.title, headers['location'], e.detail))
             for x in e(environ, start):

@@ -50,6 +50,7 @@ class _Mixin(object):
 # non-prefixed versions.
 StatusException = HTTPException = _httpexceptions.HTTPException
 Redirection = HTTPRedirection = _httpexceptions.HTTPRedirection
+Move = HTTPMove = _httpexceptions._HTTPMove
 Error = HTTPError = _httpexceptions.HTTPError
 BadRequest = HTTPBadRequest = _httpexceptions.HTTPBadRequest
 for name in dir(_httpexceptions):
