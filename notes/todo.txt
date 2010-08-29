@@ -1,4 +1,5 @@
 
+- Response should have an .abort and .redirect method
 
 - move login.html to nitrogen
 
