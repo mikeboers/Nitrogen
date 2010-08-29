@@ -152,10 +152,10 @@ class Request(CommonCore, wz.Request):
     
     # These get a little more attension because IE 6 will send us the
     # length of the previous request as an option to this header.
-    if_modified_since = _environ_property('HTTP_IF_MODIFIED_SINCE',
-        load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
-    if_unmodified_since = _environ_property('HTTP_IF_UNMODIFIED_SINCE',
-        load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
+    # if_modified_since = _environ_property('HTTP_IF_MODIFIED_SINCE',
+    #     load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
+    # if_unmodified_since = _environ_property('HTTP_IF_UNMODIFIED_SINCE',
+    #     load_func=lambda x: wz.parse_date(wz.parse_options_header(x)[0]))
     
     # Depricated.
     etag = _environ_property('HTTP_IF_NOT_MATCH')
