@@ -13,6 +13,7 @@ place.
 import json
 import pprint
 import random
+import re
 
 import webhelpers.text
 import webhelpers.html
@@ -35,7 +36,7 @@ context['json'] = json.dumps
 context['markdown'] = markdown
 context['format_date'] = lambda d, f: (d.strftime(f) if d else '')
 context['randomize'] = lambda x: sorted(x, key=lambda y: random.random())
-context['nl2br'] = lambda s: s.replace("\n", "<br />")
+context['nl2br'] = lambda s: re.sub(r'\n{3,}', '\n\n', str(s)).replace("\n", "<br />")
 
 context['pformat'] = pprint.pformat
 
