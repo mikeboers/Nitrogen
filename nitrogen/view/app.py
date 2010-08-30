@@ -29,6 +29,7 @@ class ViewAppMixin(object):
     def setup_config(self):
         super(ViewAppMixin, self).setup_config()
         self.config.setdefault('template_path', [])
+        self.config.setdefault('template_cache_dir', None)
     
     def __init__(self, *args, **kwargs):
         """Constructor.
@@ -41,10 +42,6 @@ class ViewAppMixin(object):
         
         # Need to set these up before calling the super so that other things
         # have access to them.
-        self.lookup = mako.lookup.TemplateLookup(
-            directories=[],
-            input_encoding='utf-8'
-        )
         self.view_globals = context.copy()
         self._view_locals = self.local()
         
@@ -54,7 +51,11 @@ class ViewAppMixin(object):
         template_path = list(self.config.template_path)
         template_path.append(os.path.abspath(os.path.dirname(__file__) + '/../../templates'))
         
-        self.template_path.extend(template_path)
+        self.lookup = mako.lookup.TemplateLookup(
+            directories=template_path,
+            module_directory=self.config.template_cache_dir,
+            input_encoding='utf-8',
+        )
         
         self.view_globals['url_for'] = self.url_for
         self.view_globals['get_flash_messages'] = self.get_flash_messages
