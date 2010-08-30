@@ -12,6 +12,9 @@ from mako.template import Template
 from .defaults import context
 
 
+log = logging.getLogger(__name__)
+
+
 class ViewAppMixin(object):
     """Environment for working with views/templates.
     
@@ -53,10 +56,14 @@ class ViewAppMixin(object):
         
         self.template_path.extend(template_path)
         
-        
+        self.view_globals['url_for'] = self.url_for
+        self.view_globals['get_flash_messages'] = self.get_flash_messages
         self._warned_no_session = False
         
-    
+    def init_request(self, environ):
+        super(ViewAppMixin, self).init_request(environ)
+        self.view_locals['url_for'] = lambda *args, **kwargs: self.request.url_for(*args, **kwargs)
+        
     def export_to(self, map):
         super(ViewAppMixin, self).export_to(map)
         map.update(
@@ -74,18 +81,17 @@ class ViewAppMixin(object):
         """Return the underlying dict of the thread-local object."""
         return self._view_locals.__dict__
         
-    def _prep_data(self, data):
+    def _prep_data(self, user_data):
         """Prepare user supplied data for use as a view context.
         
         Adds globals, locals, flash messages, etc.
         
         """
-        
+        data = {}
         data.update(self.view_globals)
         data.update(self.view_locals)
-        data['get_flash_messages'] = self.get_flash_messages
-        if hasattr(self._local, 'environ'):
-            environ = self._local.environ
+        data.update(user_data)
+        return data
     
     def get_template(self, template):
         try:
@@ -102,13 +108,13 @@ class ViewAppMixin(object):
         
         if isinstance(template, basestring):
             template = self.lookup.get_template(template)
-        self._prep_data(data)
+        data = self._prep_data(data)
         return template.render_unicode(**data)
     
     def render_string(self, template_string, **data):
         """Render a string as a template with the given keyword args."""
         template = mako.template.Template(template_string, lookup=self.lookup)
-        self._prep_data(data)
+        data = self._prep_data(data)
         return template.render_unicode(**data)
     
     def _get_flash_messages(self):
