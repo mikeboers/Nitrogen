@@ -4,7 +4,7 @@ import re
 import json
 
 
-class SiteConfig(collections.Mapping):
+class ConfigFile(collections.Mapping):
     
     def __init__(self, path, defaults=()):
         self.path = path
