@@ -96,6 +96,7 @@ def default_handler(name):
 def reloader(app, packages=('nitrogen', ), func=default_handler):
     start_time = time.time()
     package_re = re.compile(r'^(%s)(\.|$)' % '|'.join(re.escape(x) for x in packages))
+    log.info('Will reload on modications to %s.' % ', '.join(repr(x) for x in packages))
     name_to_path = {}
     def _reloader(environ, start):
         request_start_time = time.time()

@@ -4,13 +4,14 @@ import logging
 from werkzeug import cached_property
 
 from . import cookies
+from . import local
 from . import request
 from . import route
+from .compress import compressor
+from .proxy import Proxy
 from .serve import serve
-from nitrogen.compress import compressor
-from nitrogen.unicode import encoder
-from nitrogen.proxy import Proxy
-from nitrogen import local
+from .serve.fcgi import reloader
+from .unicode import encoder
 
 log = logging.getLogger(__name__)
 
@@ -87,6 +88,9 @@ class Core(object):
         self.register_middleware((self.FRAMEWORK_LAYER, 0), encoder)
         self.register_middleware((self.TRANSPORT_LAYER, 1000), compressor)
         
+        if self.config.reload:
+            self.register_middleware((self.TRANSPORT_LAYER, 10000), reloader, (self.config.reloader_packages, ))
+        
         self._local = self.local()
         self.request = self._local('request')
         
@@ -97,7 +101,9 @@ class Core(object):
         self.config.setdefaults(
             root='',
             runmode='socket',
-            private_key=None
+            private_key=None,
+            reload=False,
+            reloader_packages=('nitrogen', 'app'),
         )
     
     # These are stubs for us to add on to in the __init__ method.
