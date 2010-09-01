@@ -196,7 +196,8 @@ class Core(object):
         finally:
             self.finish_request()
     
-    def run(self, mode=None, *args, **kwargs):
+    def run(self, via=None, *args, **kwargs):
         self.flatten_middleware()
-        serve(mode or self.config['run_mode'], self, *args, **kwargs)
+        kwargs.setdefault('debug', self.config.debug)
+        serve(via or self.config['run_mode'], self, *args, **kwargs)
 
