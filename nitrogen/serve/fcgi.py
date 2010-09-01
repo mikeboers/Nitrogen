@@ -18,12 +18,21 @@ Forking notes:
 """
 
 import itertools
+import logging
 import multiprocessing.util
 import os
+import re
+import sys
+import time
 
-from flup.server.fcgi_base import Request as _FCGIRequest
+from flup.server.fcgi_base import Request as _FCGIRequest, FCGI_REQUEST_COMPLETE
 from flup.server.fcgi import WSGIServer as _FCGIServer
 from flup.server.fcgi_fork import WSGIServer as _FCGIPreForkServer
+
+from .. import status
+
+
+log = logging.getLogger(__name__)
 
 
 def monkeypatch_fcgi_request(Request):
@@ -49,27 +58,117 @@ monkeypatch_fcgi_request(_FCGIRequest)
 
 
 
+log = logging.getLogger(__name__)
 
 
-class FCGIServer(_FCGIServer):
+class ReloadException(Exception):
+    
+    def __init__(self, status, headers, body):
+        self.status = status
+        self.headers = headers
+        self.body = body
+        super(ReloadException, self).__init__()
+    
+    def get_output(self):
+        return ('Status: %s\r\n' % self.status) + ''.join('%s: %s\r\n' % x for x in self.headers) + '\r\n' + self.body
 
-    def __init__(self, app, min_spare=1, max_spare=5, max_threads=50):
-        super(FCGIServer, self).__init__(app, minSpare=min_spare,
-            maxSpare=max_spare, maxThreads=max_threads)
 
 
-class FCGIPreForkServer(_FCGIPreForkServer):
+def default_handler(name):
+    raise ReloadException('200 OK', [('Refresh', '1'), ('Content-Type', 'text/html')], 
+'''<html><head><style>
+    body {
+        margin: 0;
+        padding: 1em;
+    h1, p {
+        font-weight: normal;
+        margin: 0;
+    }
+</style></head><body">
+    <h1>The <b>%r</b> module is out of date.</h1>
+    <p>The FCGI server has been restarted and this request will refresh in one second.</p>
+</body></html>''' % name
+    )
+    raise ReloadException('200 OK', [], name)
+
+
+
+def reloader(app, packages=('nitrogen', ), func=default_handler):
+    start_time = time.time()
+    package_re = re.compile(r'^(%s)(\.|$)' % '|'.join(re.escape(x) for x in packages))
+    name_to_path = {}
+    def _reloader(environ, start):
+        request_start_time = time.time()
+        for name in sys.modules:
+            if name not in name_to_path:
+                path = None
+                if package_re.match(name):
+                    path = getattr(sys.modules[name], '__file__', None)
+                if path and path.endswith('.pyc') and os.path.exists(path[:-1]):
+                    path = path[:-1]
+                name_to_path[name] = path
+            else:
+                path = name_to_path[name]
+            try:
+                if path and os.path.getmtime(path) > start_time:
+                    log.info('%s has changed' % name)
+                    func(name)
+            except IOError as e:
+                log.debug('Ignoring %n due to %r.' % e)
+                name_to_path[name] = None
+            
+        log.debug('checked modules in %.2fms' % (1000 * (time.time() - request_start_time)))
+        return app(environ, start)
+    return _reloader
+
+
+
+
+class FCGIMixin(object):
+    
+    def handler(self, req):
+        try:
+            return super(FCGIMixin, self).handler(req)
+        
+        except ReloadException as e:
+            log.info('Caught %r; restarting.' % e)
+            req.stdout.write(e.get_output())
+        
+        except SystemExit as e:
+            log.exception('Caught SystemExit; restarting.')
+            req.stdout.write(
+                'Status: 200 OK\r\n'
+                '\r\n'
+                'Caught %r; restarting FCGI process.' % e)
+        
+        self._keepGoing = False
+        return FCGI_REQUEST_COMPLETE, 0
+    
+
+class FCGIServer(FCGIMixin, _FCGIServer):
+
+    def __init__(self, app, min_spare=1, max_spare=5, max_threads=50, **kwargs):
+        kwargs.setdefault('minSpare', min_spare)
+        kwargs.setdefault('maxSpare', max_spare)
+        kwargs.setdefault('maxThreads', max_threads)
+        super(FCGIServer, self).__init__(app, **kwargs)
+
+
+class FCGIPreForkServer(FCGIMixin, _FCGIPreForkServer):
 
     def __init__(self, app, min_spare=1, max_spare=4, max_children=10,
         max_requests=0, setup=None, teardown=None):
+        
+        kwargs.setdefault('minSpare', min_spare)
+        kwargs.setdefault('maxSpare', max_spare)
+        kwargs.setdefault('maxChildren', max_children)
+        kwargs.setdefault('maxRequests', max_requests)
 
         self._setup_child = setup
         self._teardown_child = teardown
         self._pid = os.getpid()
 
-        super(FCGIPreForkServer, self).__init__(app, minSpare=min_spare,
-            maxSpare=max_spare, maxChildren=max_children,
-            maxRequests=max_requests)
+        super(FCGIPreForkServer, self).__init__(app, **kwargs)
 
     def setup_child(self):
         if self._setup_child:

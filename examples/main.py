@@ -191,7 +191,5 @@ def do_request(environ, start):
     
     yield 'DONE'
 
-
-
 if __name__ == '__main__':
-    app.run('socket')
+    app.run(via='socket')
