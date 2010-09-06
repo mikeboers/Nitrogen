@@ -1,4 +1,32 @@
 
+- CRUD needs to have builtin security.
+    - a couple predicates for various actions:
+        general_predicate (for whichever are missing below)
+        create_predicate
+        read_predicate (this won't do anything yet)
+        update_predicate
+        delete_predicate
+    - to we prefer "deleteable", "allow_delete" or "can_delete"?
+        - either allow_delete or can_delete
+        - "allow" seems to be more specific to this situation
+    - new "get_perms" method which returns:
+        {
+            can_create: ...,
+            can_update: ...,
+            can_delete: ...
+        }
+    - crud.js should be in the nitrogen public folder
+    - make adjustments to crud.js
+        - make "url" required
+        - get_perms option will call "get_perms" method to get permissions.
+          This is assumes to be dependant upon only the url
+    - drop a script tag for EVERY thing that is supposed to be editable
+        <script>jQuery.crud('#selector', {url="/whatever", can_delete=false, id=1234});</script>
+    - TextBlobAppMixin should specify the predicates to use by default for all
+      text blobs. The CRUD.allow_* method can be overridden on a single site
+      to allow certain people to be able to do certain things.
+
+
 - Response should have an .abort and .redirect method
 
 - move login.html to nitrogen
