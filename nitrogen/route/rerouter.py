@@ -256,6 +256,10 @@ class ReRouter(core.Router):
     def generate_step(self, data):
         log.debug('generate_step(%r, %r)' % (self, data))
         for _, pattern, app in self._apps:
+            # Skip patterns that are not identifiable.
+            if not (pattern._keys or pattern._constants):
+                continue
+            # Filter out unmatching constant data.
             if any(k in data and data[k] != v for k, v in
                 pattern._constants.iteritems()):
                 continue
