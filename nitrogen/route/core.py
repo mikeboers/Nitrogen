@@ -167,21 +167,25 @@ class Router(object):
         RoutingError exception.
         
         """
+        log.debug('Starting route %r:' % path)
+        steps = 0
         history = RouteHistory(path)
         router = self
         while hasattr(router, 'route_step'):
+            steps += 1
             # print 'a', router, path
             step = router.route_step(path)
             if step is None:
                 if strict:
                     raise RoutingError(history, router, path)
                 return None
+            log.debug('\t%d: %r' % (steps, step))
             if not isinstance(step, RoutingStep):
                 step = RoutingStep(*step)
-            log.debug('route step: %r' % (step, ))
             history.update(path=step.path, router=router, data=step.data)
             router = step.next
             path = step.path
+        log.debug('\tDONE.')
         return Route(
             history=history,
             app=router,
@@ -230,6 +234,7 @@ class Router(object):
         apply_route_data = history is not None
         nodes = []
         node = self
+        log.debug('Starting route generation with %r from %r:' % (new_data, history))
         while node is not None and hasattr(node, 'generate_step'):
             nodes.append(node)
             route_i += 1
@@ -244,12 +249,14 @@ class Router(object):
                 if strict:
                     raise GenerationError(path, node, route_data)
                 return None
+            log.debug('\t%d: apply_data=%r, %r from %r' % (route_i + 1, apply_route_data, step, node))
             if not isinstance(step, GenerationStep):
                 step = GenerationStep(*step)
-            # log.debug((node, data) + x)
+
             node = step.next
             path.append(step.segment)
         
+        log.debug('\tDONE.')
         out = ''
         for i, segment in reversed(list(enumerate(path))):
             node = nodes[i]
