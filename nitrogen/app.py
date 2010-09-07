@@ -122,6 +122,7 @@ class Core(object):
             Response=self.Response,
             route=self.route,
             request=self.request,
+            config=self.config,
         )
     
     APPLICATION_LAYER = 0
