@@ -1,5 +1,78 @@
 
-- clean up the docs
+Consider: Should route_step be returning just the remaining part of the part,
+or should it give back the part that it explicitly popped off as well?
+
+    Right now we are making the assumption that if the remaining path is a
+    suffix of the original path then the prefix was consumed by the router,
+    and if it is not a suffix then the path was otherwise transformed in an
+    opaque way.
+    
+    Right now the signer gateway strips off a suffix, but it could be modified
+    so that it strips off a prefix. Otherwise the only other idea I have had
+    that would not strictly strip of prefixes would be an encrypting or
+    encoding gateway, but I have yet to have a need to implement that.
+
+Consider: Should it be enforced that the remaining path returns from route_step be a proper suffix (ie empty or starts with '/', and is a suffix of
+the origina path)?
+
+    Instinctually it seems like the "proper" thing to do, but it is cutting of
+    possibilities. However, everything I have done thus far does not require
+    not stripping off prefixes.
+
+
+Consider: Is there a significance to a trailing slash?
+
+    I feel as if '/path' and '/path/' are visualizations of the same resource.
+    The first being the object at '/path', and the second being the contents
+    of that object.
+
+Consider: Should the ModuleRouter import everything at init-time?
+
+    Yes, it should. All reloading capabilities should be redirected to some
+    auto-loader that is broader.
+
+    If we are using the werkzeug function to import all modules in a package
+    then this class can also be a relatively simple extension of a MapRouter.
+
+Consider: Should previous route data be introduced only at the level at which
+it was generated, or shall it be availible to the entire process?
+
+Consider: Should the route_step and generate_step functions return a single
+value representing the best candidate, or should they return a list of possible candidates, potentially with scores for each one.
+
+    Situation 1: An app is accessable from two different paths via a ReRouter.
+    We must specify which one is the one to generate to if they both could
+    match. Currently there is a "priority" kwarg to the register method which
+    makes it obvious. The ReRouter class could be extended to provide an
+    additional scoring mechanism of it's own.
+
+    This is a way to implement a route generation scheme that does not rely
+    upon an absolute match at every step along the process. ie. We want
+    a route that matched {'photo_id': 12}, and there are two ReRouters in
+    seperate modules that would respond to that, but there is a ModuleRouter
+    in the way for which we have not specified any data. The routers could
+    yield a series of possible matches and scores doing a breadth-first search
+    for the highest score route. Keep track of the current minimum score
+    overall, and the complete path with the current maximum score.
+    
+Consider how to implement names for routes.
+
+    This is analogous to having *args to represent a route, instead of just
+    **kwargs as we have now. We should consider ways of implementing relative
+    vs. absolute names as well.
+    
+    Scheme 1: Every step may have a name, and names are queries with dot or
+    slash seperated strings. Absolute paths can be specified with an initial
+    "/", while relative paths could use "../" or a simple "." ala imports. The
+    slash seems more intuitive to me, but perhaps it's similarities will
+    serve to bring in extra baggage that we cannot deal with. It also feels as
+    if this string must represent the entire path.
+    
+    Scheme 2: A tuple of strings. This would be either inherently relative or
+    absolute, depending on which direction we start matching from. We are also
+    able to skip routers, perhaps only if they are nameless, however.
+
+
 
 - allows:
     - simple decorator to assert the request mode is one of the given.

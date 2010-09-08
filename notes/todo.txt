@@ -1,29 +1,5 @@
 
 
-- Fix routing to the donation form for st5
-	options:
-		- hardcode that URL
-		- fix the routers
-			- names?
-			- module router should import everything
-			- return script_name_part, path_info, router, data
-			- document the route generator
-			- instead of returning a tuple, yield tuples
-				instead of a single router object we are tracking, have a list
-				of them:
-					routers = [self]
-					leafs = []
-					for router in routers:
-			- rerouter should not be able to match a pattern that has no data
-			  there is no way to refer to such a path
-			- what is the default terminating point on a rerouter?
-				router.register('/pattern', default=True)
-				this will set this app to be the default handler for the
-				router
-				
-				
-
-
 - CRUD needs to have builtin security.
     - a couple predicates for various actions:
         general_predicate (for whichever are missing below)

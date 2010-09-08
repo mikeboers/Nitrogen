@@ -3,7 +3,7 @@ UNROUTED FORMAT
 ===============
 
 - If it is non-empty, it MUST start with a slash.
-- It MUSH not have any dot segments whatsoever.
+- It MUST NOT have any dot segments whatsoever.
 - It MAY have empty segments, but it is up to the routers to decide how to deal with them.
 
 
