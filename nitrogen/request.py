@@ -98,12 +98,13 @@ class Request(CommonCore, wz.Request):
         
         """
         
-        return body.FileWrapper(self.stream_factory(
+        return body.FileWrapper(
+            self.stream_factory, 
             total_content_length,
             content_type,
             filename,
             content_length,
-        ))
+        )
     
     # I am supplying this synonym for the Werkzeug property simply for
     # backwards compatibility.
