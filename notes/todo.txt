@@ -1,4 +1,104 @@
+LogBook's "fingers crossed" handler is a VERY nice idea!
 
+- Write a basic comet app.
+	- How to have javascript run as soon as the server releases it?
+		- long polling with ajax or script tags
+		- streaming into an iframe with chunked content
+			- How do I send chunked content? Does the wsgi server have to do
+			  that for me? It looks like the mod_fcgid is doing that.
+	- How to have the wsgi app terminate when the browser kills the connection
+		- When we yield it may just not call for another iterable.
+		- Looks like a close() method on the iterable will be called if it
+		  exists.
+			- Must write a class for mutating an output stream on the fly and
+			  maintain a close method. nitrogen.wsgi.util.StreamMutator
+
+
+
+- extract route into it's own package preserving history as much as possible
+	- rename it:
+		- route
+		- pathfinder
+		- routefinder
+		- router
+		- webber
+		- pystar (Py*)
+		- webstar
+		- querystar
+		- getstar
+		- pstar
+		- wsgistar
+		- wstar
+
+- make all of the middleware retain the close method if there is one. This is
+  likely easiest accomplished by writing a Middleware class which is
+  overrideable to provide whatever functinality you want, and maintain best
+  practises without you having to try too hard.
+
+	Could also have a couple of classes for dealing with specific parts. Ie. a
+	nitrogen.wsgi.util.StreamMutator can be a wrapper around an interator
+	which mutates it in a given way, and maintains the close method
+
+- rename js crud to autoCrud, and it uses a crud tool to make all the method
+  calls.
+  
+	$('#whatever').crud('delete', {<more options>})
+	$.crud('create', {url: 'whatever'})
+	
+	Should "url" be "entry_point"? or "uri"?
+	
+	- get proper permission checking in here everywhere
+	- proper etags to make sure that things haven't changes
+	- accept: application/json, and reject others
+	- content-type: application/json
+	- proper rest-style status codes
+	- perhaps the request itself could be a json object so that I can pass
+	  more complex information to it
+
+- write my own template wrapper class which:
+	- render's directly (.render(name, _type=None, **kwargs))
+		this could pull from the name what type of template it is
+	- replicates what mako does (.get_template(name))
+	- can be inserted into mako templates for <%include /> tags
+		look like it would need get_template and adjust_uri (from _lookup_template
+		in mako.runtime). adjust_uri can be lifted right from mako TemplateLookup
+	- have it's path extended dynamically
+	- have the render function extended dynamically (although I can easily do
+	  it manually: render = lambda name, **kw: tpl.tender(name, x=1, y=2, **kw)
+
+
+- pull the blog into nitrogen.blog
+
+	- the class should take:
+		- render
+		- Session
+	- the class needs to abstract:
+		- determining if we are in edit mode
+		- template names should be relative (so they can be joined)
+	- building all of the various classes should be done in methods so that
+	  it can be extended (ie add fields to forms or models)
+	- should attachments/authorship be a permanent feature, or an extension?
+		If a permanent feature then they remain columns on the Post class.
+		If an extension, then they have their own migrate repo which adds the
+		columns and a mixin to add to the model.
+		
+		I could simply turn off authorship and that sort of thing. It seems like
+		it would actually be more straight forward to have it all be part of
+		the trunk, and turn features off.
+	
+	- attachments should handle straight urls of images as well
+	- attachments should be able to handle local files as well
+	
+	- how can I bundle the migrate repo along with the package?
+
+
+
+- consider having .json on response object
+- or a JSONapplication
+
+
+- reload checker must not use iter version
+	- can also loop over the modules themselves
 
 - CRUD needs to have builtin security.
     - a couple predicates for various actions:
