@@ -1,3 +1,13 @@
+
+- fix json view filter. it is being a pain in the ass
+
+- Session is unable to persist when one of the status exceptions are thrown
+  because then the session start method gets completely bypassed. I should
+  consider setting the session middleware up behind the exception handler.
+
+- Try to extend beaker sessions so that the id token is regenerated on every
+  request, OR that I am able to manually reset it
+
 LogBook's "fingers crossed" handler is a VERY nice idea!
 
 - Write a basic comet app.
@@ -39,8 +49,30 @@ LogBook's "fingers crossed" handler is a VERY nice idea!
 	nitrogen.wsgi.util.StreamMutator can be a wrapper around an interator
 	which mutates it in a given way, and maintains the close method
 
-- rename js crud to autoCrud, and it uses a crud tool to make all the method
-  calls.
+- cleanup crud.js:
+	
+	- do not pull from metadata or from attrData. It is easy enough to write a
+	function which will look for everything with "data-crud", and crud it with
+	that data
+	
+	- try to break the main function up into smaller functions, using
+	significantly fewer closures. will have to use $$.data a lot to maintain
+	the proper state
+	
+		init: set up GUI. need to be careful about how we deal with
+		      this being called twice as the partial for the final HTML may
+		      contain the script tag to setup the crud functionality
+		edit/create: setup the form
+		save: TRY to save the form, inserting the new HTML or the form with
+			  errors
+		delete: delete this object
+	
+	- use http://json.org/json2.js JSON.stringify to serialize the request.
+	this will require the server side to parse the request manually
+	
+	- perhaps have a registry of types that contain defaults:
+		$.crud('setup-type', {'type': 'blog-post', url:'whatever'})
+		$('...').crud('init', {'type':'blog-post', 'id': 123})
   
 	$('#whatever').crud('delete', {<more options>})
 	$.crud('create', {url: 'whatever'})
@@ -188,7 +220,9 @@ LogBook's "fingers crossed" handler is a VERY nice idea!
 	prefixes on the signing key
 
 - write my own session (or adapt beaker):
-	- decide if we want to write/save on item access, or the whole thing at once
+	- decide if we want to write/save on item access, or the whole thing
+		Likely the whole thing (by default)
+	- auto save at the end if dirty
 	- no regards for mutable objects
 	- explicit save method will save everything, or just the keys you provide
 	- locks:
@@ -197,6 +231,9 @@ LogBook's "fingers crossed" handler is a VERY nice idea!
 		with session.lock('namespace'):
 			blah blah
 	- id is regenerated constantly
+	- method to regenerate id
+	- id could be a random tag, and a counter that gets incremented constantly
+	- maintain a creation_time, modification_time, and access_time attribute
 		
 		
 
@@ -852,13 +889,7 @@ all together
 - the UserContext should have a table_prefix, instead of "name"
 
 
-	
-- Crud
-	manage both the api side of the crud operations (like the editables now)
-	and provide standard web based stuff. lists of objects, getting objects,
-	updating and deleting, ect.
-	
-	permission_base gets appended to to figure out all the permissions
+
 
 - locals
 	make a local object factory which keeps a reference to the __dict__ so that
