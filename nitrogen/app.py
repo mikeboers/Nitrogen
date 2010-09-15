@@ -59,7 +59,10 @@ class Core(object):
     
     def __init__(self, *args, **kwargs):
         
-        self.config = Config(kwargs)
+        self.config = Config()
+        for arg in args:
+            self.config.update(arg)
+        self.config.update(kwargs)
         self.setup_config()
         
         # Setup initial routers. Use the primary router (or just the .route

@@ -1,6 +1,12 @@
 
 - fix json view filter. it is being a pain in the ass
 
+- some way to register a route generation data mutator function. These are
+  passed the data, and are given free range to mutate them at will. This would
+  allow one to create shortcuts or overrides.
+
+	data = {'crew': <mike object>'} -> {'controller':'film', 'film_page':'crew', 'crew':'Mike-Boers'}
+	
 - Session is unable to persist when one of the status exceptions are thrown
   because then the session start method gets completely bypassed. I should
   consider setting the session middleware up behind the exception handler.
