@@ -8,6 +8,9 @@
   % for field in form:
     <li class="state-${"error" if field.errors else "ok"}">
       <div class="label">
+          % if field.type == 'BooleanField':
+            ${field()}
+          % endif
         ${field.label()}
         % if field.flags.optional:
           <span class="optional">(optional)</span>
@@ -20,7 +23,11 @@
           </ol>
         % endif
       </div>
-      <div class="field type-${field.type}">${field()}</div>
+    % if field.type != 'BooleanField':
+      <div class="field type-${field.type}">
+        ${field()}
+      </div>
+    % endif
       % if field.type == 'MarkdownField':
         <script>jQuery(function($) {
           if ($.markdownEditor)
