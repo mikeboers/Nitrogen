@@ -1,4 +1,64 @@
 
+
+- design a generic Middleware class which abstracts away the details of the
+protocol. This should be compatible with both wsgi and web3
+
+
+- write my own auth solution like repoze.who/repose.what. take their API and
+  make it even simpler where possible. Consider copying all of their code and
+  making crazy rewriting motions.
+
+	call it KeyMan
+	- global/class-based/object-based roles/permissions
+	- role based security. this is effectively what repoze does, but calls it
+	  groups
+	- dont need classifiers
+	- can have a list of handlers which expose methods to fill the different
+	  functions:
+		- identify
+		- authenticate
+		- get_metadata
+		- persist
+		- challenge
+
+
+- design a version control mechanism for CRUD
+	- crud_history table:
+		columns: id, table_name, object_id, datetime, data, username, comment
+	
+	- the problem with story all the data from the whole row is that a user would
+	be able to affects columns that their form does not have permission to see.
+	ideally only the data that the user is allowed to see (controlled by the
+	form) would be affected, but this may bring in some data integrity issues.
+	if we apply the data to the supplied form object first then we are assured
+	that the only changes will be those that the user is allowed to make anyways
+	
+	- CRUD.commit(id, comment=None, user=None)
+		this commits the current state of the object with the given id
+	
+	- popup box in the bottom right corner lets one pick an older version of
+	  the data to display
+	- a "revision message" box at the bottom lets you comment on the changes
+	
+	- etags are passed down with every form. this is a hash of the repr of
+	  sorted item tuples of the dict version of the raw row
+		ie md5(repr(sorted(dict(table.select().filter(...).execute().fetchone()).items())))
+
+- add a preview button to crud
+	blue glow
+- proper error handling everywhere
+- add nice transitions to UI block
+
+- remove the second resize handle from crud text areas
+- add grippie to all normal text areas
+
+- should all jquery plugins have the jquery prefix?
+
+- make a FileRouter, and move some javascript into nitrogen
+- consider adding a compass directory which compiles into the public css directory
+
+
+
 - fix json view filter. it is being a pain in the ass
 
 - some way to register a route generation data mutator function. These are
@@ -72,6 +132,18 @@ LogBook's "fingers crossed" handler is a VERY nice idea!
 		save: TRY to save the form, inserting the new HTML or the form with
 			  errors
 		delete: delete this object
+	
+	- api methods:
+		
+		- get_form
+			id
+			version (optional)
+		- get_metadata
+			returns permissions and such
+		- preview
+			parms: all the data
+			
+		
 	
 	- use http://json.org/json2.js JSON.stringify to serialize the request.
 	this will require the server side to parse the request manually
