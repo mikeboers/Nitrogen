@@ -6,6 +6,7 @@ import sys
 import traceback
 import logging
 
+from werkzeug.exceptions import HTTPException as WZException
 from mako.exceptions import RichTraceback as MakoTraceback
 
 from . import status
@@ -174,6 +175,10 @@ def exception_handler(app, get_template=None, debug=False):
                 pass
         except status.HTTPException as e:
             e.original = None
+        except WZException as original:
+            e = status.exceptions.get(original.code) or status.InternalServerError
+            e = e()
+            e.original = original
         except Exception as original:
             e = status.InternalServerError()
             e.original = original
