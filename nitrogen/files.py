@@ -167,7 +167,7 @@ class WSGIWrapper(object):
     
     @Request.application
     def __call__(self, request):
-        use_x_sendfile = request.environ.get('SERVER_SOFTWARE', '').startswith('Apache')
+        use_x_sendfile = False #request.environ.get('SERVER_SOFTWARE', '').startswith('Apache')
         return send_file(self.path,
             environ=request.environ,
             conditional=True,
