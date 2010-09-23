@@ -54,6 +54,10 @@ value representing the best candidate, or should they return a list of possible 
     yield a series of possible matches and scores doing a breadth-first search
     for the highest score route. Keep track of the current minimum score
     overall, and the complete path with the current maximum score.
+
+    I feel as though we ought to have the route_step and generate_step return
+    a list of possible steps, and perform a depth-first search in an attempt
+    to route/generate.
     
 Consider how to implement names for routes.
 

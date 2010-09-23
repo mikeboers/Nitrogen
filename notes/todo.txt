@@ -1,25 +1,55 @@
 
+- restore as_html/as_text/as_json properties. Add them to the Response
+  constructor
+ 
+- Decide if we should remove the unicode encoder as any time we use Response
+  as a wrapper then the body is automatically encoded.
 
 - design a generic Middleware class which abstracts away the details of the
 protocol. This should be compatible with both wsgi and web3
+
+- query signing should be a part of crypto, not query
+	crypto.sign_map(map) or crypto.hmac_map(obj)
+	crypto.verify_map_signature(map) or crypto.verify_map_hmac(obj)
 
 
 - write my own auth solution like repoze.who/repose.what. take their API and
   make it even simpler where possible. Consider copying all of their code and
   making crazy rewriting motions.
 
+	- look at the ruby aclatraz
+	
 	call it KeyMan
+	
 	- global/class-based/object-based roles/permissions
+	
 	- role based security. this is effectively what repoze does, but calls it
 	  groups
-	- dont need classifiers
+	
+	- Perhaps we do not need a classifier.
+	
 	- can have a list of handlers which expose methods to fill the different
 	  functions:
-		- identify
-		- authenticate
-		- get_metadata
-		- persist
-		- challenge
+	
+		- classify: Return a token representing the type of the request. This
+		  ultimately may not be required, and may only be a single function at
+		  most. This need not be a do-everything library.
+		
+		- identify(environ): return a dict of credentials (id). Stored at
+			environ['nitrogen.auth.creds']
+		
+		- authenticate(credentials): verify the authenticity of the found credentials
+		  and return a canonical user_id token if they are good. Stored at
+			environ['nitrogen.auth.user_id']
+		
+		- get_info(user_id): return more data for this user. Stored at
+			environ['nitrogen.auth.info']. This may not be required.
+		
+		- persist(user_id): Return the headers necessary to persist this user
+		  id
+		
+		- challenge(environ): Return body, status, headers for a challenge (ie.
+		  an HTML form)
 
 
 - design a version control mechanism for CRUD
@@ -52,14 +82,17 @@ protocol. This should be compatible with both wsgi and web3
 - remove the second resize handle from crud text areas
 - add grippie to all normal text areas
 
-- should all jquery plugins have the jquery prefix?
+- should all jquery plugins have the jquery prefix? YES.
 
 - make a FileRouter, and move some javascript into nitrogen
 - consider adding a compass directory which compiles into the public css directory
 
 
 
-- fix json view filter. it is being a pain in the ass
+- fix json view filter. it is being a pain in the ass.
+    
+    I think that it is the filtering mechanism that is being a pain, coercing
+    things to strings before even running through the filters. 
 
 - some way to register a route generation data mutator function. These are
   passed the data, and are given free range to mutate them at will. This would
@@ -67,14 +100,22 @@ protocol. This should be compatible with both wsgi and web3
 
 	data = {'crew': <mike object>'} -> {'controller':'film', 'film_page':'crew', 'crew':'Mike-Boers'}
 	
+	You could even pass positional arguments which then get mutated into
+	keyword arguments. This would allow for easy naming, as we could have a
+	global mutator that registers names to the keyword arguments they
+	represent.
+	
+	Perhaps the data should be mutated at every step along the way. If we are
+	doing a relative route then we ought to travel backwards along the routed
+	path allowing routers to mutate as they go
+	
+	
 - Session is unable to persist when one of the status exceptions are thrown
   because then the session start method gets completely bypassed. I should
   consider setting the session middleware up behind the exception handler.
 
 - Try to extend beaker sessions so that the id token is regenerated on every
   request, OR that I am able to manually reset it
-
-LogBook's "fingers crossed" handler is a VERY nice idea!
 
 - Write a basic comet app.
 	- How to have javascript run as soon as the server releases it?
@@ -99,7 +140,7 @@ LogBook's "fingers crossed" handler is a VERY nice idea!
 		- router
 		- webber
 		- pystar (Py*)
-		- webstar
+		- webstar (Web*)
 		- querystar
 		- getstar
 		- pstar
@@ -246,8 +287,6 @@ LogBook's "fingers crossed" handler is a VERY nice idea!
 
     It should remove it from the collection. .expire will actually expire it.
 
-- SerialView should also wrap around getlist and other multimap methods if
-  they exist.
 	
 - new router that uses string.format symantics
 	{name:format}
@@ -271,9 +310,7 @@ LogBook's "fingers crossed" handler is a VERY nice idea!
 	router.register takes a type kwarg (one of 're', 'pattern', 'format')
 
 
-- MultiMap.lists() and iterlists()
 
-- LiteMap.update should set everything simulaneously.
 	
 - AuthAppMixin uses repoze.who and what
 	see if I can make a mixin so that permissions and groups are not cached
@@ -313,14 +350,8 @@ LogBook's "fingers crossed" handler is a VERY nice idea!
 	- id could be a random tag, and a counter that gets incremented constantly
 	- maintain a creation_time, modification_time, and access_time attribute
 		
-		
 
-- write my own cache (or adapt beaker):
-	- make sure there is no pileup when it expires (ie how beaker handles it)
-	
-- Want to have nitrogen.query and nitrogen.body.form back into the environment
 
-	
 AppCore needs a root
 	templatemixin adds root + '/templates'
 	sessionmixin defaults to using it for data
@@ -388,7 +419,7 @@ AppCore needs a root
 	- flickr
 	- imgsizer
 	- mail as "easymailer"
-	- route as "pystar"
+	- route as "webstar"
 	- uri as "uri"
 
 - etagger should only work if the iterable is not an iterator (ie. not an instance of collections.Iterator)

@@ -1,5 +1,6 @@
 
 import logging
+import os
 
 from werkzeug import cached_property
 
@@ -12,6 +13,7 @@ from .proxy import Proxy
 from .serve import serve
 from .serve.fcgi import reloader
 from .unicode import encoder
+from .files import StaticRouter
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +72,8 @@ class Core(object):
         # list. Feel free to wrap .wsgi_app at will. It will be automatically
         # wrapped by the AppMixins at every request.
         self.primary_router = route.ReRouter()
-        self.routers = route.Chain([self.primary_router])
+        self.static_router = StaticRouter(self.config.static_path)
+        self.routers = route.Chain([self.primary_router, self.static_router])
         self.wsgi_app = self.routers
         
         # Setup middleware stack. This is a list of tuples; the second is a
@@ -108,6 +111,8 @@ class Core(object):
             reload=False,
             reloader_packages=('nitrogen', 'app'),
         )
+        static_path = self.config.setdefault('static_path', [])
+        static_path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/static')
     
     # These are stubs for us to add on to in the __init__ method.
     class RequestMixin(object): pass

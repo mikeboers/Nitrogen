@@ -28,7 +28,7 @@ def serve_via_fcgi_fork(app, **kwargs):
     FCGIPreForkServer(app, **kwargs).run()
 
 
-def serve_via_socket(app, host='', port=8000, once=False):
+def serve_via_socket(app, host='', port=8000, once=False, **kwargs):
     from .socket import SocketServer
     handler = SocketServer(app, host, port)
     if once:
