@@ -7,7 +7,11 @@ Requirments:
     jquery-ui
     jquery.blockUI.js
     
-    
+Optional:
+    jquery.autodate.js
+    jquery.markdownEditor.js
+    jquery.textarearesizer.js
+
 */
 
 (function($){
@@ -40,6 +44,12 @@ $.fn.crud = function main(opts) {
 	var $children;
 	var initial_data;
 	
+	$$.hover(function(){
+	    $$.addClass('crud-hover');
+	}, function(){
+	    $$.removeClass('crud-hover');
+	})
+	
 	function _init()
 	{
 	    $$.addClass('crud');
@@ -52,7 +62,7 @@ $.fn.crud = function main(opts) {
 		// Add the edit button.
 		if (opts.id) {
 			$('<a class="edit-button">Edit</a>')
-			    .button()
+			    .button({icons: {primary: 'silk-icon silk-icon-pencil'}})
 			    .click(_start_edit)
 			    .appendTo($buttons);
 		}
@@ -60,10 +70,12 @@ $.fn.crud = function main(opts) {
 		if (opts.id && opts.deleteable)
 		{
 			$('<a class="delete-button">Delete</a>')
-			    .button()
+			    .button({icons: {primary: 'silk-icon silk-icon-delete'}})
 			    .click(_delete_click_handler)
 			    .appendTo($buttons);
 		}
+		
+		$buttons.buttonset();
 	}
 
 	function _start_edit()
@@ -109,22 +121,22 @@ $.fn.crud = function main(opts) {
 		// Add the buttons.
 		
         $('<a class="commit-button">Preview</a>')
-            .button({'disabled': true})
+		    .button({icons: {primary: 'silk-icon silk-icon-eye'}, disabled:true})
             .appendTo(buttons)
 		    // .click(_commit_click_handler);
         
-		$('<a class="save-button">Save</a>')
-		    .button()
+		$('<a class="save-button">Save</a>')    
+		    .button({icons: {primary: 'silk-icon silk-icon-tick'}})
 		    .appendTo(buttons)
 		    .click(_save_click_handler);
-        $('<a class="cancel-button">Cancel</a>')
-            .button()
+        $('<a class="cancel-button">Cancel</a>')    
+		    .button({icons: {primary: 'silk-icon silk-icon-cross'}})
             .appendTo(buttons)
             .click(_cancel_click_handler);
         
-        var version_div = $('<div class="version-control">Modification history: </div>')
+        var version_div = $('<div class="version-control">History: </div>')
             .appendTo(buttons)
-        $('<select class="version-menu"><option value="">No history</option></select>')
+        $('<select class="version-menu"><option value="">None</option></select>')
             .appendTo(version_div)
             .attr('disabled', true)
         $('<input type="checkbox" /><label>Commit on Save</label>')

@@ -4,12 +4,20 @@
     
     background-color: #fffad4
     
-    &:hover
-        background-color: #fff6b8
+    &.crud-hover
+        background-color: #fff6b8 !important
+        .outer-buttons
+            +opacity(1)
         
     &.crud-active
         border: 1px dashed #92907B
     
+    .silk-icon
+        // margin-left: -1px
+    
+    .silk-icon + .ui-button-text
+        padding-left: 2.5em
+        
     .edit-button
 
     .save-button
@@ -36,13 +44,13 @@
         overflow: visible
         position: relative
         text-align: right
-        +opacity(50%)
+        +opacity(.5)
         
         a.ui-button
-            margin-left: 5px
+            // margin-left: 5px
             position: relative
             top: -3em
-            right: 1ex
+    
     
     .required, .optional
         font-size: .7em
