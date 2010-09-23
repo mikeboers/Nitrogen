@@ -1,3 +1,4 @@
+import os
 
 from datetime import datetime
 from .app import *
@@ -29,16 +30,6 @@ class Form(FormBase):
     post_time = forms.DateTimeField()
     body = forms.MarkdownField()
 
-if not table.select().count().scalar():
-    
-    session = Session()
-    for name in 'one', 'two', 'three':
-        session.add(Post(
-            title=name.title(),
-            post_time=datetime.now(),
-            body='Body of %s.' % name
-        ))
-    session.commit()
 
 router.register('/api', CRUD(
     Session=Session,
@@ -53,5 +44,18 @@ router.register('/api', CRUD(
 @router.register('/')
 @Request.application
 def do_jquery(request):
+    
+    
+    while table.select().count().scalar() < 5:
+
+        session = Session()
+        name = os.urandom(8).encode('hex')
+        session.add(Post(
+            title=name.title(),
+            post_time=datetime.now(),
+            body='Body of %s.' % name
+        ))
+        session.commit()
+    
     posts = Session().query(Post).all()
     return Response(render('/crud/index.html', posts=posts), as_html=True)
