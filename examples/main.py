@@ -74,9 +74,9 @@ def do_api_error(request):
     request.abort(400, 'This is the message.')
     
 @app.route('/')
-def index(environ, start):
-    start('200 OK', [])
-    return ['Hello, world!']
+@Request.application
+def index(request):
+    return Response('Hello, world!')
 
 @app.route('/env')
 def env(environ, start):

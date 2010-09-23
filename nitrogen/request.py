@@ -7,6 +7,7 @@ routing, etc.
 """
 
 import logging
+import functools
 
 import werkzeug as wz
 import werkzeug.utils as wzutil
@@ -60,6 +61,47 @@ class Request(CommonCore, wz.Request):
     
     """
     
+    @classmethod
+    def application(cls, func=None, add_etag=None, conditional=True):
+        """Decorator to adapt WSGI to a request/response model.
+        
+        The function is passed a Request object, and must return a Response
+        object.
+        
+        Params:
+            add_etags: Generate an etag? None implies adding an etag if one
+                does not already exist, and the response is not cached.
+            conditional: Add a date header if not set, and return a 304 if
+                the response does not appear modified.
+        
+        """
+        
+        if func is None:
+            return functools.partial(cls.application,
+                add_etags=add_etags,
+                conditional=conditional,
+            )
+        
+        add_etag = None if add_etag is None else bool(add_etag)
+        
+        @functools.wraps(func)
+        def _wrapped(*args):
+            environ = args[-2]
+            request = cls(environ)
+            
+            response = func(*(args[:-2] + (request, )))
+            
+            if add_etag or add_etag is None and response.is_sequence:
+                response.add_etag()
+            
+            if conditional:
+                response.make_conditional(environ)
+            
+            return response(*args[-2:])
+        
+        return _wrapped
+        
+        
     # Set a default max request length. This applied to both form data, and
     # file uploads. See http://werkzeug.pocoo.org/documentation/0.6/http.html#werkzeug.parse_form_data
     # for more info.
