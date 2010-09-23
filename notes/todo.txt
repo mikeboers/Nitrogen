@@ -158,17 +158,17 @@ protocol. This should be compatible with both wsgi and web3
 
 - cleanup crud.js:
 	
-	- do not pull from metadata or from attrData. It is easy enough to write a
-	function which will look for everything with "data-crud", and crud it with
-	that data
+	- $.autocrud() looks for data-crud-url attribute, and pulls is as the numeric
+	  part of the id attribute
 	
 	- try to break the main function up into smaller functions, using
 	significantly fewer closures. will have to use $$.data a lot to maintain
 	the proper state
-	
-		init: set up GUI. need to be careful about how we deal with
-		      this being called twice as the partial for the final HTML may
-		      contain the script tag to setup the crud functionality
+	    
+	    $.fn.crud(opts)
+		    set up GUI. need to be careful about how we deal with
+		    this being called twice. Throw a hissy fit, perhaps.
+		    
 		edit/create: setup the form
 		save: TRY to save the form, inserting the new HTML or the form with
 			  errors

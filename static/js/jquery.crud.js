@@ -60,14 +60,12 @@ $.fn.crud = function main(opts) {
 		    .appendTo($$);
 		
 		// Add the edit button.
-		if (opts.id) {
-			$('<a class="edit-button">Edit</a>')
-			    .button({icons: {primary: 'silk-icon silk-icon-pencil'}})
-			    .click(_start_edit)
-			    .appendTo($buttons);
-		}
+		$('<a class="edit-button">Edit</a>')
+		    .button({icons: {primary: 'silk-icon silk-icon-pencil'}})
+		    .click(_start_edit)
+		    .appendTo($buttons);
 		
-		if (opts.id && opts.deleteable)
+		if (opts.deleteable)
 		{
 			$('<a class="delete-button">Delete</a>')
 			    .button({icons: {primary: 'silk-icon silk-icon-delete'}})
