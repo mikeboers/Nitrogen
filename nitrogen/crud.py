@@ -114,7 +114,7 @@ class CRUD(object):
 
         return dict(form=self.render_form(form))
 
-    def handle_submit_form(self, request):
+    def handle_submit_form(self, request, commit=True):
         
         response = {}
         
@@ -140,11 +140,13 @@ class CRUD(object):
         
         else:
             form.populate_obj(model)
-            if not model.id: 
-                s.add(model)
-            s.commit()
-
-            response['id'] = model.id
+            
+            if commit:
+                if not model.id: 
+                    s.add(model)
+                s.commit()
+                response['id'] = model.id
+                
             data = {}
             for key in request.form:
                 m = re.match(r'^partial_kwargs\[(.+?)\]$', key)
@@ -154,6 +156,9 @@ class CRUD(object):
             response['partial'] = self.render_model(model, **data)
         
         return response
+    
+    def handle_preview(self, request):
+        return self.handle_submit_form(request, commit=False)
 
     def handle_delete(self, request):
         id_ = request['id']
