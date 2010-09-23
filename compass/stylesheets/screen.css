@@ -329,17 +329,9 @@ caption {
 .crud .silk-icon + .ui-button-text {
   padding-left: 2.5em;
 }
-/* line 28, ../src/_crud.sass */
-.crud .save-button {
-  margin-left: 5px;
-}
 /* line 31, ../src/_crud.sass */
 .crud .version-control {
   float: right;
-}
-/* line 34, ../src/_crud.sass */
-.crud .cancel-button {
-  margin-left: 5px;
 }
 /* line 37, ../src/_crud.sass */
 .crud > .wrapper {

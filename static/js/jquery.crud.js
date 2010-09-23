@@ -181,6 +181,8 @@ $.widget('nitrogen.crud', {
 			.appendTo(buttons)
 			.click(bind(this, this._cancel_click_handler));
 	
+		buttons.buttonset()
+			
 		var version_div = $('<div class="version-control">History: </div>')
 			.appendTo(buttons)
 		$('<select class="version-menu"><option value="">None</option></select>')
@@ -188,7 +190,8 @@ $.widget('nitrogen.crud', {
 			.attr('disabled', true)
 		$('<input type="checkbox" /><label>Commit on Save</label>')
 			.appendTo(version_div)
-	
+		
+		
 		// Save the current values for cancel warning.
 		this.initialData = this._getData();
 	
