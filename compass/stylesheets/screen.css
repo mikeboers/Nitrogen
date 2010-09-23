@@ -299,86 +299,70 @@ caption {
 .crud {
   background-color: #fffad4;
 }
-/* line 7, ../src/_crud.sass */
+/* line 6, ../src/_crud.sass */
 .crud.crud-hover {
   background-color: #fff6b8;
 }
 /* line 9, ../src/_crud.sass */
-.crud.crud-hover .outer-buttons {
-  -moz-opacity: 1;
-  -webkit-opacity: 1;
-  -o-opacity: 1;
-  -khtml-opacity: 1;
-  opacity: 1;
-  -ms-filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100);
-  filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100);
-}
-/* line 12, ../src/_crud.sass */
 .crud.crud-active {
   border: 1px dashed #92907b;
 }
-/* line 15, ../src/_crud.sass */
-.crud.crud-preview {
+/* line 12, ../src/_crud.sass */
+.crud.crud-state-preview {
   background-color: #c2dafc;
 }
-/* line 17, ../src/_crud.sass */
-.crud.crud-preview.crud-hover {
+/* line 14, ../src/_crud.sass */
+.crud.crud-state-preview.crud-hover {
   background-color: #abcffc;
 }
-/* line 23, ../src/_crud.sass */
+/* line 17, ../src/_crud.sass */
 .crud .silk-icon + .ui-button-text {
   padding-left: 2.5em;
 }
-/* line 31, ../src/_crud.sass */
+/* line 20, ../src/_crud.sass */
 .crud .version-control {
   float: right;
 }
-/* line 37, ../src/_crud.sass */
+/* line 24, ../src/_crud.sass */
 .crud > .wrapper {
   border-bottom-style: solid;
   margin: 0;
   padding: 10px;
 }
-/* line 42, ../src/_crud.sass */
-.crud .inner-buttons, .crud .outer-buttons {
+/* line 29, ../src/_crud.sass */
+.crud .crud-buttons {
   font-size: 0.7em;
   margin-top: 1em;
 }
-/* line 46, ../src/_crud.sass */
-.crud .outer-buttons {
+/* line 33, ../src/_crud.sass */
+.crud.crud-state-idle .crud-buttons {
   height: 0;
   overflow: visible;
   position: relative;
   text-align: right;
-  -moz-opacity: 0.5;
-  -webkit-opacity: 0.5;
-  -o-opacity: 0.5;
-  -khtml-opacity: 0.5;
   opacity: 0.5;
-  -ms-filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=50);
-  filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=50);
-}
-/* line 54, ../src/_crud.sass */
-.crud .outer-buttons a.ui-button {
-  position: relative;
   top: -3em;
 }
-/* line 60, ../src/_crud.sass */
+/* line 41, ../src/_crud.sass */
+.crud.crud-hover .crud-buttons {
+  opacity: 1;
+}
+/* line 44, ../src/_crud.sass */
 .crud .required, .crud .optional {
   font-size: 0.7em;
   position: relative;
   top: -0.15em;
   font-style: italic;
 }
-/* line 66, ../src/_crud.sass */
+/* line 50, ../src/_crud.sass */
 .crud .required {
   color: #442718;
 }
-/* line 69, ../src/_crud.sass */
+/* line 53, ../src/_crud.sass */
 .crud .optional {
   color: #cccccc;
 }
-/* line 72, ../src/_crud.sass */
+/* line 56, ../src/_crud.sass */
 .crud input[type=text] {
   border: 1px solid #bbbbbb;
 }

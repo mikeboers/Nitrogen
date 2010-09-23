@@ -12,110 +12,156 @@ Optional:
 	jquery.markdownEditor.js
 	jquery.textarearesizer.js
 
+TODO:
+	- make sure only serialized data is being tracked for changes
+	
 */
 
 (function($, undefined) {
 
-// Helper to permanently bind a context to a function.
-var bind = function(context, func)
-{
-	return function()
-	{
-		return func.apply(context, arguments)
+
+var assertHoverClass = function($$) {
+	if (!$$.data().crudHoverSetup) {
+		$$.hover(function() {
+			$$.addClass('crud-hover')
+		}, function() {
+			$$.removeClass('crud-hover')
+		})
+		$$.data().crudHoverSetup = true
 	}
 }
+
 
 $.widget('nitrogen.crud', {
 	
 	options: {
-		deleteable: true,
-
+		
+		allowCreate: true,
+		allowUpdate: true,
+		allowDelete: true,
+		
 		// Extra data to send along with the API request.
 		// Useful for when you need more info for an API mdoel adapter callback.
 		extraData: {}
+	},	
+	
+	_create: function()
+	{
+		// For backwards compatibility
+		if (this.options.deleteable !== undefined) {
+			this.options.allowDelete = this.options.deleteable
+		}
+		
+		var $$ = this.widget()
+		
+		$$.addClass('crud')
+		assertHoverClass($$)
+		
+		if (this.options.id) {
+			this._setupIdle()
+		} else if (this.options.allowCreate) {
+			console.warning('Creation has not been fixed yet.')
+			// this._request_form()
+		} else {
+			this.widget().removeClass('crud')
+			throw "no ID and no create permissions"
+		}
 	},
 	
-	_init: function(preview)
-	{
-		
-		var self = this
-		var $$ = this.element
-		
-		// The _init function is automatically called by the widget factory
-		// AND by the successful save handler. Make sure we don't do this fun
-		// class business more than once per set of markup.
-		if (!$$.data().crudInited) {
-			$$.addClass('crud');
-			$$.hover(function(){
-				$$.addClass('crud-hover')
-			}, function(){
-				$$.removeClass('crud-hover')
-			})
+	// Get functions whose context is bound to this object.
+	_bound: function(name) {
+		if (!this._boundFunctions) {
+			this._boundFunctions = {}
 		}
-		else {
-			$$.removeClass('crud-active');
-			$$.removeClass('crud-preview');
+		if (!this._boundFunctions[name]) {
+			var self = this
+			var func = this[name]
+			this._boundFunctions[name] = function() {
+				return func.apply(self, arguments)
+			}
 		}
-		
-		$$.data().crudInited = true
-		
-		if (!preview)
-		{
-			this.children = $$.children();
+		return this._boundFunctions[name]
+	},
+	
+	_setState: function(state) {
+		var $$ = this.widget()
+		if (this.state) {
+			$$.removeClass('crud-state-' + this.state);
 		}
-		
-		var $buttons = $('<div class="outer-buttons" />')
-			.appendTo($$);
-		this.outerButtons = $buttons
-		
-		if (preview)
-		{
-			this.element.addClass('crud-preview')
-			
-			// Add the edit button.
-			$('<a>Apply</a>')
-				.button({icons: {primary: 'silk-icon silk-icon-tick'}})
-				.click(bind(this, this._apply_preview))
-				.appendTo($buttons);
+		this.state = state;
+		$$.addClass('crud-state-' + state);
+	},
+	
+	_setupIdle: function() {
 				
-			// Add the edit button.
-			$('<a>Edit</a>')
-				.button({icons: {primary: 'silk-icon silk-icon-pencil'}})
-				.click(bind(this, this._edit_preview))
-				.appendTo($buttons);
-				
-			// Add the edit button.
-			$('<a>Revert</a>')
-				.button({icons: {primary: 'silk-icon silk-icon-cross'}})
-				.click(bind(this, this._revert_preview))
-				.appendTo($buttons);
-				
-		}
-		else
-		{
-			// Add the edit button.
+		this._setState('idle')
+		
+		var $$ = this.widget();
+		
+		this.buttons = $('<div class="crud-buttons" />')
+			.appendTo($$)
+		
+		if (this.options.allowUpdate) {
 			$('<a class="edit-button">Edit</a>')
 				.button({icons: {primary: 'silk-icon silk-icon-pencil'}})
-				.click(bind(this, this._request_form))
-				.appendTo($buttons);
-	
-			if (this.options.deleteable)
-			{
-				$('<a class="delete-button">Delete</a>')
-					.button({icons: {primary: 'silk-icon silk-icon-delete'}})
-					.click(bind(this, this._delete_click_handler))
-					.appendTo($buttons);
-			}
-	
-		
-			if (!this.options.id) {
-				this._request_form()
-			}
+				.click(this._bound('_request_form'))
+				.appendTo(this.buttons)
+		}
+
+		if (this.options.allowDelete) {
+			$('<a class="delete-button">Delete</a>')
+				.button({icons: {primary: 'silk-icon silk-icon-delete'}})
+				.click(this._bound('_delete_click_handler'))
+				.appendTo(this.buttons)
 		}
 		
-		$buttons.buttonset();
+		this.buttons.buttonset()
+		
 	},
+	
+	// 
+	// 	
+	// 	if (!preview)
+	// 	{
+	// 		this.children = $$.children();
+	// 	}
+	// 	
+	// 	var $buttons = 
+	// 		.appendTo($$);
+	// 	this.outerButtons = $buttons
+	// 	
+	// 	if (preview)
+	// 	{
+	// 		this.element.addClass('crud-preview')
+	// 		
+	// 		// Add the edit button.
+	// 		$('<a>Apply</a>')
+	// 			.button({icons: {primary: 'silk-icon silk-icon-tick'}})
+	// 			.click(this._bound('_apply_preview'))
+	// 			.appendTo($buttons);
+	// 			
+	// 		// Add the edit button.
+	// 		$('<a>Edit</a>')
+	// 			.button({icons: {primary: 'silk-icon silk-icon-pencil'}})
+	// 			.click(this._bound('_edit_preview'))
+	// 			.appendTo($buttons);
+	// 			
+	// 		// Add the edit button.
+	// 		$('<a>Revert</a>')
+	// 			.button({icons: {primary: 'silk-icon silk-icon-cross'}})
+	// 			.click(this._bound('_revert_preview'))
+	// 			.appendTo($buttons);
+	// 			
+	// 	}
+	// 	else
+	// 	{
+	// 		
+	// 	}
+	// 	
+	// 	$buttons.buttonset();
+	// },
 
+	
 	_init_preview: function()
 	{
 		this._init(true)
@@ -140,7 +186,7 @@ $.widget('nitrogen.crud', {
 			type: "POST",
 			url: this.options.url,
 			data: data,
-			success: bind(this, this._insert_form),
+			success: this._bound('_insert_form'),
 			error: function() {
 				$$.unblock();
 				alert('There was an error while contacting the server.');
@@ -169,17 +215,17 @@ $.widget('nitrogen.crud', {
 		$('<a class="preview-button">Preview</a>')
 			.button({icons: {primary: 'silk-icon silk-icon-eye'}, disabled:false})
 			.appendTo(buttons)
-			.click(bind(this, this._preview_click_handler));
+			.click(this._bound('_preview_click_handler'));
 	
 		$('<a class="save-button">Save</a>')	
 			.button({icons: {primary: 'silk-icon silk-icon-tick'}})
 			.appendTo(buttons)
-			.click(bind(this, this._save_click_handler));
+			.click(this._bound('_save_click_handler'));
 		
 		$('<a class="cancel-button">Cancel</a>')	
 			.button({icons: {primary: 'silk-icon silk-icon-cross'}})
 			.appendTo(buttons)
-			.click(bind(this, this._cancel_click_handler));
+			.click(this._bound('_cancel_click_handler'));
 	
 		buttons.buttonset()
 			
@@ -221,7 +267,7 @@ $.widget('nitrogen.crud', {
 			type: "POST",
 			url: this.options.url,
 			data: data,
-			success: bind(this, this._submit_res_handler),
+			success: this._bound('_submit_res_handler'),
 			dataType: 'json'
 		});
 	},
@@ -259,7 +305,7 @@ $.widget('nitrogen.crud', {
 			type: "POST",
 			url: this.options.url,
 			data: data,
-			success: bind(this, this._preview_res_handler),
+			success: this._bound('_preview_res_handler'),
 			dataType: 'json'
 		});
 	},
