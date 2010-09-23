@@ -284,9 +284,21 @@ class Response(CommonCore, wz.Response):
     
     """
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, response=None, status=None, headers=None, **kwargs):
+        
+        super_kwargs = {}
+        for name in 'mimetype', 'content_type', 'direct_passthrough':
+            super_kwargs[name] = kwargs.pop(name, None)
+        super(Response, self).__init__(response, status, headers, **super_kwargs)
+        
         self._wsgi_start = kwargs.pop('start_response', None) or kwargs.pop('start', None)
-        super(Response, self).__init__(*args, **kwargs)
+        
+        for k, v in kwargs.items():
+            if not hasattr(self, k):
+                raise ValueError('no response attribute %r' % k)
+            setattr(self, k, v)
+        
+        
     
     @wz.cached_property
     def cookies(self):
