@@ -16,15 +16,13 @@ Optional:
 
 (function($, undefined) {
 
-var localMethodNames = [
-	'_start_edit',
-	'_delete_click_handler',
-	'_build_form',
-	'_preview_click_handler',
-	'_cancel_click_handler',
-	'_submit_res_handler',
-	'_save_click_handler',
-]
+var bind = function(context, func)
+{
+	return function()
+	{
+		return func.apply(context, arguments)
+	}
+}
 
 $.widget('nitrogen.crud', {
 	
@@ -36,41 +34,17 @@ $.widget('nitrogen.crud', {
 		extraData: {}
 	},
 	
-	_create: function() { 
-		
-		var self = this
-		var $$ = this.element
-	
-		// To hold the markup that is removed when the form is deployed.
-		this.form = null
-		this.children = null
-		this.initialData = null
-	
-		$$.hover(function(){
-			$$.addClass('crud-hover')
-		}, function(){
-			$$.removeClass('crud-hover')
-		})
-		
-		// Set up local version of all the instance method names.
-		$.each(localMethodNames, function(i, name) {
-			var localName = '_local' + name
-			self[localName] = function() {
-				return self[name].apply(self, arguments)
-			}
-		})
-		
-		
-	
-	},
-	
-	
-	// No need to call this as it is called for us after _create.
 	_init: function()
 	{
 		
 		var self = this
 		var $$ = this.element
+		
+		$$.hover(function(){
+			$$.addClass('crud-hover')
+		}, function(){
+			$$.removeClass('crud-hover')
+		})
 		
 		$$.addClass('crud');
 		$$.removeClass('crud-active');
@@ -82,14 +56,14 @@ $.widget('nitrogen.crud', {
 		// Add the edit button.
 		$('<a class="edit-button">Edit</a>')
 			.button({icons: {primary: 'silk-icon silk-icon-pencil'}})
-			.click(this._local_start_edit)
+			.click(bind(this, this._start_edit))
 			.appendTo(this.outerButtons);
 	
 		if (this.options.deleteable)
 		{
 			$('<a class="delete-button">Delete</a>')
 				.button({icons: {primary: 'silk-icon silk-icon-delete'}})
-				.click(this._local_delete_click_handler)
+				.click(bind(this, this._delete_click_handler))
 				.appendTo(this.outerButtons);
 		}
 	
@@ -119,7 +93,7 @@ $.widget('nitrogen.crud', {
 			type: "POST",
 			url: this.options.url,
 			data: data,
-			success: this._local_build_form,
+			success: bind(this, this._build_form),
 			error: function() {
 				$$.unblock();
 				alert('There was an error while contacting the server.');
@@ -153,11 +127,11 @@ $.widget('nitrogen.crud', {
 		$('<a class="save-button">Save</a>')	
 			.button({icons: {primary: 'silk-icon silk-icon-tick'}})
 			.appendTo(buttons)
-			.click(this._local_save_click_handler);
+			.click(bind(this, this._save_click_handler));
 		$('<a class="cancel-button">Cancel</a>')	
 			.button({icons: {primary: 'silk-icon silk-icon-cross'}})
 			.appendTo(buttons)
-			.click(this._local_cancel_click_handler);
+			.click(bind(this, this._cancel_click_handler));
 	
 		var version_div = $('<div class="version-control">History: </div>')
 			.appendTo(buttons)
@@ -204,7 +178,7 @@ $.widget('nitrogen.crud', {
 			type: "POST",
 			url: this.options.url,
 			data: data,
-			success: this._local_submit_res_handler,
+			success: bind(this, this._submit_res_handler),
 			dataType: 'json'
 		});
 	},

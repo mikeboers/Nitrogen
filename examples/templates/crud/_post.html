@@ -2,5 +2,5 @@
 <div id="post-${post.id}" class="post">
     <h2>${post.title|h}</h2>
     <h3>${post.post_time|h}</h3>
-    <p>${post.body}</p>
+    <p>${post.body|markdown}</p>
 </div>
