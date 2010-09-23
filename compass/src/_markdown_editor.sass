@@ -1,0 +1,94 @@
+
+.markdown-editor
+    
+    .wrapper    
+        padding-left: 5px
+        background-color: white
+        border: 1px solid #bbb
+        border-width: 1px 1px 0 1px
+        height: 100px
+        
+        textarea
+            height: 100% !important
+            width: 100%
+            border: none !important
+            font: .9em "Courier New", Courier, mono !important
+            padding: 0 !important
+            margin: 0 !important
+        
+    
+    .ui-resizable-handle
+        background-color: rgba(255, 0, 0, 0.5)
+        bottom: 2px
+        z-index: 10
+
+    .buttons
+        background-color: #eee
+        border: 1px solid #BBBBBB
+        display: block
+        border-bottom-style: none
+        margin-top: 2px
+        // padding: 1px
+        // width: 100%
+
+        a
+            width: 20px
+            height: 20px
+            margin: 2px
+            +border-radius(3px)
+            text-decoration: none
+            background: no-repeat center center
+            display: inline-block
+
+            &:hover
+                background-color: #ccc
+
+            &.button-bold
+                background-image: url(/img/silk/text_bold.png)
+
+            &.button-italic
+                background-image: url(/img/silk/text_italic.png)
+                margin-right: 15px
+
+            &.button-link
+                background-image: url(/img/silk/link.png)
+
+            &.button-list_item
+                background-image: url(/img/silk/text_list_bullets.png)
+
+            &.button-image
+                background-image: url(/img/silk/picture.png)
+
+            &.button-image_link
+                background-image: url(/img/silk/picture_link.png)
+
+            &.button-movie_link
+                background-image: url(/img/silk/film_link.png)
+
+            &.button-asset_link
+                background-image: url(/img/silk/plugin_link.png)
+
+            &.button-horizontal_rule
+                background-image: url(/img/silk/text_horizontalrule.png)
+
+            &.button-align_left
+                background-image: url(/img/silk/text_align_left.png)
+
+            &.button-align_center
+                background-image: url(/img/silk/text_align_center.png)
+
+            &.button-align_right
+                background-image: url(/img/silk/text_align_right.png)
+                margin-right: 15px
+
+            &.button-float_left
+                background-image: url(/img/silk/text_padding_left.png)
+
+            &.button-float_right
+                background-image: url(/img/silk/text_padding_right.png)
+                margin-right: 15px
+
+            &.button-help
+                background-image: url(/img/silk/help.png)
+                margin-left: 18px
+                float: right

@@ -2,6 +2,12 @@
 
 This is the editable plugin for Mike Boers' nitrogen web framework.
 
+Requirments:
+
+    jquery-ui
+    jquery.blockUI.js
+    
+    
 */
 
 (function($){
@@ -17,16 +23,17 @@ $.crud.defaults = {
 }
 
 
-$.fn.crud = function(opts_in) { 
+$.fn.crud = function main(opts) { 
 	
-	var $$ = this;
-	
-	var meta = $.extend({}, $$.metadata('data-crud'), opts_in);
-	var opts = $.extend({}, $.crud.defaults, meta);
-	
-	if (meta.url === undefined) {
-	    return;
+	if (this.length > 1)
+	{
+	    this.each(function(){ main.call(this, opts) });
+	    return this;
 	}
+    
+    var $$ = this;
+	
+	opts = $.extend({}, $.crud.defaults, opts);
 	
 	// To hold the markup that is removed when the form is deployed.
 	var $form;
@@ -67,7 +74,7 @@ $.fn.crud = function(opts_in) {
 		});
         
 		// Get the form.
-		var data = $.extend({}, meta, opts.extraData, {
+		var data = $.extend({}, opts, opts.extraData, {
 			method: 'get_form',
 			id: opts.id ? opts.id : 0
 		});
@@ -130,7 +137,7 @@ $.fn.crud = function(opts_in) {
 	
 	function _serialize() {
 		// Start off with the meta and extraData in place.
-		var data = $.extend({}, meta, opts.extraData);
+		var data = $.extend({}, opts, opts.extraData);
 		
 		$.each($form.serializeArray(), function(k, v) {
 			data[this.name] = this.value;

@@ -1,0 +1,22 @@
+<html>
+<head>
+    
+    <script src="/js/jquery-1.4.2.min.js"></script>
+    <script src="/js/jquery-ui-1.8.5.min.js"></script>
+    <script src="/js/jquery.crud.js"></script>
+    <script src="/js/jquery.metadata.js"></script>
+    <script src="/js/jquery.blockUI.js"></script>
+    
+    <link rel="stylesheet" href="/css/smoothness/jquery-ui-1.8.5.css">
+    <link rel="stylesheet" href="/css/framework/screen.css">
+    
+</head>
+<body>
+
+<h1>Posts:</h1>
+% for post in posts:
+    <%include file="_post.html" args="post=post" />
+    <script>jQuery(function($){
+        $('#post-${post.id}').crud({url:'/crud/api', id:${post.id}})
+    })</script>
+% endfor

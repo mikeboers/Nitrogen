@@ -13,6 +13,7 @@ from .app import *
 from .cookies import cookie_app
 from .response import response_app
 from .script import script_app
+from .crud import crud_app
 
 log = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ log = logging.getLogger(__name__)
 app.route('/cookies', cookie_app)
 app.route('/response', response_app)
 app.route('/script', script_app)
+app.route('/crud', crud_app)
 
 @app.route('/stream')
 def do_stream(environ, start):

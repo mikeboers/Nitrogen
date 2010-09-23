@@ -1,0 +1,80 @@
+$error_color: #8d0f00
+$border_color: #BBBBBB
+
+
+.autodate-wrapper
+    position: relative
+
+    label
+        font-style: normal
+        font-weight: normal
+        font-size: .8em
+        color: #838383
+        float: right
+        position: absolute
+        top: 50%
+        right: 24px
+        margin-top: -0.8em
+    
+    .ui-datepicker-trigger
+        position: absolute
+        right: 0
+        top: 50%
+        margin-top: -8px
+
+ol.form-fields
+    list-style-type: none
+    padding: 0
+    margin: 0
+    
+    li
+        margin-bottom: .5em
+    
+    .state-error
+        .form-label
+            color: $error_color
+        .form-field
+            input, textarea
+                border-color: $error_color
+        
+    .errors
+        color: $error_color
+        display: inline-block
+        font-size: .7em
+        font-style: italic
+        padding: 0 0 0 5px
+
+        li
+            display: inline-block
+    
+    .field
+        position: relative
+
+        &.type-TextField, &.type-DateTimeField
+            padding: 0 4px
+            background-color: #fff
+            border: 1px solid $border_color
+            margin: 0
+
+            input
+                border: none
+                padding: 1px 0 2px
+                width: 100%
+                margin: 0
+        
+        &.type-TextAreaField textarea
+            width: 100%
+            border: 1px solid $border_color
+            font: .8em "Lucida Grande", Lucida, Verdana, sans-serif
+            padding: 0
+            padding: 3px 4px
+
+
+
+
+
+
+    
+.form-errors-title
+    color: #8d0f00
+    font-weight: bold

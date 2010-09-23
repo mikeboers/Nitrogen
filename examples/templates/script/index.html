@@ -1,9 +1,14 @@
 <html>
 <head>
+    
     <script src="/js/jquery-1.4.2.min.js"></script>
+    <script src="/js/jquery-ui-1.8.5.min.js"></script>
+    <link rel="stylesheet" href="/css/smoothness/jquery-ui-1.8.5.css">
+    
     <script>jQuery(function($){
-        $('#button').click(function(){
-            alert('Hello.');
+        $('.button').button()
+        $('#hide').click(function(){
+            $(this).hide("fade", 1000)
         })
     })</script>
 </head>
@@ -11,4 +16,4 @@
 
 <p>jQuery is availible.</p>
 
-<p><a href="#" id="button">Say "Hello".</a></p>
+<p><a href="#" id="hide" class="button">Hide this button.</a></p>
