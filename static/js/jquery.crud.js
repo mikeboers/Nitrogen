@@ -345,6 +345,16 @@ $.widget('nitrogen.crud', {
 				.click(this._bound('revert'))
 				.appendTo($buttons);
 			$buttons.buttonset();
+			
+			var self = this
+			var pulse = function()
+			{
+				if (self.state == 'preview') {
+					self.preview.toggleClass('crud-preview-pulse', 750, null, pulse)
+				}
+			}
+			pulse()
+			
 		}
 	},
 
@@ -392,6 +402,7 @@ $.widget('nitrogen.crud', {
 	},
 
 	// Note that this is NOT "destroy". This actually removes the data.
+	// This also needs to be quoted for those browsers that care that much.
 	'delete': function()
 	{
 		var $$ = this.widget()

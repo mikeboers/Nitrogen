@@ -304,37 +304,41 @@ caption {
   background-color: #fff6b8;
 }
 /* line 9, ../src/_crud.sass */
-.crud.crud-active {
-  border: 1px dashed #92907b;
+.crud.crud-state-edit, .crud.crud-state-preview {
+  outline: 1px dashed #92907b;
 }
 /* line 12, ../src/_crud.sass */
 .crud.crud-state-preview {
-  background-color: #c2dafc !important;
+  background-color: #c2dafc;
 }
 /* line 14, ../src/_crud.sass */
 .crud.crud-state-preview.crud-hover {
-  background-color: #abcffc !important;
+  background-color: #abcffc;
 }
 /* line 17, ../src/_crud.sass */
+.crud.crud-state-preview.crud-preview-pulse {
+  background-color: #d7e5fb;
+}
+/* line 20, ../src/_crud.sass */
 .crud .silk-icon + .ui-button-text {
   padding-left: 2.5em;
 }
-/* line 20, ../src/_crud.sass */
+/* line 23, ../src/_crud.sass */
 .crud .version-control {
   float: right;
 }
-/* line 24, ../src/_crud.sass */
+/* line 27, ../src/_crud.sass */
 .crud > .wrapper {
   border-bottom-style: solid;
   margin: 0;
   padding: 10px;
 }
-/* line 29, ../src/_crud.sass */
+/* line 32, ../src/_crud.sass */
 .crud .crud-buttons {
   font-size: 0.7em;
   margin-top: 1em;
 }
-/* line 33, ../src/_crud.sass */
+/* line 36, ../src/_crud.sass */
 .crud.crud-state-idle .crud-buttons, .crud.crud-state-preview .crud-buttons {
   height: 0;
   overflow: visible;
@@ -343,26 +347,26 @@ caption {
   opacity: 0.5;
   top: -3em;
 }
-/* line 41, ../src/_crud.sass */
+/* line 44, ../src/_crud.sass */
 .crud.crud-hover .crud-buttons {
   opacity: 1;
 }
-/* line 44, ../src/_crud.sass */
+/* line 47, ../src/_crud.sass */
 .crud .required, .crud .optional {
   font-size: 0.7em;
   position: relative;
   top: -0.15em;
   font-style: italic;
 }
-/* line 50, ../src/_crud.sass */
+/* line 53, ../src/_crud.sass */
 .crud .required {
   color: #442718;
 }
-/* line 53, ../src/_crud.sass */
+/* line 56, ../src/_crud.sass */
 .crud .optional {
   color: #cccccc;
 }
-/* line 56, ../src/_crud.sass */
+/* line 59, ../src/_crud.sass */
 .crud input[type=text] {
   border: 1px solid #bbbbbb;
 }
