@@ -309,11 +309,11 @@ caption {
 }
 /* line 12, ../src/_crud.sass */
 .crud.crud-state-preview {
-  background-color: #c2dafc;
+  background-color: #c2dafc !important;
 }
 /* line 14, ../src/_crud.sass */
 .crud.crud-state-preview.crud-hover {
-  background-color: #abcffc;
+  background-color: #abcffc !important;
 }
 /* line 17, ../src/_crud.sass */
 .crud .silk-icon + .ui-button-text {
@@ -335,7 +335,7 @@ caption {
   margin-top: 1em;
 }
 /* line 33, ../src/_crud.sass */
-.crud.crud-state-idle .crud-buttons {
+.crud.crud-state-idle .crud-buttons, .crud.crud-state-preview .crud-buttons {
   height: 0;
   overflow: visible;
   position: relative;

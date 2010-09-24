@@ -19,7 +19,7 @@ TODO:
 	- √ delete
 	- √ save
 	- √ cancel
-	- preview
+	- √ preview
 	- preview apply
 	- preview edit
 	- preview revert
@@ -63,8 +63,9 @@ $.widget('nitrogen.crud', {
 		
 		var $$ = this.widget()
 		
-		$$.addClass('crud')
-		assertHoverClass($$)
+		// This is what we will restore to.
+		this.originalChildren = $$.children()
+		
 		
 		if (this.options.id) {
 			this._setupIdle()
@@ -72,7 +73,6 @@ $.widget('nitrogen.crud', {
 			console.warning('Creation has not been fixed yet.')
 			// this.edit()
 		} else {
-			this.widget().removeClass('crud')
 			throw "no ID and no create permissions"
 		}
 	},
@@ -99,7 +99,9 @@ $.widget('nitrogen.crud', {
 			$$.removeClass('crud-state-' + this.state)
 		}
 		this.state = state
+		$$.addClass('crud')
 		$$.addClass('crud-state-' + state)
+		assertHoverClass($$)
 		return oldDate
 	},
 	
@@ -121,8 +123,6 @@ $.widget('nitrogen.crud', {
 		
 		var $$ = this.widget();
 		
-		// This has to be before the buttons are setup.
-		this.originalChildren = $$.children()
 		
 		this.buttons = $('<div class="crud-buttons" />')
 			.appendTo($$)
@@ -144,48 +144,6 @@ $.widget('nitrogen.crud', {
 		this.buttons.buttonset()
 		
 	},
-	
-	// 
-	// 	
-	// 	if (!preview)
-	// 	{
-	// 		this.children = $$.children();
-	// 	}
-	// 	
-	// 	var $buttons = 
-	// 		.appendTo($$);
-	// 	this.outerButtons = $buttons
-	// 	
-	// 	if (preview)
-	// 	{
-	// 		this.element.addClass('crud-preview')
-	// 		
-	// 		// Add the edit button.
-	// 		$('<a>Apply</a>')
-	// 			.button({icons: {primary: 'silk-icon silk-icon-tick'}})
-	// 			.click(this._bound('_apply_preview'))
-	// 			.appendTo($buttons);
-	// 			
-	// 		// Add the edit button.
-	// 		$('<a>Edit</a>')
-	// 			.button({icons: {primary: 'silk-icon silk-icon-pencil'}})
-	// 			.click(this._bound('_edit_preview'))
-	// 			.appendTo($buttons);
-	// 			
-	// 		// Add the edit button.
-	// 		$('<a>Revert</a>')
-	// 			.button({icons: {primary: 'silk-icon silk-icon-cross'}})
-	// 			.click(this._bound('_revert_preview'))
-	// 			.appendTo($buttons);
-	// 			
-	// 	}
-	// 	else
-	// 	{
-	// 		
-	// 	}
-	// 	
-	// 	$buttons.buttonset();
-	// },
 	
 	edit: function()
 	{
@@ -250,7 +208,7 @@ $.widget('nitrogen.crud', {
 			.appendTo(this.form);
 		$('<a class="preview-button">Preview</a>')
 			.button({icons: {primary: 'silk-icon silk-icon-eye'}})
-			.click(this._bound('_preview_click_handler'))
+			.click(this._bound('preview'))
 			.appendTo(buttons)
 		$('<a class="save-button">Save</a>')	
 			.button({icons: {primary: 'silk-icon silk-icon-tick'}})
@@ -284,34 +242,41 @@ $.widget('nitrogen.crud', {
 		}
 	},
 	
-	save: function()
+	save: function(preview)
 	{
 		if (this.state != 'edit')
 			throw 'not editing'
 		
 		var self = this
-		var oldState = this._setState('saving')
+		var oldState = this._setState(preview ? 'preview' : 'saving')
 		var $$ = this.widget()
 		
-		$$.block('Saving. Please wait...');
+		$$.block(preview ?
+			'Building preview. Please wait...' :
+			'Saving. Please wait...'
+		)
 	
 		$.ajax({
 			type: "POST",
 			url: this.options.url,
 			data: $.extend(this._getRequestData(), {
-				method: 'submit_form',
+				method: preview ? 'preview' : 'submit_form',
 				id: this.options.id ? this.options.id : 0
 			}),
-			success: this._bound('_handleSaveResponse'),
+			success: this._bound(preview ? '_handlePreviewResponse' : '_handleSaveResponse'),
 			error: function() {
 				self._setState(oldState)
 				$$.unblock()
 				alert('There was an error while contacting the server.')
 			},
 			dataType: 'json'
-		});
+		})
 	},
-
+	
+	preview: function() {
+		this.save(true)
+	},
+	
 	_handleSaveResponse: function(res)
 	{
 		if (!res.valid) {
@@ -320,6 +285,7 @@ $.widget('nitrogen.crud', {
 		else
 		{
 			if (res.id)
+				// So the next will be an update.
 				this.options.id = res.id
 			var $$ = this.widget()
 			$(res.partial)
@@ -329,40 +295,39 @@ $.widget('nitrogen.crud', {
 		}
 	},
 	
-	_preview_click_handler: function()
+	_handlePreviewResponse: function(res)
 	{
-		var $$ = this.element
-		$$.block('Saving. Please wait...');
-	
-		// Get the data.
-		var data = this._getRequestData();
-		
-		data.method = 'preview';
-		data.id = this.options.id ? this.options.id : 0;
-		
-		this.previewData = data;
-		
-		$.ajax({
-			type: "POST",
-			url: this.options.url,
-			data: data,
-			success: this._bound('_preview_res_handler'),
-			dataType: 'json'
-		});
-	},
-
-	_preview_res_handler: function(res)
-	{
-		var $$ = this.element;
 		if (!res.valid) {
 			this._setupForm(res);
 		}
 		else
 		{
-			this.previewForm = this.element
-			this.previewForm.hide()
-			this.element = $(res.partial).insertAfter(this.element);
-			this._init_preview();
+			var $$ = this.widget()
+			this.originalWidget = $$
+			this.element = $(res.partial)
+				.insertAfter($$)
+			$$.hide()
+			
+			this._setState('preview')
+			
+			// Get the NEW widget
+			$$ = this.widget()
+			
+			var $buttons = $('<div class="crud-buttons" />')
+				.appendTo($$)
+			$('<a>Apply</a>')
+					.button({icons: {primary: 'silk-icon silk-icon-tick'}})
+					.click(this._bound('_apply_preview'))
+					.appendTo($buttons);
+			$('<a>Edit</a>')
+				.button({icons: {primary: 'silk-icon silk-icon-pencil'}})
+				.click(this._bound('_edit_preview'))
+				.appendTo($buttons);
+			$('<a>Revert</a>')
+				.button({icons: {primary: 'silk-icon silk-icon-cross'}})
+				.click(this._bound('_revert_preview'))
+				.appendTo($buttons);
+			$buttons.buttonset();
 		}
 	},
 
