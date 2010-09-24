@@ -92,8 +92,8 @@ $.widget('nitrogen.crud', {
 		return this._boundFunctions[name]
 	},
 	
-	_setState: function(state) {
-		var $$ = this.widget()
+	_setState: function(state, obj) {
+		var $$ = obj ? obj : this.widget()
 		var oldDate = this.state
 		if (oldDate) {
 			$$.removeClass('crud-state-' + this.state)
@@ -301,31 +301,28 @@ $.widget('nitrogen.crud', {
 			this._setupForm(res);
 		}
 		else
-		{
-			var $$ = this.widget()
-			this.originalWidget = $$
-			this.element = $(res.partial)
+		{			
+			$$ = this.widget()
+			this.preview = $(res.partial)
 				.insertAfter($$)
 			$$.hide()
 			
 			this._setState('preview')
-			
-			// Get the NEW widget
-			$$ = this.widget()
+			this._setState('preview', this.preview)
 			
 			var $buttons = $('<div class="crud-buttons" />')
-				.appendTo($$)
+				.appendTo(this.preview)
 			$('<a>Apply</a>')
 					.button({icons: {primary: 'silk-icon silk-icon-tick'}})
-					.click(this._bound('_apply_preview'))
+					.click(this._bound('apply'))
 					.appendTo($buttons);
 			$('<a>Edit</a>')
 				.button({icons: {primary: 'silk-icon silk-icon-pencil'}})
-				.click(this._bound('_edit_preview'))
+				.click(this._bound('edit'))
 				.appendTo($buttons);
 			$('<a>Revert</a>')
 				.button({icons: {primary: 'silk-icon silk-icon-cross'}})
-				.click(this._bound('_revert_preview'))
+				.click(this._bound('revert'))
 				.appendTo($buttons);
 			$buttons.buttonset();
 		}
@@ -342,27 +339,27 @@ $.widget('nitrogen.crud', {
 	},
 	
 	
-	_revert_preview: function()
-	{
-		console.log(this)
-		var changed = this._isDifferentData(this.previewData)
-		if (changed && !confirm("There are unsaved changes.\n\nAre you sure you want to revert changes?"))
-		{
-			return;
-		}
+	revert: function() {
 		
-		var $$ = this.element
+		if (this.state != 'preview')
+			throw 'not editing'
 		
-		// Clear it out, put the original children back, and re-initialize.
-		if (this.options.id)
-		{
-			$$.empty();
-			$$.append(this.children);
-			this._init();
-		}
-		else
-		{
-			$$.remove();
+		var changed = this._isDifferentData(this._getFormData())
+		if (changed && !confirm("There are unsaved changes.\n\nAre you sure you want revert changes?"))
+			return
+		
+		this.preview.remove()
+		
+		var $$ = this.widget()
+		
+		if (this.options.id) { // an UPDATE
+			// Restore the markup to what it was.
+			$$.empty()
+			$$.append(this.originalChildren)
+			$$.show()
+			this._setupIdle()
+		} else { // a CREATE
+			$$.remove()
 		}
 		
 	},
