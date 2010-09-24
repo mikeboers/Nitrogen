@@ -26,8 +26,8 @@ class Post(Base):
 FormBase = Form
 class Form(FormBase):
     
-    title = forms.TextField()
-    post_time = forms.DateTimeField()
+    title = forms.TextField(validators=[forms.validators.required()])
+    post_time = forms.DateTimeField(validators=[forms.validators.required()])
     body = forms.MarkdownField()
 
 

@@ -15,9 +15,10 @@ Optional:
 TODO:
 	- make sure only serialized data is being tracked for changes
 	
-	- edit
-	- save
-	- cancel
+	- √ edit
+	- √ delete
+	- √ save
+	- √ cancel
 	- preview
 	- preview apply
 	- preview edit
@@ -102,6 +103,18 @@ $.widget('nitrogen.crud', {
 		return oldDate
 	},
 	
+	_getFormData: function() {
+		var data = {}
+		$.each(this.form.serializeArray(), function(k, v) {
+			data[this.name] = this.value;
+		});
+		return data;
+	},
+	
+	_getRequestData: function() {
+		return $.extend({}, this.options, this.options.extraData, this._getFormData())
+	},
+	
 	_setupIdle: function() {
 				
 		this._setState('idle')
@@ -173,12 +186,6 @@ $.widget('nitrogen.crud', {
 	// 	
 	// 	$buttons.buttonset();
 	// },
-
-	
-	_init_preview: function()
-	{
-		this._init(true)
-	},
 	
 	edit: function()
 	{
@@ -228,7 +235,8 @@ $.widget('nitrogen.crud', {
 		// Save the current values for cancel warning.
 		// XXX: do not do this for the edit button on a preview, or after
 		// submitting invalid data.
-		this.originalData = this._getFormData();
+		if (this.originalData === undefined)
+			this.originalData = this._getFormData()
 		
 		var versionControls = $('<div class="version-control">History: </div>')
 			.appendTo(this.form)
@@ -246,7 +254,7 @@ $.widget('nitrogen.crud', {
 			.appendTo(buttons)
 		$('<a class="save-button">Save</a>')	
 			.button({icons: {primary: 'silk-icon silk-icon-tick'}})
-			.click(this._bound('_save_click_handler'))
+			.click(this._bound('save'))
 			.appendTo(buttons)
 		$('<a class="cancel-button">Cancel</a>')	
 			.button({icons: {primary: 'silk-icon silk-icon-cross'}})
@@ -276,51 +284,48 @@ $.widget('nitrogen.crud', {
 		}
 	},
 	
-	_getFormData: function() {
-		var data = {}
-		$.each(this.form.serializeArray(), function(k, v) {
-			data[this.name] = this.value;
-		});
-		return data;
-	},
-	
-	_getRequestData: function() {
-		return $.extend({}, this.options, this.options.extraData, this._getFormData())
-	},
-
-	_save_click_handler: function()
+	save: function()
 	{
-		var $$ = this.element
+		if (this.state != 'edit')
+			throw 'not editing'
+		
+		var self = this
+		var oldState = this._setState('saving')
+		var $$ = this.widget()
+		
 		$$.block('Saving. Please wait...');
-	
-		// Get the data.
-		var data = this._getRequestData();
-	
-		data.method = 'submit_form';
-		data.id = this.options.id ? this.options.id : 0;
 	
 		$.ajax({
 			type: "POST",
 			url: this.options.url,
-			data: data,
-			success: this._bound('_submit_res_handler'),
+			data: $.extend(this._getRequestData(), {
+				method: 'submit_form',
+				id: this.options.id ? this.options.id : 0
+			}),
+			success: this._bound('_handleSaveResponse'),
+			error: function() {
+				self._setState(oldState)
+				$$.unblock()
+				alert('There was an error while contacting the server.')
+			},
 			dataType: 'json'
 		});
 	},
 
-	_submit_res_handler: function(res)
+	_handleSaveResponse: function(res)
 	{
-		var $$ = this.element;
 		if (!res.valid) {
 			this._setupForm(res);
 		}
 		else
 		{
-			this.options.id = res.id;
-			$new = $(res.partial).insertAfter($$);
-			$$.remove();
-			this.element = $new;
-			this._init();
+			if (res.id)
+				this.options.id = res.id
+			var $$ = this.widget()
+			$(res.partial)
+				.insertAfter($$)
+				.crud(this.options)
+			$$.remove()
 		}
 	},
 	
