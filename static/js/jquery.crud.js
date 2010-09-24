@@ -14,6 +14,9 @@ Optional:
 
 TODO:
 	- preview disabled unless there are changes
+	- add flash on invalid form
+	- preview should stop moving away from page
+	- unsaved changes should stop moving away from page
 	
 */
 
