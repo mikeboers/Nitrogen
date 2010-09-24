@@ -152,13 +152,22 @@ $.widget('nitrogen.crud', {
 		var self = this
 		var $$ = this.widget()
 		
-		var oldState = this._setState('getForm')
+		if (this.state == 'preview') {
+			this.preview.remove()
+			$$.unblock()
+			$$.show()
+			this._setState('edit')
+			return
+		}
 		
+		
+		var oldState = this._setState('getForm')
+				
 		// Block out the UI while we get the form.
 		$$.block({
 			message: 'Retrieving form. Please wait...'
 		});
-	
+		
 		// Get the form.
 		var data = $.extend({}, this.options, this.options.extraData, {
 			method: 'get_form',
@@ -251,15 +260,15 @@ $.widget('nitrogen.crud', {
 		var $$ = this.widget()
 		
 		mode = mode ? mode : 'save'
-		var is_preview = mode == 'preview'
+		var isPreview = mode == 'preview'
 		
 		if (this.state != 'edit' && this.state != 'preview')
 			throw 'not editing'
 		
-		var oldState = this._setState(is_preview ? 'preview' : 'saving')
+		var oldState = this._setState(isPreview ? 'preview' : 'saving')
 		
 		var blockTarget = mode == 'apply' ? this.preview : $$
-		blockTarget.block(is_preview ?
+		blockTarget.block(isPreview ?
 			'Building preview. Please wait...' :
 			'Saving. Please wait...'
 		)
@@ -268,7 +277,7 @@ $.widget('nitrogen.crud', {
 			type: "POST",
 			url: this.options.url,
 			data: $.extend(this._getRequestData(), {
-				method: is_preview ? 'preview' : 'submit_form',
+				method: isPreview ? 'preview' : 'submit_form',
 				id: this.options.id ? this.options.id : 0
 			}),
 			success: function(res) {
