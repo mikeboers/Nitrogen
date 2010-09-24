@@ -15,6 +15,14 @@ Optional:
 TODO:
 	- make sure only serialized data is being tracked for changes
 	
+	- edit
+	- save
+	- cancel
+	- preview
+	- preview apply
+	- preview edit
+	- preview revert
+	
 */
 
 (function($, undefined) {
@@ -61,7 +69,7 @@ $.widget('nitrogen.crud', {
 			this._setupIdle()
 		} else if (this.options.allowCreate) {
 			console.warning('Creation has not been fixed yet.')
-			// this._request_form()
+			// this.edit()
 		} else {
 			this.widget().removeClass('crud')
 			throw "no ID and no create permissions"
@@ -85,11 +93,13 @@ $.widget('nitrogen.crud', {
 	
 	_setState: function(state) {
 		var $$ = this.widget()
-		if (this.state) {
-			$$.removeClass('crud-state-' + this.state);
+		var oldDate = this.state
+		if (oldDate) {
+			$$.removeClass('crud-state-' + this.state)
 		}
-		this.state = state;
-		$$.addClass('crud-state-' + state);
+		this.state = state
+		$$.addClass('crud-state-' + state)
+		return oldDate
 	},
 	
 	_setupIdle: function() {
@@ -98,20 +108,23 @@ $.widget('nitrogen.crud', {
 		
 		var $$ = this.widget();
 		
+		// This has to be before the buttons are setup.
+		this.originalChildren = $$.children()
+		
 		this.buttons = $('<div class="crud-buttons" />')
 			.appendTo($$)
 		
 		if (this.options.allowUpdate) {
 			$('<a class="edit-button">Edit</a>')
 				.button({icons: {primary: 'silk-icon silk-icon-pencil'}})
-				.click(this._bound('_request_form'))
+				.click(this._bound('edit'))
 				.appendTo(this.buttons)
 		}
 
 		if (this.options.allowDelete) {
 			$('<a class="delete-button">Delete</a>')
 				.button({icons: {primary: 'silk-icon silk-icon-delete'}})
-				.click(this._bound('_delete_click_handler'))
+				.click(this._bound('delete'))
 				.appendTo(this.buttons)
 		}
 		
@@ -167,9 +180,12 @@ $.widget('nitrogen.crud', {
 		this._init(true)
 	},
 	
-	_request_form: function()
+	edit: function()
 	{
-		var $$ = this.element;
+		var self = this
+		var $$ = this.widget()
+		
+		var oldState = this._setState('getForm')
 		
 		// Block out the UI while we get the form.
 		$$.block({
@@ -186,70 +202,90 @@ $.widget('nitrogen.crud', {
 			type: "POST",
 			url: this.options.url,
 			data: data,
-			success: this._bound('_insert_form'),
+			success: this._bound('_setupForm'),
 			error: function() {
-				$$.unblock();
-				alert('There was an error while contacting the server.');
+				self._setState(oldState)
+				$$.unblock()
+				alert('There was an error while contacting the server.')
 			},
 			dataType: 'json'
 		});
 	},
 	
-	_insert_form: function(res)
+	// This takes an object which must have a `form` property.
+	_setupForm: function(res)
 	{
-		var $$ = this.element;
-		// Unblock the UI, strip all the children, place the form.
-		$$.unblock();
-		$$.empty();
-		$$.addClass('crud-active');
-	
-		var $wrapper = $('<div class="wrapper" />').appendTo($$);
-		this.form = $('<form />').appendTo($wrapper);
-		this.form.html(res.form);
-	
-		var buttons = $('<div class="inner-buttons" />')
-			.appendTo(this.form);
-	
-		// Add the buttons.
-	
-		$('<a class="preview-button">Preview</a>')
-			.button({icons: {primary: 'silk-icon silk-icon-eye'}, disabled:false})
-			.appendTo(buttons)
-			.click(this._bound('_preview_click_handler'));
-	
-		$('<a class="save-button">Save</a>')	
-			.button({icons: {primary: 'silk-icon silk-icon-tick'}})
-			.appendTo(buttons)
-			.click(this._bound('_save_click_handler'));
+		var $$ = this.widget()
+		$$.unblock()
+		$$.empty()
 		
-		$('<a class="cancel-button">Cancel</a>')	
-			.button({icons: {primary: 'silk-icon silk-icon-cross'}})
-			.appendTo(buttons)
-			.click(this._bound('_cancel_click_handler'));
+		this._setState('edit')
 	
-		buttons.buttonset()
-			
-		var version_div = $('<div class="version-control">History: </div>')
-			.appendTo(buttons)
-		$('<select class="version-menu"><option value="">None</option></select>')
-			.appendTo(version_div)
-			.attr('disabled', true)
-		$('<input type="checkbox" /><label>Commit on Save</label>')
-			.appendTo(version_div)
-		
+		this.form = $('<form />')
+			.appendTo($$)
+			.html(res.form) // Must come after the append.
 		
 		// Save the current values for cancel warning.
-		this.initialData = this._getData();
-	
+		// XXX: do not do this for the edit button on a preview, or after
+		// submitting invalid data.
+		this.originalData = this._getFormData();
+		
+		var versionControls = $('<div class="version-control">History: </div>')
+			.appendTo(this.form)
+		$('<select class="version-menu"><option value="">None</option></select>')
+			.attr('disabled', true)
+			.appendTo(versionControls)
+		$('<input type="checkbox" /><label>Commit on Save</label>')
+			.appendTo(versionControls)
+		
+		var buttons = $('<div class="crud-buttons" />')
+			.appendTo(this.form);
+		$('<a class="preview-button">Preview</a>')
+			.button({icons: {primary: 'silk-icon silk-icon-eye'}})
+			.click(this._bound('_preview_click_handler'))
+			.appendTo(buttons)
+		$('<a class="save-button">Save</a>')	
+			.button({icons: {primary: 'silk-icon silk-icon-tick'}})
+			.click(this._bound('_save_click_handler'))
+			.appendTo(buttons)
+		$('<a class="cancel-button">Cancel</a>')	
+			.button({icons: {primary: 'silk-icon silk-icon-cross'}})
+			.click(this._bound('cancel'))
+			.appendTo(buttons)
+		buttons.buttonset()
 	},
 	
-	_getData: function() {
-		// Start off with the meta and extraData in place.
-		var data = $.extend({}, this.options, this.options.extraData);
+	cancel: function()
+	{
+		if (this.state != 'edit')
+			throw 'not editing'
+		
+		var changed = this._isDifferentData(this._getFormData())
+		if (changed && !confirm("There are unsaved changes.\n\nAre you sure you want to cancel?"))
+			return
+		
+		var $$ = this.widget()
+		
+		if (this.options.id) { // an UPDATE
+			// Restore the markup to what it was.
+			$$.empty()
+			$$.append(this.originalChildren)
+			this._setupIdle()
+		} else { // a CREATE
+			$$.remove()
+		}
+	},
+	
+	_getFormData: function() {
+		var data = {}
 		$.each(this.form.serializeArray(), function(k, v) {
 			data[this.name] = this.value;
 		});
 		return data;
+	},
+	
+	_getRequestData: function() {
+		return $.extend({}, this.options, this.options.extraData, this._getFormData())
 	},
 
 	_save_click_handler: function()
@@ -258,7 +294,7 @@ $.widget('nitrogen.crud', {
 		$$.block('Saving. Please wait...');
 	
 		// Get the data.
-		var data = this._getData();
+		var data = this._getRequestData();
 	
 		data.method = 'submit_form';
 		data.id = this.options.id ? this.options.id : 0;
@@ -276,7 +312,7 @@ $.widget('nitrogen.crud', {
 	{
 		var $$ = this.element;
 		if (!res.valid) {
-			this._insert_form(res);
+			this._setupForm(res);
 		}
 		else
 		{
@@ -294,7 +330,7 @@ $.widget('nitrogen.crud', {
 		$$.block('Saving. Please wait...');
 	
 		// Get the data.
-		var data = this._getData();
+		var data = this._getRequestData();
 		
 		data.method = 'preview';
 		data.id = this.options.id ? this.options.id : 0;
@@ -314,7 +350,7 @@ $.widget('nitrogen.crud', {
 	{
 		var $$ = this.element;
 		if (!res.valid) {
-			this._insert_form(res);
+			this._setupForm(res);
 		}
 		else
 		{
@@ -328,35 +364,13 @@ $.widget('nitrogen.crud', {
 	_isDifferentData: function(data)
 	{
 		for (var key in data) {
-			if (data[key] != this.initialData[key]) {
+			if (data[key] != this.originalData[key]) {
 				return true
 			}
 		}
 		return false
 	},
 	
-	_cancel_click_handler: function()
-	{
-		var changed = this._isDifferentData(this._getData())
-		if (changed && !confirm("There are unsaved changes.\n\nAre you sure you want to cancel?"))
-		{
-			return;
-		}
-		
-		var $$ = this.element
-		
-		// Clear it out, put the original children back, and re-initialize.
-		if (this.options.id)
-		{
-			$$.empty();
-			$$.append(this.children);
-			this._init();
-		}
-		else
-		{
-			$$.remove();
-		}
-	},
 	
 	_revert_preview: function()
 	{
@@ -383,19 +397,20 @@ $.widget('nitrogen.crud', {
 		
 	},
 
-
-	_delete_click_handler: function()
+	// Note that this is NOT "destroy". This actually removes the data.
+	delete: function()
 	{
-		var $$ = this.element
+		var $$ = this.widget()
 		
 		if (!confirm("Are you sure you want to delete this?\n\nIt cannot be recovered."))
-		{
-			return;
-		}
-	
+			return
+		
+		this._setState('deleting')
+		
 		$$.block({
 			message: 'Deleting. Please wait...'
 		});
+		
 		$.ajax({
 			type: "POST",
 			url: this.options.url,
