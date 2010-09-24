@@ -22,7 +22,9 @@ TODO:
 	- √ preview
 	- preview apply
 	- preview edit
-	- preview revert
+	- √ preview revert
+	
+	- preview disabled unless there are changes
 	
 */
 
@@ -242,16 +244,22 @@ $.widget('nitrogen.crud', {
 		}
 	},
 	
-	save: function(preview)
+	save: function(e, mode)
 	{
-		if (this.state != 'edit')
-			throw 'not editing'
 		
 		var self = this
-		var oldState = this._setState(preview ? 'preview' : 'saving')
 		var $$ = this.widget()
 		
-		$$.block(preview ?
+		mode = mode ? mode : 'save'
+		var is_preview = mode == 'preview'
+		
+		if (this.state != 'edit' && this.state != 'preview')
+			throw 'not editing'
+		
+		var oldState = this._setState(is_preview ? 'preview' : 'saving')
+		
+		var blockTarget = mode == 'apply' ? this.preview : $$
+		blockTarget.block(is_preview ?
 			'Building preview. Please wait...' :
 			'Saving. Please wait...'
 		)
@@ -260,21 +268,35 @@ $.widget('nitrogen.crud', {
 			type: "POST",
 			url: this.options.url,
 			data: $.extend(this._getRequestData(), {
-				method: preview ? 'preview' : 'submit_form',
+				method: is_preview ? 'preview' : 'submit_form',
 				id: this.options.id ? this.options.id : 0
 			}),
-			success: this._bound(preview ? '_handlePreviewResponse' : '_handleSaveResponse'),
+			success: function(res) {
+				switch(mode) {
+					case 'apply':
+						self.preview.remove()
+						// NO BREAK
+					case 'save':
+						self._handleSaveResponse(res)
+						break
+					case 'preview':
+						self._handlePreviewResponse(res)
+						break
+					default:
+						throw 'unrecognized mode: ' + mode
+				}
+			},
 			error: function() {
 				self._setState(oldState)
-				$$.unblock()
+				blockTarget.unblock()
 				alert('There was an error while contacting the server.')
 			},
 			dataType: 'json'
 		})
 	},
 	
-	preview: function() {
-		this.save(true)
+	preview: function(e) {
+		this.save(e, 'preview')
 	},
 	
 	_handleSaveResponse: function(res)
@@ -312,7 +334,7 @@ $.widget('nitrogen.crud', {
 			
 			var $buttons = $('<div class="crud-buttons" />')
 				.appendTo(this.preview)
-			$('<a>Apply</a>')
+			$('<a>Save</a>')
 					.button({icons: {primary: 'silk-icon silk-icon-tick'}})
 					.click(this._bound('apply'))
 					.appendTo($buttons);
@@ -328,6 +350,13 @@ $.widget('nitrogen.crud', {
 		}
 	},
 
+	apply: function(e) {
+		if (this.state != 'preview')
+			throw 'not previewing'
+		this.save(e, 'apply')
+		
+	},
+	
 	_isDifferentData: function(data)
 	{
 		for (var key in data) {
