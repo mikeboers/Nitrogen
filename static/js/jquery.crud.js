@@ -13,17 +13,6 @@ Optional:
 	jquery.textarearesizer.js
 
 TODO:
-	- make sure only serialized data is being tracked for changes
-	
-	- √ edit
-	- √ delete
-	- √ save
-	- √ cancel
-	- √ preview
-	- preview apply
-	- preview edit
-	- √ preview revert
-	
 	- preview disabled unless there are changes
 	
 */
@@ -344,9 +333,9 @@ $.widget('nitrogen.crud', {
 			var $buttons = $('<div class="crud-buttons" />')
 				.appendTo(this.preview)
 			$('<a>Save</a>')
-					.button({icons: {primary: 'silk-icon silk-icon-tick'}})
-					.click(this._bound('apply'))
-					.appendTo($buttons);
+				.button({icons: {primary: 'silk-icon silk-icon-tick'}})
+				.click(this._bound('apply'))
+				.appendTo($buttons);
 			$('<a>Edit</a>')
 				.button({icons: {primary: 'silk-icon silk-icon-pencil'}})
 				.click(this._bound('edit'))
@@ -403,7 +392,7 @@ $.widget('nitrogen.crud', {
 	},
 
 	// Note that this is NOT "destroy". This actually removes the data.
-	delete: function()
+	'delete': function()
 	{
 		var $$ = this.widget()
 		
