@@ -5,6 +5,36 @@
 - Decide if we should remove the unicode encoder as any time we use Response
   as a wrapper then the body is automatically encoded.
 
+- design a new Session
+
+    - key features:
+        - lazy loading
+        - continuously incremented cookies
+            anything with a counter_id within the last 10 is considered current
+            and anything not current remains valid for 60 seconds after its
+            signature time. this should hopefully deal with race conditions
+            that would result in the last cookie being invalid
+    
+    - autosave, just like beaker
+        an explisit save just marks it as dirty, while persist actually saves it
+    - store id_counter, creation_time, modification_time, access_time
+    - regenerate_id() -> replace the primary id
+    - delete() -> delete the session and expire the cookie. I'm not goig to
+      do this a whole lot
+    - restart() -> a delete and regenerate
+    
+    - if it werent for the pure-cookie mode, I would think that I can get by
+      without the store seeing every seeing the http machinery. Need to have
+      a standard api with as few exposure points as possible. There isn't
+      actually any need for a pure cookie solution: my cookie container
+      already does this all very nicely.
+      
+    - the store need only be able to __getitem__, __setitem__, and __delitem__
+    - how to lazy load:
+        1) proxy dict access to the actual object, loading it on first access
+        2) get_session(environ) gets it
+
+
 - design a generic Middleware class which abstracts away the details of the
 protocol. This should be compatible with both wsgi and web3
 
@@ -52,35 +82,6 @@ protocol. This should be compatible with both wsgi and web3
 		  an HTML form)
 
 
-- design a version control mechanism for CRUD
-	- crud_history table:
-		columns: id, table_name, object_id, datetime, data, username, comment
-	
-	- the problem with story all the data from the whole row is that a user would
-	be able to affects columns that their form does not have permission to see.
-	ideally only the data that the user is allowed to see (controlled by the
-	form) would be affected, but this may bring in some data integrity issues.
-	if we apply the data to the supplied form object first then we are assured
-	that the only changes will be those that the user is allowed to make anyways
-	
-	- CRUD.commit(id, comment=None, user=None)
-		this commits the current state of the object with the given id
-	
-	- popup box in the bottom right corner lets one pick an older version of
-	  the data to display
-	- a "revision message" box at the bottom lets you comment on the changes
-	
-	- etags are passed down with every form. this is a hash of the repr of
-	  sorted item tuples of the dict version of the raw row
-		ie md5(repr(sorted(dict(table.select().filter(...).execute().fetchone()).items())))
-
-- add a preview button to crud
-	blue glow
-- proper error handling everywhere
-- add nice transitions to UI block
-
-- remove the second resize handle from crud text areas
-- add grippie to all normal text areas
 
 - should all jquery plugins have the jquery prefix? YES.
 
@@ -156,6 +157,7 @@ protocol. This should be compatible with both wsgi and web3
 	nitrogen.wsgi.util.StreamMutator can be a wrapper around an interator
 	which mutates it in a given way, and maintains the close method
 
+
 - cleanup crud.js:
 	
 	- $.autocrud() looks for data-crud-url attribute, and pulls is as the numeric
@@ -206,6 +208,7 @@ protocol. This should be compatible with both wsgi and web3
 	- perhaps the request itself could be a json object so that I can pass
 	  more complex information to it
 
+
 - write my own template wrapper class which:
 	- render's directly (.render(name, _type=None, **kwargs))
 		this could pull from the name what type of template it is
@@ -251,32 +254,6 @@ protocol. This should be compatible with both wsgi and web3
 - reload checker must not use iter version
 	- can also loop over the modules themselves
 
-- CRUD needs to have builtin security.
-    - a couple predicates for various actions:
-        general_predicate (for whichever are missing below)
-        create_predicate
-        read_predicate (this won't do anything yet)
-        update_predicate
-        delete_predicate
-    - to we prefer "deleteable", "allow_delete" or "can_delete"?
-        - either allow_delete or can_delete
-        - "allow" seems to be more specific to this situation
-    - new "get_perms" method which returns:
-        {
-            can_create: ...,
-            can_update: ...,
-            can_delete: ...
-        }
-    - crud.js should be in the nitrogen public folder
-    - make adjustments to crud.js
-        - make "url" required
-        - get_perms option will call "get_perms" method to get permissions.
-          This is assumes to be dependant upon only the url
-    - drop a script tag for EVERY thing that is supposed to be editable
-        <script>jQuery.crud('#selector', {url="/whatever", can_delete=false, id=1234});</script>
-    - TextBlobAppMixin should specify the predicates to use by default for all
-      text blobs. The CRUD.allow_* method can be overridden on a single site
-      to allow certain people to be able to do certain things.
 
 
 - Response should have an .abort and .redirect method
@@ -652,29 +629,10 @@ RANDOM IDEAS
 - consider using redis as key-value store instead of bucket
 
 
-- editables should be renamed. maybe ajaxcrud, or nitrogen.model.crud.CRUD
-
-- editables should roughly follow the Atom publishing protocl. see what pylons
-  does: http://wiki.pylonshq.com/display/pylonscookbook/How+map.resource+enables+controllers+as+services
-
-
-
-- api MUST not just pull in all the get and post data, for that will trigger
-  file parsing. It can look in the get and post data when you ask it to, but
-  do NOT do it automatically or without provocation.
-  
-  - ApiRequest could perform lookups into get/post/cookies and then raise an
-    extended KeyError which would be understoon by te ApiResponse
-
 - need to either bulk up the encoder or replace it with something else.
 	- IE does not supply a Accept-Charset header, but it still does accept
 	  UTF-8.
 	- Should only be auto encoding stuff for text/* content types.
-
-
-- route.Transformer could exist solely to manipulate the data that is getting
-  passed around. Then one can pass in a model and have the url generated for
-  it specifically
 
 
 - figure out which parts can be seperated out
@@ -692,27 +650,6 @@ RANDOM IDEAS
 - mailer does wierd things with unicode email addresses
 
 
-- route.Chain should catch status exceptions and start_response(status, ...) as
-  well.
-    - status should have a function to throw a given status code. Do this by
-      having the function that defines all of the status exceptions store them
-      into a module-global dict. The thrower can then just look it up and throw
-      it.
-    - if the status given to start_response is one that the Chain is supposed to
-      catch (this should be configurable, but default to 404) then throw the
-      corresponding exception which is caught by the normal machinery
-    - all the caught statuses should be logged by the chain
-    - MAYBE we want to have the ability to save the state of the routing history
-      so that the chain can restore it before trying another app
-        - save_history() could return the state of the history (maybe just the
-          length of the list), and restore_history(state) will put it back the
-          same as it was at the time of the save call.
-
-- Compare the lib/markdown with lib/webhelpers/markdown
-    - I think the webhelpers one has references and line breaks, while the other
-      does not.
-    - The webhelpers one also looks a bit easier to extend.
-    - Make line breaks drop in <br />
 
 - See about getting https working.
 
@@ -724,169 +661,21 @@ my own minifier, which sounds like a bad idea).
 
 - rename the nitrogen.logs.FileLogger to something that indicates it is time based
 
-- not_found_catcher -> status.status_notifier
-    - takes a dict mapping status to template to throw
-    - a traceback parameter determines if it should dump a traceback with env
-      and everything
-
 - logs should be timestamping with utc time, not local time
 
-
-- it might be a good idea to write my own pickling sockets instead of using
-  the Listener and Client from multiprocessing.connection
-    - Then I can have more standard symantics about when the socket is closed, and such
-
-
-
-
-- model_adapter should work again
-
-- editables should work again
 
 - write a session
 
 - consider having default log path include the thread-id as well so that they are running into seperate files
 
-- textblobs should have an environ object just like models and views
-
-- hash IPs in the logs, so we dont store actual IPs. need to salt them or do something else fancy
-	maybe hash together a salt, ip, user-agent, and anything else that is constant from that user
-
-- the setup_logging middleware should not be added automatically by the runners
-	it is not that special
 
 - file logger should put the format string through `time.strftime(format.replace('%(', '%%')), time.gmtime()) % params`
   to get the file name (also so it is in GMT). actually need to double the number of percent signs in except for those that precede a single letter
 
-- multiple processes logging to the same file is not safe. the docs seems to suggest
-  that the multiprocessing module could be handy in writing a new file handler
-
-- route history objects should proxy item access to the data object
-	should have some more properties (prev -> previous piece of history, next,
-	first, last, is_first, is_last, rebuild -> rebuilds this routeing chunk,
-	rebuild_route builds the full route back to the beginning... or from one
-	router to another
 
 - pull out a bunch of todo itesm from http://www.catonmat.net/blog/50-ideas-for-the-new-catonmat-website/?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+catonmat+%28good+coders+code%2C+great+reuse%29&utm_content=Google+Reader 
   as it has some good ideas
-
-- user.context
-	- allow username, realname, or email to be used as password
-	- many different ways to authenticate: password, PPP, yubikey, email token
-	  ' token, sms, openid, etc
-	- the login/authentication page should see that I am coming from 127.0.0.1
-	  and allow me to create a new user, or use a temporary superuser
-	- users should not need to be backed by the database, so that we can have
-	  a guest user (if we decide that we want one) and other temporary users
-	  (the temp superuser for local connections).
-	- middleware to make sure that a user is authenticated to get to the
-	  requested url. maybe have it check what the url is... or have some other
-	  middleware (more general) that runs these tests and optinally skips the
-	  next piece of middleware. so it goes through the authenticator if the
-	  domain starts with "admin." or something.
-	- permissions should be heirarchical split with /. maybe so something with
-	  absolute vs relative ones
-
-	- groups
-		- can contain users, or other groups
-		- can have permissions
 	
-	django user model:
-		- is_staff: the user can access the admin site
-		- is_active: all has_perm(...) calls will return False, no matter the
-		  permissions
-		- is_superuser: all has_perm(...) calls will return True, no matter the
-		  permissions
-		- last_login: last time they logged in
-		- date_created: datetime when they were created
-		- is_anonymous(): always returns false for users. They seem to put in
-		  a dummy AnonymousUser if someone is not logged in
-		- is_authenticated(): has the user authenticated (in this session)? In
-		  django this will always return True.
-		- set_password(...)
-		- check_password(...)
-		- get_group_permissions(): a list of permissions obtained through membership
-		- get_all_permissions(): a list of all permissions
-		- has_perm(...): Do they have the permissions? For django they are
-		  of the format "<app label>.<permission codename>".
-		- has_perms(...): Do they have all the specified permissions?
-		- get_profile(): Returns the site-sepcific profile... Whatever that means.
-	
-	django user management:
-		- create_user(username, email, password=None)
-		- make_random_password(length=10, charset='...')
-		- login_required(app): a decorator which forwards you to the login page
-		  it takes a "redirect_field_name" parameter which determines the get
-		  key for where to redirect after login
-		- the login page is "/accounts/login" by default
-	
-	ideas of mine while reading django stuff
-		- sendmail(...): Send them an email.
-		- is_in_group(<groupname>): is_staff() is really just is_in_group('/staff')
-		- trigger_password_reset(): Send an email with a password reset link.
-		- Manager.authenticate(username, password): returns a user if it was
-		  valid. more likely this would also take: yubicode, ppp_token, ...
-		  This does NOT login the user; just authenticates them
-		- User.login() does the actual login using whatever persistance method
-		  has been chosed by the manager. It may take the request/response as
-		  an argument.
-		- User.logout(). It may take request/response as arguement. Should
-		  completely destroy any session that was setup for the user.
-
-		- should an anonymous user be an object, or None?
-			- with an object, we only have to do one test (has_perm) instead
-			  of two (user and user.has_perm). it seems like if we design the
-			  apps securely, we will always be checking permissions anyways
-			- with an object, if the user is not in the view context it is an
-			  error. with None, you never really know for sure. It is one less
-			  point of failure to expect it to be an object
-		- perhaps a manage.py script which is hooked into the app configuration
-		  is a good idea. it can be what sets permissions, adds superusers,
-		  edits config files, etc
-		- need not have admin subdomain. one can just go to /admin, and if you
-		  are in "admin mode" or not is just a flag in your session.
-		- if we keep using the same admin_gateway middleware (which enforces a
-		  login on all admin subdomain pages), then some other middleware could
-		  make an app not require that gateway to run. maybe. this would likely
-		  require all middleware to use a @middleware decorator which does some
-		  magic with metadata and such, and I don't really want to do that.
-		- @user_needs_perm('permission') requires a user to have a permission
-		  before they can go on. or @perm_required('perm')
-		- the resolution order of groups should be similar to the MRO for classes.
-		  because we expect to have a multiple inheritance structure, this is
-		  required
-		- it would be nice if the permissions we tested for were actual objects.
-		  then it would be relatively easy to go about populating a view with
-		  ALL of the possible permissions.
-	
-	- other django stuff:
-		- user is always an object in the view context
-		- perms is an object for testing for permission by proxying to the user
-		  ie perms.admin would be True if they had '/admin', perms.admin.whatever
-		  would be true for /admin/whatever'. make it callable for checking
-		  patterns: perms('/admin/*/something?k=v')
-
-
-
-	
-	- change the url parameter on the login page that redirects to "next":
-		/login/?next=whereveryouwere . It also need not be url encoded. The query
-		should know that it does not need to encode slashes (by default); only
-		# and ?.
-	
-	- @as_request can allow you to return HTTP status exceptions and it would
-	  throw them for you. But why bother?
-	
-	- can formalchemy set 'enctype="multipart/form-data"' on the form?
-	
-	- can we get access to the reported content_type of the file that is being
-	  posted? perhaps the charset as well?
-	
-	- maybe extend the file upload protocol so that there is a function for
-	  write, and a function for the upload being done, and maybe the constructor
-	  gets the expected length and content type and so forth as well.
-	  http://docs.djangoproject.com/en/1.1/topics/http/file-uploads/#topics-http-file-uploads
-		
 - MapRouter should sort keys by length before trying to match.
 - ModuleMapRouter could map prefixes to module names to import: "app.controller.news.main"
   could run "main" of "app.controller.news". This just seems kinda lazy on my
@@ -927,32 +716,11 @@ my own minifier, which sounds like a bad idea).
   if they have not set cookies yet.
   http://docs.djangoproject.com/en/1.1/topics/http/sessions/#module-django.contrib.sessions
 
-- django has a "sites" framework, to allow it to power more than one site with
-  the same code. I should try to make my App (or Site) class work in a way so
-  that several of them can play nicely beside each other. can import a site
-  config out of a configs folder (example_com.py or admin_example_com.py), or
-  perhaps run the domain through a mapping to determin which config to use
-  (so that admin.example.com uses the same config as example.com).
-
-- We no longer have a need for the admin sub-domain. Simply track if they are
-  logged in via the session. can even add a login link into the footer for the
-  client to use
-
 
 - read about the Atom publishing protocol, and the set of REST URLs that go with it
   it seems the Pylons uses that setup a bunch (for resources in the route mapper
   http://pylonshq.com/docs/en/0.9.7/thirdparty/routes/#routes.base.Mapper.resource )
 
-- Response.matches() and Response.not_modified() would call start with the right
-  headers
-
-- FieldSet class should be called FieldSet, not Form. form module should be at
-  nitrogen.form, not nitrogen.form
-
-- consider breaking various parts of nitrogen into different packages.
-	- they would assemble into the same namespace using what magic module does that...
-	- use pip to install them with --no-install option to just build them
-	- then softlink them into the site-packages
 
 - in place editors:
 	- take all the options out of the email I sent shane
@@ -978,36 +746,13 @@ be able to be added to from the web with a password or by visiting some signed U
 	sentry
 
 
-
 FieldSet._render should take a multipart=True param which allows for file uploads.
 	that should be passed into the viewenviron.render call, and the template
 	set enctype="multipart/form-data"
 
 
-start designing an App class which loads a config, sets up a model/view/
-textblob environ, and generally manages the interactions bettween all the
-parts of a site. This should be a part of nitrogen.
-
-standardize on a primary middleware wrapping function which does all the
-wrapping. Several wrappers will handle discrete types: one for error logging
-and reporting, one for managing http (encoding, etagging), one to put them
-all together
-
-- the various contexts should not bother with having their own log and name
-  unless they absolutely need it
-- the UserContext should have a table_prefix, instead of "name"
 
 
-
-
-- locals
-	make a local object factory which keeps a reference to the __dict__ so that
-	it can be cleared out on every request by some middleware
-
-- flash_messages
-	- be able to persist them so that we can specify a flash message to show up
-	in the next response
-	
 - users
 	- should not be able to verify an email if you are already logged in
 	- should automatically login when a password is set for the first time
@@ -1023,8 +768,6 @@ all together
       as a property (or something). this could simply be the whole application
       class.
 
-- password hashing
-    use either scrypt or PBKDF2 (http://www.daemonology.net/blog/2009-06-11-cryptographic-right-answers.html)
 
 - use this openid selector http://code.google.com/p/openid-selector/
 

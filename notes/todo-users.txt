@@ -5,3 +5,122 @@ UserController manages interaction with the web, such as putting users into
 the environment at the right places, login, ect.
     has_perm middlewear goes here
     do_login wsgi app
+
+
+
+- user.context
+	- allow username, realname, or email to be used as password
+	- many different ways to authenticate: password, PPP, yubikey, email token
+	  ' token, sms, openid, etc
+	- the login/authentication page should see that I am coming from 127.0.0.1
+	  and allow me to create a new user, or use a temporary superuser
+	- users should not need to be backed by the database, so that we can have
+	  a guest user (if we decide that we want one) and other temporary users
+	  (the temp superuser for local connections).
+	- middleware to make sure that a user is authenticated to get to the
+	  requested url. maybe have it check what the url is... or have some other
+	  middleware (more general) that runs these tests and optinally skips the
+	  next piece of middleware. so it goes through the authenticator if the
+	  domain starts with "admin." or something.
+	- permissions should be heirarchical split with /. maybe so something with
+	  absolute vs relative ones
+
+	- groups
+		- can contain users, or other groups
+		- can have permissions
+
+	django user model:
+		- is_staff: the user can access the admin site
+		- is_active: all has_perm(...) calls will return False, no matter the
+		  permissions
+		- is_superuser: all has_perm(...) calls will return True, no matter the
+		  permissions
+		- last_login: last time they logged in
+		- date_created: datetime when they were created
+		- is_anonymous(): always returns false for users. They seem to put in
+		  a dummy AnonymousUser if someone is not logged in
+		- is_authenticated(): has the user authenticated (in this session)? In
+		  django this will always return True.
+		- set_password(...)
+		- check_password(...)
+		- get_group_permissions(): a list of permissions obtained through membership
+		- get_all_permissions(): a list of all permissions
+		- has_perm(...): Do they have the permissions? For django they are
+		  of the format "<app label>.<permission codename>".
+		- has_perms(...): Do they have all the specified permissions?
+		- get_profile(): Returns the site-sepcific profile... Whatever that means.
+
+	django user management:
+		- create_user(username, email, password=None)
+		- make_random_password(length=10, charset='...')
+		- login_required(app): a decorator which forwards you to the login page
+		  it takes a "redirect_field_name" parameter which determines the get
+		  key for where to redirect after login
+		- the login page is "/accounts/login" by default
+
+	ideas of mine while reading django stuff
+		- sendmail(...): Send them an email.
+		- is_in_group(<groupname>): is_staff() is really just is_in_group('/staff')
+		- trigger_password_reset(): Send an email with a password reset link.
+		- Manager.authenticate(username, password): returns a user if it was
+		  valid. more likely this would also take: yubicode, ppp_token, ...
+		  This does NOT login the user; just authenticates them
+		- User.login() does the actual login using whatever persistance method
+		  has been chosed by the manager. It may take the request/response as
+		  an argument.
+		- User.logout(). It may take request/response as arguement. Should
+		  completely destroy any session that was setup for the user.
+
+		- should an anonymous user be an object, or None?
+			- with an object, we only have to do one test (has_perm) instead
+			  of two (user and user.has_perm). it seems like if we design the
+			  apps securely, we will always be checking permissions anyways
+			- with an object, if the user is not in the view context it is an
+			  error. with None, you never really know for sure. It is one less
+			  point of failure to expect it to be an object
+		- perhaps a manage.py script which is hooked into the app configuration
+		  is a good idea. it can be what sets permissions, adds superusers,
+		  edits config files, etc
+		- need not have admin subdomain. one can just go to /admin, and if you
+		  are in "admin mode" or not is just a flag in your session.
+		- if we keep using the same admin_gateway middleware (which enforces a
+		  login on all admin subdomain pages), then some other middleware could
+		  make an app not require that gateway to run. maybe. this would likely
+		  require all middleware to use a @middleware decorator which does some
+		  magic with metadata and such, and I don't really want to do that.
+		- @user_needs_perm('permission') requires a user to have a permission
+		  before they can go on. or @perm_required('perm')
+		- the resolution order of groups should be similar to the MRO for classes.
+		  because we expect to have a multiple inheritance structure, this is
+		  required
+		- it would be nice if the permissions we tested for were actual objects.
+		  then it would be relatively easy to go about populating a view with
+		  ALL of the possible permissions.
+
+	- other django stuff:
+		- user is always an object in the view context
+		- perms is an object for testing for permission by proxying to the user
+		  ie perms.admin would be True if they had '/admin', perms.admin.whatever
+		  would be true for /admin/whatever'. make it callable for checking
+		  patterns: perms('/admin/*/something?k=v')
+
+
+
+
+	- change the url parameter on the login page that redirects to "next":
+		/login/?next=whereveryouwere . It also need not be url encoded. The query
+		should know that it does not need to encode slashes (by default); only
+		# and ?.
+
+	- @as_request can allow you to return HTTP status exceptions and it would
+	  throw them for you. But why bother?
+
+	- can formalchemy set 'enctype="multipart/form-data"' on the form?
+
+	- can we get access to the reported content_type of the file that is being
+	  posted? perhaps the charset as well?
+
+	- maybe extend the file upload protocol so that there is a function for
+	  write, and a function for the upload being done, and maybe the constructor
+	  gets the expected length and content type and so forth as well.
+	  http://docs.djangoproject.com/en/1.1/topics/http/file-uploads/#topics-http-file-uploads

@@ -1,0 +1,171 @@
+
+
+- remove the second resize handle from crud text areas
+- add grippie to all normal text areas
+
+- design a version control mechanism for CRUD
+    - crud_history table:
+        columns: id, table_name, object_id, datetime, data, username, comment
+    
+    - the problem with story all the data from the whole row is that a user would
+    be able to affects columns that their form does not have permission to see.
+    ideally only the data that the user is allowed to see (controlled by the
+    form) would be affected, but this may bring in some data integrity issues.
+    if we apply the data to the supplied form object first then we are assured
+    that the only changes will be those that the user is allowed to make anyways
+    
+    - CRUD.commit(id, comment=None, user=None)
+        this commits the current state of the object with the given id
+    
+    - popup box in the bottom right corner lets one pick an older version of
+      the data to display
+    - a "revision message" box at the bottom lets you comment on the changes
+    
+    - etags are passed down with every form. this is a hash of the repr of
+      sorted item tuples of the dict version of the raw row
+        ie md5(repr(sorted(dict(table.select().filter(...).execute().fetchone()).items())))
+
+- add a preview button to crud
+    blue glow
+- proper error handling everywhere
+- add nice transitions to UI block
+
+
+
+
+
+- CRUD needs to have builtin security.
+    - a couple predicates for various actions:
+        general_predicate (for whichever are missing below)
+        create_predicate
+        read_predicate (this won't do anything yet)
+        update_predicate
+        delete_predicate
+    - to we prefer "deleteable", "allow_delete" or "can_delete"?
+        - either allow_delete or can_delete
+        - "allow" seems to be more specific to this situation
+    - new "get_perms" method which returns:
+        {
+            can_create: ...,
+            can_update: ...,
+            can_delete: ...
+        }
+    - crud.js should be in the nitrogen public folder
+    - make adjustments to crud.js
+        - make "url" required
+        - get_perms option will call "get_perms" method to get permissions.
+          This is assumes to be dependant upon only the url
+    - drop a script tag for EVERY thing that is supposed to be editable
+        <script>jQuery.crud('#selector', {url="/whatever", can_delete=false, id=1234});</script>
+    - TextBlobAppMixin should specify the predicates to use by default for all
+      text blobs. The CRUD.allow_* method can be overridden on a single site
+      to allow certain people to be able to do certain things.
+      
+      
+JavaScript cleanup
+==================
+    
+- Do not pull from metadata or from attrData. It is easy enough to write a
+function which will look for everything with "data-crud", and crud it with
+that data. The current practise of silently aborting when no api url is given
+should be dropped as well; the function doing automatic discovery should be
+able to determine if there is valid config data in there.
+
+    At least do not always pull from attribute data. It is possible that we
+    specify an option to pull data from as well.
+
+- Cleanup the CSS classes.
+
+    - "crud-wrapper" for if the crud extension is working on it at all.
+    - "crud-editing" if the form is deployed
+    - "crud-preview" if we are in preview mode
+
+- Decide if it should automatically re-init at the end of the saving cycle, or
+if the new markup that is sent down should contain the script to do it.
+
+    It feels ugly to have the script right in the partial that sets
+    up the next iteration, but it is a nice and direct method.
+    
+    It also feels pretty ugly to be stuffing the configuration into an
+    attribute.
+    
+    It is actually possible that the second call to the "init" method actually
+    reconfigures the setup, and does not try to override it entirely. It is
+    also possible to have the script tag which does this wrapped in an "if"
+    block depending on the presence of a variable that crud provides. This
+    could be accomplished by having a method injected into the template which
+    is called to generate the script tag.
+    
+        ${setup_crud(selector, url='/path/to/api', id=123)}
+        
+    So it seems that this is a decision of how we go about setting up the crud
+    at all.
+    
+        1) Auto setup by "data-crud" attribute in whatever tag is the container.
+           This method defined that the plugin auto-re-setup.
+           
+        2) Script tag with explicit call to jQuery plugin. This method defines
+           that the plugin either NOT auto-re-setup, or the second init call
+           changes the configuration data. If this included new permissions it is
+           quite likely too late for drawing buttons. It also seems questionable
+           as to when precisely this will be called on the second pass. If
+           this were done with a function in the template scope then it could
+           inject a script if it is the first time, and pass along new config
+           values the second time.
+           
+           is_crud_update could signify that this is an update
+           is_crud_preview does similarly
+           is_crud would = is_crud_update or is_crud_preview
+           
+           This would require that the render functions take kwargs.
+           
+        3) The individual page sets it up. Less to send over the wire, but the
+           most tedious.
+    
+    I am feeling that an auto-recycling method with possibilities in the
+    protocol for metadata updates is apropriate. No need to design the data
+    updates just yet, however.
+    
+
+
+- try to break the main function up into smaller functions, using
+significantly fewer closures. will have to use $$.data a lot to maintain
+the proper state
+
+    init: set up GUI. This must not be called twice.
+    edit/create: setup the form
+    save: TRY to save the form, inserting the new HTML or the form with
+          errors
+    delete: delete this object
+
+- api methods:
+    
+    - get_form
+        id
+        version (optional)
+    - get_metadata
+        returns permissions and such
+    - preview
+        parms: all the data
+        
+    
+
+- use http://json.org/json2.js JSON.stringify to serialize the request.
+this will require the server side to parse the request manually
+
+- perhaps have a registry of types that contain defaults:
+    $.crud('setup-type', {'type': 'blog-post', url:'whatever'})
+    $('...').crud('init', {'type':'blog-post', 'id': 123})
+
+$('#whatever').crud('delete', {<more options>})
+$.crud('create', {url: 'whatever'})
+
+Should "url" be "entry_point"? or "uri"?
+
+- get proper permission checking in here everywhere
+- proper etags to make sure that things haven't changes
+- accept: application/json, and reject others
+- content-type: application/json
+- proper rest-style status codes
+- perhaps the request itself could be a json object so that I can pass
+  more complex information to it
