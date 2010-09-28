@@ -154,6 +154,11 @@ class CRUD(object):
                     data[m.group(1)] = request[key]
             
             response['partial'] = self.render_model(model, **data)
+            
+            # Must explicity roll back the changes we have made otherwise
+            # the database will remain locked.
+            if not commit:
+                s.rollback()
         
         return response
     
