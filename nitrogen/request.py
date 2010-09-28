@@ -91,11 +91,11 @@ class Request(CommonCore, wz.Request):
             
             response = func(*(args[:-2] + (request, )))
             
-            if add_etag or add_etag is None and response.is_sequence:
-                response.add_etag()
-            
-            if conditional:
-                response.make_conditional(environ)
+            if response.status_code == 200:
+                if add_etag or add_etag is None and response.is_sequence:
+                    response.add_etag()
+                if conditional:
+                    response.make_conditional(environ)
             
             return response(*args[-2:])
         
