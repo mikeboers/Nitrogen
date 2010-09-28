@@ -71,7 +71,7 @@ $.jsonAttr = {
     getRaw: function(elem, name)
     {
         name = name || 'data';
-        var cacheKey = 'attrdata-' + name;
+        var cacheKey = 'jsonAttr-' + name;
         var data = $.data(elem, cacheKey);
         if (data !== undefined)
         {
