@@ -38,7 +38,7 @@ class TextBlobAppMixin(object):
         class HtmlForm(self.Form):
             content = TextAreaField('Content')
     
-        self.route('/__textblob/markdown', CRUD(
+        self.route('/__textblob/markdown', self.CRUD(
             render=self.render,
             Session=self.Session,
             form_class=MarkdownForm,
@@ -48,7 +48,7 @@ class TextBlobAppMixin(object):
             partial_kwargs={'type_':'markdown'}
         ))
 
-        self.route('/__textblob/html', CRUD(
+        self.route('/__textblob/html', self.CRUD(
             render=self.render,
             Session=self.Session,
             form_class=HtmlForm,
@@ -58,7 +58,7 @@ class TextBlobAppMixin(object):
             partial_kwargs={'type_':'html'}
         ))
 
-        self.route('/__textblob/text', CRUD(
+        self.route('/__textblob/text', self.CRUD(
             render=self.render,
             Session=self.Session,
             form_class=PlainForm,

@@ -2,12 +2,16 @@
 
 import logging
 import re
+import collections
+import datetime
 
 from multimap import MultiMap
 
+import werkzeug as wz
+
 from .request import Request
 from .api import ApiRequest
-
+from .app import build_inheritance_mixin_class
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +31,12 @@ class CRUD(object):
     form_view_kwargs={}
     form_view_key='form'
     render=None
+    
+    allow_create = True
+    allow_update = True
+    allow_delete = True
+    allow_commit = True
+    allow_revert = True
     
     def __init__(self, Session, **kwargs):
         
@@ -81,20 +91,19 @@ class CRUD(object):
         if not handler:
             request.error('no api method %r' % method)
         return handler(request)
-
-    # def handle_get(self, request, response):
-    #     
-    #     id_ = int(request['id'])
-    #     
-    #     s = self.Session()
-    #     obj = s.query(self.model_class).get(id_)
-    # 
-    #     if not obj:
-    #         raise ApiError("could not find object %d" % id_)
-    # 
-    #     for key in self.keys:
-    #         response[key] = getattr(obj, key)
-
+        
+    def versions_for(self, obj):
+        """Return a list of (version, comment) tuples."""
+        return []
+    
+    def commit(self, obj, comment=None):
+        """Commit the state of the given object."""
+        pass
+        
+    def revert(self, obj, version):
+        """Revert the given object to the state from the given version."""
+        pass
+    
     def handle_get_form(self, request):
 
         id_ = request.get('id')
@@ -103,17 +112,32 @@ class CRUD(object):
         except:
             request.error("bad id")
         
+        # Get a version > 0, or None.
+        version = int(request.get('version', 0)) or None
+        
         s = self.Session()
         if id_:
             obj = s.query(self.model_class).get(id_)
             if not obj:
                 raise ApiError("could not find object %d" % id_)
+            
+            # Apply requested version data.
+            if version and self.allow_revert:
+                self.revert(obj, version)
+                
             form = self.form_class(obj=obj)
         else:
             form = self.form_class()
-
-        return dict(form=self.render_form(form))
-
+        
+        return self.get_form_response(obj, form)
+        
+        
+    def get_form_response(self, obj, form):
+        return dict(
+            form=self.render_form(form),
+            versions=self.versions_for(obj) if self.allow_revert else None,
+        )
+    
     def handle_submit_form(self, request, commit=True):
         
         response = {}
@@ -136,29 +160,36 @@ class CRUD(object):
         response['valid'] = valid = form.validate()
         
         if not valid:
-            response['form'] = self.render_form(form)
+            return self.get_form_response(obj, form)
         
-        else:
-            form.populate_obj(model)
+        
+        form.populate_obj(model)
+        
+        # This "commit" refers to the database, as this method is overloaded
+        # to provide preview functionality as well.
+        if commit:
             
-            if commit:
-                if not model.id: 
-                    s.add(model)
-                s.commit()
-                response['id'] = model.id
-                
-            data = {}
-            for key in request.form:
-                m = re.match(r'^partial_kwargs\[(.+?)\]$', key)
-                if m:
-                    data[m.group(1)] = request[key]
+            if not model.id: 
+                s.add(model)
+            s.commit()
+            response['id'] = model.id
             
-            response['partial'] = self.render_model(model, **data)
-            
-            # Must explicity roll back the changes we have made otherwise
-            # the database will remain locked.
-            if not commit:
-                s.rollback()
+            if self.allow_commit and request.get('__do_commit'):
+                commit_message = request.get('__commit_message', '')
+                self.commit(model, commit_message)
+        
+        data = {}
+        for key in request.form:
+            m = re.match(r'^partial_kwargs\[(.+?)\]$', key)
+            if m:
+                data[m.group(1)] = request[key]
+        
+        response['html'] = self.render_model(model, **data)
+        
+        # Must explicity roll back the changes we have made otherwise
+        # the database will remain locked.
+        if not commit:
+            s.rollback()
         
         return response
     
@@ -195,3 +226,47 @@ class CRUD(object):
             item.order_id = order_ids[i]
 
         self.session.commit()
+
+
+class CRUDAppMixin(object):
+    
+    build_crud_class = lambda self: build_inheritance_mixin_class(self.__class__, CRUD)
+    CRUD = wz.cached_property(build_crud_class, name='CRUD')
+    
+    class CRUDMixin(object):
+        
+        @wz.cached_property
+        def commits_by_id(self):
+            return collections.defaultdict(list)
+            
+        def versions_for(self, obj):
+            id = obj.id
+            versions = []
+            for i, raw in enumerate(self.commits_by_id[id]):
+                comment = raw['comment'].strip()
+                versions.append((i + 1, raw['commit_time'].ctime() + (': ' if comment else '') + comment))
+            if versions:
+                versions.append((0, '< current >'))
+            return versions
+        
+        def commit(self, obj, comment=None):
+            id = obj.id
+            data = obj.todict()
+            log.debug('COMMIT %r to %r: %r' % (id, data, comment))
+            self.commits_by_id[id].append(dict(
+                data=data,
+                comment=comment,
+                commit_time=datetime.datetime.now()
+            ))
+            
+        def revert(self, obj, version):
+            for key, value in self.commits_by_id[obj.id][version - 1]['data'].iteritems():
+                setattr(obj, key, value)
+
+    
+    def export_to(self, map):
+        super(CRUDAppMixin, self).export_to(map)
+        map['CRUD'] = self.CRUD
+    
+    
+    

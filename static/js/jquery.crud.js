@@ -138,7 +138,7 @@ $.widget('nitrogen.crud', {
 		
 	},
 	
-	edit: function()
+	edit: function(e, version)
 	{
 		var self = this
 		var $$ = this.widget()
@@ -151,18 +151,19 @@ $.widget('nitrogen.crud', {
 			return
 		}
 		
-		
-		var oldState = this._setState('getForm')
+		// var oldState = this._setState('getForm')
 				
 		// Block out the UI while we get the form.
 		$$.block({
 			message: 'Retrieving form. Please wait...'
 		});
 		
+		
 		// Get the form.
 		var data = $.extend({}, this.options, this.options.extraData, {
 			method: 'get_form',
-			id: this.options.id ? this.options.id : 0
+			id: this.options.id ? this.options.id : 0,
+			version: version || 0
 		});
 	
 		$.ajax({
@@ -171,7 +172,7 @@ $.widget('nitrogen.crud', {
 			data: data,
 			success: this._bound('_setupForm'),
 			error: function() {
-				self._setState(oldState)
+				// self._setState(oldState)
 				$$.unblock()
 				alert('There was an error while contacting the server.')
 			},
@@ -198,14 +199,47 @@ $.widget('nitrogen.crud', {
 		if (this.originalData === undefined)
 			this.originalData = this._getFormData()
 		
-		var versionControls = $('<div class="version-control">History: </div>')
-			.appendTo(this.form)
-		$('<select class="version-menu"><option value="">None</option></select>')
-			.attr('disabled', true)
-			.appendTo(versionControls)
-		$('<input type="checkbox" /><label>Commit on Save</label>')
-			.appendTo(versionControls)
+		if (res.versions !== null) {
+			var versionControls = $('<div class="crud-version-control">History: </div>')
+				.appendTo(this.form)
+			this.versionSelect = $('<select class="version-menu"></select>')
+				.appendTo(versionControls)
+			this.commitOnSave = $('<input name="__do_commit" type="checkbox" value="1" />')
+				.appendTo(versionControls)
+			$('<label for="__do_commit">Commit on Save</label>')
+				.appendTo(versionControls)
 		
+			var versions = res.versions || []
+			if (versions.length)
+			{
+				var self = this
+			
+				$('<option>revert to...</option>')
+					.appendTo(this.versionSelect)
+				this.versionSelect.change(function(val) {
+					var changed = self._isDifferentData(self._getFormData())
+					if (changed && !confirm("There are unsaved changes.\n\nAre you sure you want to replace them?"))
+						return
+					var version = $(this).val()
+					self.edit(null, version)				
+				})
+				$.each(versions, function(i, version) {
+					$('<option />')
+						.attr('value', version[0])
+						.text(version[1])
+						.appendTo(self.versionSelect)
+				})
+			
+			}
+			else
+			{
+				this.versionSelect
+					.attr('disabled', true)
+				$('<option>none</option>')
+					.appendTo(this.versionSelect)
+			}
+		}
+
 		var buttons = $('<div class="crud-buttons" />')
 			.appendTo(this.form);
 		$('<a class="preview-button">Preview</a>')
@@ -256,20 +290,30 @@ $.widget('nitrogen.crud', {
 		if (this.state != 'edit' && this.state != 'preview')
 			throw 'not editing'
 		
-		var oldState = this._setState(isPreview ? 'preview' : 'saving')
+		// var oldState = this._setState(isPreview ? 'preview' : 'saving')
+		
+		
+		var do_commit = this.commitOnSave.attr('checked')
+		var commit_msg = do_commit ? prompt('Commit message:') : null
+		
+		if (do_commit && commit_msg === null)
+		{
+			return
+		}
 		
 		var blockTarget = mode == 'apply' ? this.preview : $$
 		blockTarget.block(isPreview ?
 			'Building preview. Please wait...' :
 			'Saving. Please wait...'
 		)
-	
+		
 		$.ajax({
 			type: "POST",
 			url: this.options.url,
 			data: $.extend(this._getRequestData(), {
 				method: isPreview ? 'preview' : 'submit_form',
-				id: this.options.id ? this.options.id : 0
+				id: this.options.id ? this.options.id : 0,
+				__commit_message: commit_msg
 			}),
 			success: function(res) {
 				switch(mode) {
@@ -287,7 +331,7 @@ $.widget('nitrogen.crud', {
 				}
 			},
 			error: function() {
-				self._setState(oldState)
+				// self._setState(oldState)
 				blockTarget.unblock()
 				alert('There was an error while contacting the server.')
 			},
@@ -310,7 +354,7 @@ $.widget('nitrogen.crud', {
 				// So the next will be an update.
 				this.options.id = res.id
 			var $$ = this.widget()
-			$(res.partial)
+			$(res.html)
 				.insertAfter($$)
 				.crud(this.options)
 			$$.remove()
@@ -325,7 +369,7 @@ $.widget('nitrogen.crud', {
 		else
 		{			
 			$$ = this.widget()
-			this.preview = $(res.partial)
+			this.preview = $(res.html)
 				.insertAfter($$)
 			$$.hide()
 			
