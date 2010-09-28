@@ -64,8 +64,7 @@ $.widget('nitrogen.crud', {
 		if (this.options.id) {
 			this._setupIdle()
 		} else if (this.options.allowCreate) {
-			console.warning('Creation has not been fixed yet.')
-			// this.edit()
+			this.edit()
 		} else {
 			throw "no ID and no create permissions"
 		}
