@@ -1,4 +1,5 @@
 
+- "allow_*" properties should look for a "<perm>_predicate", then a "predicate", and then just return True
 
 - remove the second resize handle from crud text areas
 - add grippie to all normal text areas

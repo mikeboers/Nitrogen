@@ -6,7 +6,6 @@ from sqlalchemy import *
 
 from nitrogen.webio.cookies import parse_cookies
 from nitrogen import forms
-from nitrogen.crud import CRUD
 
 crud_app = router = ReRouter()
 
@@ -30,15 +29,15 @@ class Form(FormBase):
     post_time = forms.DateTimeField(validators=[forms.validators.required()])
     body = forms.MarkdownField()
 
-
-router.register('/api', CRUD(
+crud = CRUD(
     Session=Session,
     render=render,
     model_class=Post,
     form_class=Form,
     partial='/crud/_post.html',
     partial_key='post'
-))
+)
+router.register('/api', crud)
 
 @router.register('')
 @router.register('/')
@@ -50,12 +49,14 @@ def do_jquery(request):
 
         session = Session()
         name = os.urandom(8).encode('hex')
-        session.add(Post(
+        post = Post(
             title=name.title(),
             post_time=datetime.now(),
             body='Body of %s.' % name
-        ))
+        )
+        session.add(post)
         session.commit()
+        crud.commit(post, 'Auto-generated.')
     
     posts = Session().query(Post).all()
     return Response(render('/crud/index.html', posts=posts), as_html=True)
