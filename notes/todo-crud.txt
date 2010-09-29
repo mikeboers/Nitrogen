@@ -1,6 +1,15 @@
 
 - "allow_*" properties should look for a "<perm>_predicate", then a "predicate", and then just return True
 
+- function to convert "dict[key]" style queries into nested ones
+- OR send JSON requests.
+
+- the various `AppMixin`s should have a way of enforcing which ones should
+  load first. Ideally this would be a multi-inheritance chain, but I don't want
+  to have the massive amount of imports like that.
+  
+  Investigate how those imports would be.
+
 - remove the second resize handle from crud text areas
 - add grippie to all normal text areas
 

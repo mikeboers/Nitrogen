@@ -3,7 +3,7 @@
 
 var defaults = {
     'displayFormat': 'dddd, MMMM d, yyyy, hh:mm:ss tt',
-    'postFormat': 'yyyy-MM-dd HH:mm:ss',
+    'postFormat': 'yyyy-MM-dd HH:mm:ss'
 }
 $.autodate = function(elem, opts) {
     

@@ -95,6 +95,8 @@ $.widget('nitrogen.crud', {
 		$$.addClass('crud')
 		$$.addClass('crud-state-' + state)
 		assertHoverClass($$)
+		$$.addClass('crud-pulse')
+		$$.removeClass('crud-pulse', 1000)
 		return oldDate
 	},
 	
@@ -150,8 +152,6 @@ $.widget('nitrogen.crud', {
 			this._setState('edit')
 			return
 		}
-		
-		// var oldState = this._setState('getForm')
 				
 		// Block out the UI while we get the form.
 		$$.block({
@@ -172,7 +172,6 @@ $.widget('nitrogen.crud', {
 			data: data,
 			success: this._bound('_setupForm'),
 			error: function() {
-				// self._setState(oldState)
 				$$.unblock()
 				alert('There was an error while contacting the server.')
 			},
@@ -188,7 +187,14 @@ $.widget('nitrogen.crud', {
 		$$.empty()
 		
 		this._setState('edit')
-	
+		
+		// Add error classes
+		if (res.valid !== undefined && !res.valid) {
+			$$.addClass('crud-invalid')
+		} else {	
+			$$.removeClass('crud-invalid')
+		}
+		
 		this.form = $('<form />')
 			.appendTo($$)
 			.html(res.form) // Must come after the append.
@@ -290,7 +296,6 @@ $.widget('nitrogen.crud', {
 		if (this.state != 'edit' && this.state != 'preview')
 			throw 'not editing'
 		
-		// var oldState = this._setState(isPreview ? 'preview' : 'saving')
 		
 		
 		var do_commit = this.commitOnSave.attr('checked')
@@ -331,7 +336,6 @@ $.widget('nitrogen.crud', {
 				}
 			},
 			error: function() {
-				// self._setState(oldState)
 				blockTarget.unblock()
 				alert('There was an error while contacting the server.')
 			},
@@ -456,8 +460,6 @@ $.widget('nitrogen.crud', {
 		if (!confirm("Are you sure you want to delete this?\n\nIt cannot be recovered."))
 			return
 		
-		this._setState('deleting')
-		
 		$$.block({
 			message: 'Deleting. Please wait...'
 		});
@@ -471,7 +473,11 @@ $.widget('nitrogen.crud', {
 			},
 			success: function(res) {
 				$$.remove();
-			}
+			},
+			error: function() {
+				$$.unblock()
+				alert('There was an error while contacting the server.')
+			},
 		});
 	}
 

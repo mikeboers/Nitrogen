@@ -105,7 +105,7 @@ class CRUD(object):
         pass
     
     def handle_get_form(self, request):
-
+        
         id_ = request.get('id')
         try:
             id_ = int(id_) if id_ else None
@@ -127,6 +127,7 @@ class CRUD(object):
                 
             form = self.form_class(obj=obj)
         else:
+            obj = None
             form = self.form_class()
         
         return self.get_form_response(obj, form)
@@ -135,7 +136,7 @@ class CRUD(object):
     def get_form_response(self, obj, form):
         return dict(
             form=self.render_form(form),
-            versions=self.versions_for(obj) if self.allow_revert else None,
+            versions=self.versions_for(obj) if obj and self.allow_revert else None,
         )
     
     def handle_submit_form(self, request, commit=True):
@@ -160,7 +161,9 @@ class CRUD(object):
         response['valid'] = valid = form.validate()
         
         if not valid:
-            return self.get_form_response(obj, form)
+            res = self.get_form_response(model, form)
+            res['valid'] = False
+            return res
         
         
         form.populate_obj(model)

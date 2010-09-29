@@ -2,14 +2,18 @@
 
 .crud
     
+    // Base yellow.
     background-color: #fffad4
-    &.crud-hover
+    
+    // Darken yello while hover on idle.
+    &.crud-state-idle.crud-hover
         background-color: #fff6b8
-        
+    
+    // Add a dashed line while editing or in preview.
     &.crud-state-edit, &.crud-state-preview
         outline: 1px dashed #92907B
     
-    &.crud-state-edit > form, &.crud-state-saving > form
+    &.crud-state-edit > form
         padding: 5px !important
     
     &.crud-state-preview
@@ -20,22 +24,22 @@
         &.crud-preview-pulse
             background-color: #D7E5FB
     
+    &.crud-state-edit.crud-pulse
+        background-color: #D9FFB5
+    
+    &.crud-state-edit.crud-invalid.crud-pulse
+        background-color: #FC9294 !important
+    
     .silk-icon + .ui-button-text
         padding-left: 2.5em
 
     .crud-version-control
         float: right
-        
         select
             width: 100px
         label[for=__do_commit]
             font-size: .7em
-    
-
-    & > .wrapper
-        border-bottom-style: solid
-        margin: 0
-        padding: 10px
+            
     
     .crud-buttons
         font-size: .7em
