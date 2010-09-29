@@ -115,7 +115,7 @@ class CRUD(object):
         """
         pass
     
-    def api_getForm(self, request):
+    def api_form(self, request):
         
         id_ = request.get('id')
         try:

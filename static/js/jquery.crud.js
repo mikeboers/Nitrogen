@@ -170,7 +170,7 @@ $.widget('nitrogen.crud', {
 	
 		$.ajax({
 			type: "POST",
-			url: this.options.url + '/getForm',
+			url: this.options.url + '/form',
 			data: data,
 			success: this._bound('_setupForm'),
 			error: function() {
