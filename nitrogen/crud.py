@@ -122,6 +122,8 @@ class CRUD(object):
         except:
             request.error("bad id")
         
+        version = request.get('version')
+        
         s = self.Session()
         if id_:
             obj = s.query(self.model_class).get(id_)
@@ -129,21 +131,22 @@ class CRUD(object):
                 raise ApiError("could not find object %d" % id_)
             
             # Apply requested version data.
-            if self.allow_revert:
-                self.revert(obj, request.get('version'))
+            if version is not None and self.allow_revert:
+                self.revert(obj, version)
                 
             form = self.form_class(obj=obj)
         else:
             obj = None
             form = self.form_class()
         
-        return self.get_form_response(obj, form)
+        return self.get_form_response(obj, form, version)
         
         
-    def get_form_response(self, obj, form):
+    def get_form_response(self, obj, form, version=None):
         return dict(
             form=self.render_form(form),
             versions=self.versions_for(obj) if obj and self.allow_revert else None,
+            version=None
         )
     
     def api_save(self, request, commit=True):
@@ -238,44 +241,48 @@ class CRUD(object):
     #     self.session.commit()
 
 
+
+class MemoryRepoMixin(object):
+    
+    def __init__(self, *args, **kwargs):
+        super(MemoryRepoMixin, self).__init__(*args, **kwargs)
+        self.commits_by_id = collections.defaultdict(dict)
+        
+    def versions_for(self, obj):
+        id = obj.id
+        versions = []
+        for version_id, raw in sorted(self.commits_by_id[id].items()):
+            comment = raw['comment'].strip()
+            versions.append((version_id, raw['commit_time'].ctime() + (': ' if comment else '') + comment))
+        if versions:
+            versions.append(('current', '< current >'))
+        return versions
+    
+    def commit(self, obj, comment=None):
+        id = obj.id
+        data = obj.todict()
+        log.debug('COMMIT %r to %r: %r' % (id, data, comment))
+        key = 'version-%d' % (len(self.commits_by_id[id]) + 1)
+        self.commits_by_id[id][key] = dict(
+            data=data,
+            comment=comment,
+            commit_time=datetime.datetime.now()
+        )
+        
+    def revert(self, obj, version):
+        if version not in self.commits_by_id[obj.id]:
+            return
+        for key, value in self.commits_by_id[obj.id][version]['data'].iteritems():
+            setattr(obj, key, value)
+
+
 class CRUDAppMixin(object):
     
     build_crud_class = lambda self: build_inheritance_mixin_class(self.__class__, CRUD)
     CRUD = wz.cached_property(build_crud_class, name='CRUD')
     
-    class CRUDMixin(object):
-        
-        @wz.cached_property
-        def commits_by_id(self):
-            return collections.defaultdict(dict)
-            
-        def versions_for(self, obj):
-            id = obj.id
-            versions = []
-            for version_id, raw in sorted(self.commits_by_id[id].items()):
-                comment = raw['comment'].strip()
-                versions.append((version_id, raw['commit_time'].ctime() + (': ' if comment else '') + comment))
-            if versions:
-                versions.append(('current', '< current >'))
-            return versions
-        
-        def commit(self, obj, comment=None):
-            id = obj.id
-            data = obj.todict()
-            log.debug('COMMIT %r to %r: %r' % (id, data, comment))
-            key = 'version-%d' % (len(self.commits_by_id[id]) + 1)
-            self.commits_by_id[id][key] = dict(
-                data=data,
-                comment=comment,
-                commit_time=datetime.datetime.now()
-            )
-            
-        def revert(self, obj, version):
-            if version not in self.commits_by_id[obj.id]:
-                return
-            for key, value in self.commits_by_id[obj.id][version]['data'].iteritems():
-                setattr(obj, key, value)
-
+    class CRUDMixin(MemoryRepoMixin):
+        pass
     
     def export_to(self, map):
         super(CRUDAppMixin, self).export_to(map)

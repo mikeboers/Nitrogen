@@ -3,6 +3,11 @@
 
 - should not get warning if stepping away from version without making a change
 
+- `revision_id`s need not be completely opaque; only revert on the server
+  if something was supplied. if the server returns the revision_id then the
+  client will be able to determine if this is the "current" version and deal
+  with that itself
+
 - Define full API:
     
     method "getForm" -> {
