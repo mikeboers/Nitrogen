@@ -214,12 +214,12 @@ $.widget('nitrogen.crud', {
 		if (this.originalData === undefined)
 			this.originalData = this._getFormData()
 		
-		if (res.versions !== null) {
+		if (res.versions !== null) {			
 			var versionControls = $('<div class="crud-version-control">History: </div>')
 				.appendTo(this.form)
 			this.versionSelect = $('<select class="version-menu"></select>')
 				.appendTo(versionControls)
-			this.commitOnSave = $('<input name="__do_commit_version" type="checkbox" value="1" />')
+			this.commitOnSave = $('<input name="__do_commit_version" type="checkbox" />')
 				.appendTo(versionControls)
 			$('<label for="__do_commit_version">Commit on Save</label>')
 				.appendTo(versionControls)
@@ -322,6 +322,7 @@ $.widget('nitrogen.crud', {
 		var version_comment = do_commit_version && !isPreview ? prompt('Commit comment:') : null
 		if (do_commit_version && version_comment === null)
 		{
+			// They hit cancel.
 			return
 		}
 		

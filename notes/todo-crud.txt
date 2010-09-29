@@ -1,7 +1,7 @@
 
-- extraData should be signed
-
 - remove errors from form if we are coming back from a preview
+
+- should not get warning if stepping away from version without making a change
 
 - Define full API:
     
