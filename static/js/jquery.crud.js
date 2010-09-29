@@ -38,14 +38,9 @@ var assertHoverClass = function($$) {
 $.widget('nitrogen.crud', {
 	
 	options: {
-		
 		allowCreate: true,
 		allowUpdate: true,
 		allowDelete: true,
-		
-		// Extra data to send along with the API request.
-		// Useful for when you need more info for an API mdoel adapter callback.
-		extraData: {}
 	},	
 	
 	_create: function()
@@ -121,10 +116,6 @@ $.widget('nitrogen.crud', {
 			data[this.name] = this.value;
 		});
 		return data;
-	},
-	
-	_getRequestData: function() {
-		return $.extend({}, this.options, this.options.extraData, this._getFormData())
 	},
 	
 	_setupIdle: function() {
@@ -343,9 +334,9 @@ $.widget('nitrogen.crud', {
 		$.ajax({
 			type: "POST",
 			url: this.options.url + '/' + (isPreview ? 'preview' : 'save'),
-			data: $.extend(this._getRequestData(), {
-				id: this.options.id ? this.options.id : 0,
-				__version_comment: version_comment
+			data: $.extend({}, this.options, this._getFormData(), {
+				__do_commit_version : do_commit_version ? 'yes' : undefined,
+				__version_comment: version_comment || undefined
 			}),
 			success: this._bound({
 					save   : '_handleSaveResponse',

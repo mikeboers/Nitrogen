@@ -95,15 +95,23 @@ class CRUD(object):
         return handler(request)
         
     def versions_for(self, obj):
-        """Return a list of (version, comment) tuples."""
-        return []
+        """Return a list of (version, comment) tuples.
+        
+        None implies that this object does not have version support.
+        
+        """
+        return None
     
     def commit(self, obj, comment=None):
         """Commit the state of the given object."""
         pass
         
     def revert(self, obj, version):
-        """Revert the given object to the state from the given version."""
+        """Revert the given object to the state from the given version.
+        
+        Is called on EVERY getForm request, and need not actually do anything.
+        
+        """
         pass
     
     def api_getForm(self, request):
@@ -114,9 +122,6 @@ class CRUD(object):
         except:
             request.error("bad id")
         
-        # Get a version > 0, or None.
-        version = int(request.get('version', 0)) or None
-        
         s = self.Session()
         if id_:
             obj = s.query(self.model_class).get(id_)
@@ -124,8 +129,8 @@ class CRUD(object):
                 raise ApiError("could not find object %d" % id_)
             
             # Apply requested version data.
-            if version and self.allow_revert:
-                self.revert(obj, version)
+            if self.allow_revert:
+                self.revert(obj, request.get('version'))
                 
             form = self.form_class(obj=obj)
         else:
@@ -189,7 +194,7 @@ class CRUD(object):
             if m:
                 data[m.group(1)] = request[key]
         
-        response['html'] = self.render_model(model, **data)
+        response['html'] = self.render_model(model)
         
         # Must explicity roll back the changes we have made otherwise
         # the database will remain locked.
@@ -242,30 +247,33 @@ class CRUDAppMixin(object):
         
         @wz.cached_property
         def commits_by_id(self):
-            return collections.defaultdict(list)
+            return collections.defaultdict(dict)
             
         def versions_for(self, obj):
             id = obj.id
             versions = []
-            for i, raw in enumerate(self.commits_by_id[id]):
+            for version_id, raw in sorted(self.commits_by_id[id].items()):
                 comment = raw['comment'].strip()
-                versions.append((i + 1, raw['commit_time'].ctime() + (': ' if comment else '') + comment))
+                versions.append((version_id, raw['commit_time'].ctime() + (': ' if comment else '') + comment))
             if versions:
-                versions.append((0, '< current >'))
+                versions.append(('current', '< current >'))
             return versions
         
         def commit(self, obj, comment=None):
             id = obj.id
             data = obj.todict()
             log.debug('COMMIT %r to %r: %r' % (id, data, comment))
-            self.commits_by_id[id].append(dict(
+            key = 'version-%d' % (len(self.commits_by_id[id]) + 1)
+            self.commits_by_id[id][key] = dict(
                 data=data,
                 comment=comment,
                 commit_time=datetime.datetime.now()
-            ))
+            )
             
         def revert(self, obj, version):
-            for key, value in self.commits_by_id[obj.id][version - 1]['data'].iteritems():
+            if version not in self.commits_by_id[obj.id]:
+                return
+            for key, value in self.commits_by_id[obj.id][version]['data'].iteritems():
                 setattr(obj, key, value)
 
     
