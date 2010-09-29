@@ -95,9 +95,24 @@ $.widget('nitrogen.crud', {
 		$$.addClass('crud')
 		$$.addClass('crud-state-' + state)
 		assertHoverClass($$)
-		$$.addClass('crud-pulse')
-		$$.removeClass('crud-pulse', 1000)
+		
 		return oldState
+	},
+	
+	_pulse: function(name, duration, callback) {
+		var $$ = this.widget()
+		var data = $$.data()
+		if (data.crud_pulsing) {
+			return false
+		}
+		data.crud_pulsing = true
+		name = 'crud-pulse' + (name ? '-' + name : '')
+		$$.addClass(name)
+		$$.removeClass(name, duration || 1000, function() {
+			data.crud_pulsing = false
+		})
+		return true
+		
 	},
 	
 	_getFormData: function() {
@@ -146,16 +161,13 @@ $.widget('nitrogen.crud', {
 		var $$ = this.widget()
 		
 		if (this.state == 'preview') {
-			this.preview.remove()
-			$$.removeClass('crud-invalid')
-			$$.show()
-			this._setState('edit')
+			this._restorePreviewForm()
 			return
 		}
 				
 		// Block out the UI while we get the form.
 		$$.block({
-			message: 'Retrieving form. Please wait...'
+			message: 'Building form...'
 		});
 		
 		
@@ -171,7 +183,7 @@ $.widget('nitrogen.crud', {
 			data: data,
 			success: this._bound('_setupForm'),
 			error: function() {
-				$$.unblock()
+				$$.unblock({fadeOut: 0})
 				alert('There was an error while contacting the server.')
 			},
 			dataType: 'json'
@@ -181,14 +193,19 @@ $.widget('nitrogen.crud', {
 	// This takes an object which must have a `form` property.
 	_setupForm: function(res)
 	{
+		if (this.state != 'idle' && this.state != 'edit') {
+			throw 'bad state to setup form'
+		}
+		
 		var $$ = this.widget()
-		$$.unblock()
 		$$.empty()
+		$$.unblock({fadeOut: 0})
 		
-		
-		// Add error classes
+		// Add an invalid class if this is the response to submitting the form
+		// and it being invalid.
 		if (res.valid !== undefined && !res.valid) {
 			$$.addClass('crud-invalid')
+			this._pulse()
 		} else {	
 			$$.removeClass('crud-invalid')
 		}
@@ -211,9 +228,9 @@ $.widget('nitrogen.crud', {
 				.appendTo(this.form)
 			this.versionSelect = $('<select class="version-menu"></select>')
 				.appendTo(versionControls)
-			this.commitOnSave = $('<input name="__do_commit" type="checkbox" value="1" />')
+			this.commitOnSave = $('<input name="__do_commit_version" type="checkbox" value="1" />')
 				.appendTo(versionControls)
-			$('<label for="__do_commit">Commit on Save</label>')
+			$('<label for="__do_commit_version">Commit on Save</label>')
 				.appendTo(versionControls)
 		
 			var versions = res.versions || []
@@ -285,66 +302,62 @@ $.widget('nitrogen.crud', {
 		}
 	},
 	
-	save: function(e, mode)
+	// Submit the current form data to the server to get either a form back
+	// if the data is invalid, or the HTML representation. This has been
+	// overloaded to perform the duties of the "save", "preview" and "apply"
+	// button.
+	//
+	// In "save" mode
+	save: function(mode)
 	{
+		if (this.state != 'edit' && this.state != 'preview')
+			throw 'cannot save from  ' + this.state
+		
+		switch(mode) {
+			case 'preview':
+			case 'apply':
+				break
+			default:
+				mode = 'save'
+		}
 		
 		var self = this
 		var $$ = this.widget()
 		
-		mode = mode ? mode : 'save'
 		var isPreview = mode == 'preview'
+		var isApply = mode == 'apply'
 		
-		if (this.state != 'edit' && this.state != 'preview')
-			throw 'not editing'
-		
-		
-		
-		var do_commit = this.commitOnSave.attr('checked')
-		var commit_msg = do_commit ? prompt('Commit message:') : null
-		
-		if (do_commit && commit_msg === null)
+		var do_commit_version = this.commitOnSave.attr('checked')
+		var version_comment = do_commit_version && !isPreview ? prompt('Commit comment:') : null
+		if (do_commit_version && version_comment === null)
 		{
 			return
 		}
 		
-		var blockTarget = mode == 'apply' ? this.preview : $$
-		blockTarget.block(isPreview ?
-			'Building preview. Please wait...' :
-			'Saving. Please wait...'
-		)
+		var blockTarget = isApply ? this.preview : $$
+		blockTarget.block({message: isPreview ?
+			'Building preview...' :
+			'Saving...'
+		})
 		
 		$.ajax({
 			type: "POST",
 			url: this.options.url + '/' + (isPreview ? 'preview' : 'save'),
 			data: $.extend(this._getRequestData(), {
 				id: this.options.id ? this.options.id : 0,
-				__commit_message: commit_msg
+				__version_comment: version_comment
 			}),
-			success: function(res) {
-				switch(mode) {
-					case 'apply':
-						self.preview.remove()
-						// NO BREAK
-					case 'save':
-						self._handleSaveResponse(res)
-						break
-					case 'preview':
-						self._handlePreviewResponse(res)
-						break
-					default:
-						throw 'unrecognized mode: ' + mode
-				}
-			},
+			success: this._bound({
+					save   : '_handleSaveResponse',
+					preview: '_handlePreviewResponse',
+					'apply': '_handleApplyResponse'
+				}[mode]),
 			error: function() {
-				blockTarget.unblock()
+				blockTarget.unblock({fadeOut: 0})
 				alert('There was an error while contacting the server.')
 			},
 			dataType: 'json'
 		})
-	},
-	
-	preview: function(e) {
-		this.save(e, 'preview')
 	},
 	
 	_handleSaveResponse: function(res)
@@ -354,15 +367,21 @@ $.widget('nitrogen.crud', {
 		}
 		else
 		{
-			if (res.id)
-				// So the next will be an update.
-				this.options.id = res.id
+			// Anything the server passes down (ie. new ID) will get merged
+			// into the existing options when passed along to the new CRUD
+			// setup.
+			var options = $.extend(this.options, res)
+			
 			var $$ = this.widget()
 			$(res.html)
 				.insertAfter($$)
-				.crud(this.options)
+				.crud(options)
 			$$.remove()
 		}
+	},
+	
+	preview: function() {
+		this.save('preview')
 	},
 	
 	_handlePreviewResponse: function(res)
@@ -373,10 +392,11 @@ $.widget('nitrogen.crud', {
 		else
 		{			
 			$$ = this.widget()
+			$$.unblock({fadeOut: 0})
 			this.preview = $(res.html)
 				.insertAfter($$)
-			$$.unblock()
-			$$.hide()
+			$$.hide()	
+			
 			this._setState('preview')
 			this._setState('preview', this.preview)
 			
@@ -398,12 +418,25 @@ $.widget('nitrogen.crud', {
 			
 		}
 	},
+	
+	_restorePreviewForm: function() {
+		var $$ = this.widget()
+		this.preview.remove()
+		$$.removeClass('crud-invalid')
+		$$.show()
+		this._setState('edit')
+	},
 
-	apply: function(e) {
+	apply: function() {
 		if (this.state != 'preview')
 			throw 'not previewing'
-		this.save(e, 'apply')
+		this.save('apply')
 		
+	},
+	
+	_handleApplyResponse: function(res) {
+		this.preview.remove()
+		this._handleSaveResponse(res)
 	},
 	
 	_isDifferentData: function(data)
@@ -452,7 +485,7 @@ $.widget('nitrogen.crud', {
 			return
 		
 		$$.block({
-			message: 'Deleting. Please wait...'
+			message: 'Deleting...'
 		});
 		
 		$.ajax({
@@ -465,7 +498,7 @@ $.widget('nitrogen.crud', {
 				$$.remove();
 			},
 			error: function() {
-				$$.unblock()
+				$$.unblock({fadeOut: 0})
 				alert('There was an error while contacting the server.')
 			},
 		});

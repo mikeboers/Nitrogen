@@ -179,8 +179,8 @@ class CRUD(object):
             s.commit()
             response['id'] = model.id
             
-            if self.allow_commit and request.get('__do_commit'):
-                commit_message = request.get('__commit_message', '')
+            if self.allow_commit and request.get('__do_commit_version'):
+                commit_message = request.get('__version_comment', '')
                 self.commit(model, commit_message)
         
         data = {}
@@ -199,7 +199,7 @@ class CRUD(object):
         return response
     
     def api_preview(self, request):
-        return self.handle_save(request, commit=False)
+        return self.api_save(request, commit=False)
 
     def api_delete(self, request):
         id_ = request['id']

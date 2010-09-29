@@ -1,6 +1,8 @@
 
 - extraData should be signed
 
+- remove errors from form if we are coming back from a preview
+
 - Define full API:
     
     method "getForm" -> {
