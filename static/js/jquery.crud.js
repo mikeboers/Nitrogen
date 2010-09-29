@@ -87,8 +87,8 @@ $.widget('nitrogen.crud', {
 	
 	_setState: function(state, obj) {
 		var $$ = obj ? obj : this.widget()
-		var oldDate = this.state
-		if (oldDate) {
+		var oldState = this.state
+		if (oldState) {
 			$$.removeClass('crud-state-' + this.state)
 		}
 		this.state = state
@@ -97,7 +97,7 @@ $.widget('nitrogen.crud', {
 		assertHoverClass($$)
 		$$.addClass('crud-pulse')
 		$$.removeClass('crud-pulse', 1000)
-		return oldDate
+		return oldState
 	},
 	
 	_getFormData: function() {
@@ -147,7 +147,7 @@ $.widget('nitrogen.crud', {
 		
 		if (this.state == 'preview') {
 			this.preview.remove()
-			$$.unblock()
+			$$.removeClass('crud-invalid')
 			$$.show()
 			this._setState('edit')
 			return
@@ -161,14 +161,13 @@ $.widget('nitrogen.crud', {
 		
 		// Get the form.
 		var data = $.extend({}, this.options, this.options.extraData, {
-			method: 'get_form',
 			id: this.options.id ? this.options.id : 0,
 			version: version || 0
 		});
 	
 		$.ajax({
 			type: "POST",
-			url: this.options.url,
+			url: this.options.url + '/getForm',
 			data: data,
 			success: this._bound('_setupForm'),
 			error: function() {
@@ -186,7 +185,6 @@ $.widget('nitrogen.crud', {
 		$$.unblock()
 		$$.empty()
 		
-		this._setState('edit')
 		
 		// Add error classes
 		if (res.valid !== undefined && !res.valid) {
@@ -194,6 +192,9 @@ $.widget('nitrogen.crud', {
 		} else {	
 			$$.removeClass('crud-invalid')
 		}
+		
+		// Must come after the error classes.
+		this._setState('edit')
 		
 		this.form = $('<form />')
 			.appendTo($$)
@@ -314,9 +315,8 @@ $.widget('nitrogen.crud', {
 		
 		$.ajax({
 			type: "POST",
-			url: this.options.url,
+			url: this.options.url + '/' + (isPreview ? 'preview' : 'save'),
 			data: $.extend(this._getRequestData(), {
-				method: isPreview ? 'preview' : 'submit_form',
 				id: this.options.id ? this.options.id : 0,
 				__commit_message: commit_msg
 			}),
@@ -375,8 +375,8 @@ $.widget('nitrogen.crud', {
 			$$ = this.widget()
 			this.preview = $(res.html)
 				.insertAfter($$)
+			$$.unblock()
 			$$.hide()
-			
 			this._setState('preview')
 			this._setState('preview', this.preview)
 			
@@ -395,15 +395,6 @@ $.widget('nitrogen.crud', {
 				.click(this._bound('revert'))
 				.appendTo($buttons);
 			$buttons.buttonset();
-			
-			var self = this
-			var pulse = function()
-			{
-				if (self.state == 'preview') {
-					self.preview.toggleClass('crud-preview-pulse', 750, null, pulse)
-				}
-			}
-			pulse()
 			
 		}
 	},
@@ -466,9 +457,8 @@ $.widget('nitrogen.crud', {
 		
 		$.ajax({
 			type: "POST",
-			url: this.options.url,
+			url: this.options.url + '/delete',
 			data: {
-				method: 'delete',
 				id: this.options.id
 			},
 			success: function(res) {

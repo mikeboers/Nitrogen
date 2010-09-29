@@ -86,10 +86,12 @@ class CRUD(object):
     
     @as_api
     def __call__(self, request):
-        method = request['method']
-        handler = getattr(self, 'handle_%s' % method, None)
+        method = request.path.strip('/')
+        if not method:
+            request.error('no method given')
+        handler = getattr(self, 'api_%s' % method, None)
         if not handler:
-            request.error('no api method %r' % method)
+            request.error('bad method %r' % method)
         return handler(request)
         
     def versions_for(self, obj):
@@ -104,7 +106,7 @@ class CRUD(object):
         """Revert the given object to the state from the given version."""
         pass
     
-    def handle_get_form(self, request):
+    def api_getForm(self, request):
         
         id_ = request.get('id')
         try:
@@ -139,7 +141,7 @@ class CRUD(object):
             versions=self.versions_for(obj) if obj and self.allow_revert else None,
         )
     
-    def handle_submit_form(self, request, commit=True):
+    def api_save(self, request, commit=True):
         
         response = {}
         
@@ -196,10 +198,10 @@ class CRUD(object):
         
         return response
     
-    def handle_preview(self, request):
-        return self.handle_submit_form(request, commit=False)
+    def api_preview(self, request):
+        return self.handle_save(request, commit=False)
 
-    def handle_delete(self, request):
+    def api_delete(self, request):
         id_ = request['id']
         s = self.Session()
         obj = s.query(self.model_class).get(id_)
@@ -207,28 +209,28 @@ class CRUD(object):
             raise ApiError("could not find object %d" % id_)
         obj.delete()
         s.commit()
-
-    def handle_order(self, request):
-        order = [int(x) for x in request['order'].split(',')]
-
-        # Remove dummy (zero) ids.
-        order = filter(None, order)
-
-        # Grab all of the items that we are dealing with.
-        items = self.session.query(self.model_class).filter(self.model_class.id.in_(order)).all()
-
-        # Make sure that we have them all.
-        if len(items) != len(order):
-            raise ApiError("Could not find all the items.")
-
-        id_to_items = dict((item.id, item) for item in items)
-        order_ids = list(sorted(item.order_id for item in items))
-
-        for i, id_ in enumerate(order):
-            item = id_to_items[id_]
-            item.order_id = order_ids[i]
-
-        self.session.commit()
+    # 
+    # def handle_order(self, request):
+    #     order = [int(x) for x in request['order'].split(',')]
+    # 
+    #     # Remove dummy (zero) ids.
+    #     order = filter(None, order)
+    # 
+    #     # Grab all of the items that we are dealing with.
+    #     items = self.session.query(self.model_class).filter(self.model_class.id.in_(order)).all()
+    # 
+    #     # Make sure that we have them all.
+    #     if len(items) != len(order):
+    #         raise ApiError("Could not find all the items.")
+    # 
+    #     id_to_items = dict((item.id, item) for item in items)
+    #     order_ids = list(sorted(item.order_id for item in items))
+    # 
+    #     for i, id_ in enumerate(order):
+    #         item = id_to_items[id_]
+    #         item.order_id = order_ids[i]
+    # 
+    #     self.session.commit()
 
 
 class CRUDAppMixin(object):

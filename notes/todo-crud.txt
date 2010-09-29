@@ -1,4 +1,22 @@
 
+- extraData should be signed
+
+- Define full API:
+    
+    method "getForm" -> {
+        form: html of the form
+        versions: null or a list of (id, comment) tuples. Null indicates no
+            version support. The ID is an opaque string.
+    }
+    method "save" -> {
+        valid: true/false if it passed validation
+        get_form response here if valid is false
+        html (if valid): a string of the html representing the new content
+    }
+    method "preview" -> the same as "submit_form", but does not commit the data to the repo
+    method "delete"  -> doesn't return anything
+
+
 - "allow_*" properties should look for a "<perm>_predicate", then a "predicate", and then just return True
 
 - function to convert "dict[key]" style queries into nested ones

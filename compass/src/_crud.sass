@@ -6,29 +6,25 @@
     background-color: #fffad4
     
     // Darken yello while hover on idle.
-    &.crud-state-idle.crud-hover
+    &.crud-state-idle &.crud-hover
         background-color: #fff6b8
     
     // Add a dashed line while editing or in preview.
     &.crud-state-edit, &.crud-state-preview
         outline: 1px dashed #92907B
     
-    &.crud-state-edit > form
-        padding: 5px !important
+    &.crud-state-edit
+        &.crud-pulse
+            background-color: #D9FFB5
+        &.crud-invalid.crud-pulse
+            background-color: #FC9294
+        & > form
+            padding: 5px !important
     
     &.crud-state-preview
         background-color: #C2DAFC
-        &.crud-hover
+        &.crud-hover, &.crud-pulse
             background-color: #ABCFFC
-        
-        &.crud-preview-pulse
-            background-color: #D7E5FB
-    
-    &.crud-state-edit.crud-pulse
-        background-color: #D9FFB5
-    
-    &.crud-state-edit.crud-invalid.crud-pulse
-        background-color: #FC9294 !important
     
     .silk-icon + .ui-button-text
         padding-left: 2.5em
