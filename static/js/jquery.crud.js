@@ -214,14 +214,17 @@ $.widget('nitrogen.crud', {
 		if (this.originalData === undefined)
 			this.originalData = this._getFormData()
 		
-		if (res.versions !== null) {			
+		if (res.versions !== null) {
+			var randomId = 'rand-' + Math.random().toString().slice(2)			
 			var versionControls = $('<div class="crud-version-control">History: </div>')
 				.appendTo(this.form)
 			this.versionSelect = $('<select class="version-menu"></select>')
 				.appendTo(versionControls)
-			this.commitOnSave = $('<input name="__do_commit_version" type="checkbox" />')
+			this.commitOnSave = $('<input class="do-commit-version" type="checkbox" />')
+				.attr('id', randomId)
 				.appendTo(versionControls)
-			$('<label for="__do_commit_version">Commit on Save</label>')
+			$('<label class="do-commit-version">Add to history<br/>on save</label>')
+				.attr('for', randomId)
 				.appendTo(versionControls)
 		
 			var versions = res.versions || []
@@ -318,8 +321,8 @@ $.widget('nitrogen.crud', {
 		var isPreview = mode == 'preview'
 		var isApply = mode == 'apply'
 		
-		var do_commit_version = this.commitOnSave.attr('checked')
-		var version_comment = do_commit_version && !isPreview ? prompt('Commit comment:') : null
+		var do_commit_version = !isPreview && this.commitOnSave.attr('checked')
+		var version_comment   = !isPreview && do_commit_version ? prompt('Commit comment:') : null
 		if (do_commit_version && version_comment === null)
 		{
 			// They hit cancel.

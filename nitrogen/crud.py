@@ -35,6 +35,7 @@ class CRUD(object):
     allow_create = True
     allow_update = True
     allow_delete = True
+    
     allow_commit = True
     allow_revert = True
     
