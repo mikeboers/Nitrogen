@@ -163,7 +163,7 @@ $.widget('nitrogen.crud', {
 		
 		
 		// Get the form.
-		var data = $.extend({}, this.options, this.options.extraData, {
+		var data = $.extend({}, this.options, {
 			id: this.options.id ? this.options.id : 0,
 			version: version || 0
 		});
@@ -184,7 +184,7 @@ $.widget('nitrogen.crud', {
 	// This takes an object which must have a `form` property.
 	_setupForm: function(res)
 	{
-		if (this.state != 'idle' && this.state != 'edit') {
+		if (this.state && this.state != 'idle' && this.state != 'edit') {
 			throw 'bad state to setup form'
 		}
 		
@@ -321,14 +321,16 @@ $.widget('nitrogen.crud', {
 		var isPreview = mode == 'preview'
 		var isApply = mode == 'apply'
 		
-		var do_commit_version = !isPreview && this.commitOnSave.attr('checked')
-		var version_comment   = !isPreview && do_commit_version ? prompt('Commit comment:') : null
-		if (do_commit_version && version_comment === null)
-		{
-			// They hit cancel.
-			return
+		if (this.commitOnSave) {
+			var do_commit_version = !isPreview && this.commitOnSave.attr('checked')
+			var version_comment   = !isPreview && do_commit_version ? prompt('Commit comment:') : null
+			if (do_commit_version && version_comment === null)
+			{
+				// They hit cancel.
+				return
+			}
 		}
-		
+			
 		var blockTarget = isApply ? this.preview : $$
 		blockTarget.block({message: isPreview ?
 			'Building preview...' :

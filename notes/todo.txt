@@ -1,4 +1,9 @@
 
+- the various `AppMixin`s should have a way of enforcing which ones should
+  load first. Ideally this would be a multi-inheritance chain, but I don't want
+  to have the massive amount of imports like that.
+  
+  Investigate how those imports would be.
 
 - restore as_html/as_text/as_json properties. Add them to the Response
   constructor

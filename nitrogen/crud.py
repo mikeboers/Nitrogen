@@ -37,7 +37,7 @@ class CRUD(object):
     allow_delete = True
     
     allow_commit = True
-    allow_revert = True
+    allow_restore = True
     
     def __init__(self, Session, **kwargs):
         
@@ -107,7 +107,7 @@ class CRUD(object):
         """Commit the state of the given object."""
         pass
         
-    def revert(self, obj, version):
+    def restore(self, obj, version):
         """Revert the given object to the state from the given version.
         
         Is called on EVERY getForm request, and need not actually do anything.
@@ -132,8 +132,8 @@ class CRUD(object):
                 raise ApiError("could not find object %d" % id_)
             
             # Apply requested version data.
-            if version is not None and self.allow_revert:
-                self.revert(obj, version)
+            if version is not None and self.allow_restore:
+                self.restore(obj, version)
                 
             form = self.form_class(obj=obj)
         else:
@@ -146,7 +146,7 @@ class CRUD(object):
     def get_form_response(self, obj, form, version=None):
         return dict(
             form=self.render_form(form),
-            versions=self.versions_for(obj) if obj and self.allow_revert else None,
+            versions=self.versions_for(obj) if obj and self.allow_restore else None,
             version=None
         )
     
@@ -270,7 +270,7 @@ class MemoryRepoMixin(object):
             commit_time=datetime.datetime.now()
         )
         
-    def revert(self, obj, version):
+    def restore(self, obj, version):
         if version not in self.commits_by_id[obj.id]:
             return
         for key, value in self.commits_by_id[obj.id][version]['data'].iteritems():
