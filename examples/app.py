@@ -15,7 +15,8 @@ app = App(
     debug=True,
     recaptcha_private_key='6LdCprwSAAAAALD_xUJfPSp0uG-prJFLydoZJ-Ro',
     recaptcha_public_key='6LdCprwSAAAAALonrXY3m6LtMEEVh4ZVZi0pZ04n',
-    template_path=[root + '/templates']
+    template_path=[root + '/templates'],
+    template_cache_dir=root + '/templates',
 )
 
 app.export_to(globals())
