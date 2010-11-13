@@ -282,7 +282,7 @@ class CRUDAppMixin(object):
     build_crud_class = lambda self: build_inheritance_mixin_class(self.__class__, CRUD)
     CRUD = wz.cached_property(build_crud_class, name='CRUD')
     
-    class CRUDMixin(MemoryRepoMixin):
+    class CRUDMixin(object):
         pass
     
     def export_to(self, map):
