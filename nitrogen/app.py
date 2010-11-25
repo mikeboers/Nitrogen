@@ -191,19 +191,25 @@ class Core(object):
         return obj
     
     def init_request(self, environ):
+        self._local.environ = environ
         self._local.request = self.Request(environ)
     
-    def finish_request(self):
+    def finish_request(self, status, headers):
         self.local_manager.cleanup()
         
     def __call__(self, environ, start):
         app = self.flatten_middleware()
         self.init_request(environ)
+        
+        def _start(*args):
+            self._local.start_args = args
+            return start(*args)
+        
         try:
-            for x in app(environ, start):
+            for x in app(environ, _start):
                 yield x
         finally:
-            self.finish_request()
+            self.finish_request(*self._local.start_args)
     
     def run(self, via=None, *args, **kwargs):
         self.flatten_middleware()
