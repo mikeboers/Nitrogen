@@ -125,7 +125,7 @@ class FileHandler(logging.Handler):
         self.fh.write('\n')
         self.fh.flush()
 
-
+        
 class LoggingAppMixin(object):
     
     def setup_config(self):
@@ -139,7 +139,12 @@ class LoggingAppMixin(object):
             'nitrogen.route': logging.WARNING,
         }.items():
             levels.setdefault(name, level)
-        config.setdefault('log_handlers', []).append(logging.StreamHandler(sys.stderr))
+        
+        config.setdefault('log_handlers', [])
+        
+        config.setdefault('access_log_name', 'http.access')
+        config.setdefault('access_log_format', '%(REQUEST_METHOD)s %(REQUEST_URI)s -> %(STATUS_CODE)s in %(DURATION_MS).1fms')
+        
             
     def __init__(self, *args, **kwargs):
         super(LoggingAppMixin, self).__init__(*args, **kwargs)
@@ -147,6 +152,9 @@ class LoggingAppMixin(object):
         if not self.config.log_formatter:
             self.config['log_formatter'] = ThreadLocalFormatter()
         self.setup_logging()
+        self.access_log = None
+        if self.config.access_log_name and self.config.access_log_format:
+            self.access_log = logging.getLogger(self.config.access_log_name)
     
     def setup_logging(self):
         self.log_formatter = self.config.log_formatter
@@ -161,9 +169,22 @@ class LoggingAppMixin(object):
             handler.setFormatter(self.log_formatter)
             root.addHandler(handler)
     
+    def handle_access_log(self, app):
+        def _handle_access_log(environ, start):
+            pass
+        
     def init_request(self, environ):
         super(LoggingAppMixin, self).init_request(environ)
         self.log_formatter.init_request(environ)
+        if self.access_log:
+            self._local.start_time = time.time()
+    
+    def finish_request(self, status, headers):
+        if self.access_log:
+            params = self._local.environ.copy()
+            params['STATUS_CODE'] = status
+            params['DURATION_MS'] = 1000 * (time.time() - self._local.start_time)
+            self.access_log.info(self.config.access_log_format % params)
     
     
     
