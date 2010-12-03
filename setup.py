@@ -12,6 +12,7 @@ setup(
         flup
         webob
         werkzeug
+        beaker
         
         mako
         markdown
