@@ -342,7 +342,7 @@ class Response(CommonCore, wz.Response):
         cdisp, opts = self._content_disposition
         if cdisp is None or cdisp.lower() == 'attachment':
             if value is not None:
-                self.headers['content-disposition'] = dump_options_header('attachment', {'filename': value})
+                self.headers['content-disposition'] = wz.dump_options_header('attachment', {'filename': value})
             else:
                 self.headers.discard('content-disposition')
         else:
