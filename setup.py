@@ -25,9 +25,12 @@ setup(
         
         # These are mine.
         multimap
+        pytomcrypt
         
         wtforms
         paste
+        pil
+        
     ''',
     
     extras_require=dict(
@@ -44,5 +47,5 @@ setup(
         
     author="Mike Boers",
     author_email="nitrogen@mikeboers.com",
-    license="New BSD"
+    license="BSD-3"
 )

@@ -1,0 +1,786 @@
+
+- the various `AppMixin`s should have a way of enforcing which ones should
+  load first. Ideally this would be a multi-inheritance chain, but I don't want
+  to have the massive amount of imports like that.
+  
+  Investigate how those imports would be.
+
+- restore as_html/as_text/as_json properties. Add them to the Response
+  constructor
+ 
+- Decide if we should remove the unicode encoder as any time we use Response
+  as a wrapper then the body is automatically encoded.
+
+- design a new Session
+
+    - key features:
+        - lazy loading
+        - continuously incremented cookies
+            anything with a counter_id within the last 10 is considered current
+            and anything not current remains valid for 60 seconds after its
+            signature time. this should hopefully deal with race conditions
+            that would result in the last cookie being invalid
+    
+    - autosave, just like beaker
+        an explisit save just marks it as dirty, while persist actually saves it
+    - store id_counter, creation_time, modification_time, access_time
+    - regenerate_id() -> replace the primary id
+    - delete() -> delete the session and expire the cookie. I'm not goig to
+      do this a whole lot
+    - restart() -> a delete and regenerate
+    
+    - if it werent for the pure-cookie mode, I would think that I can get by
+      without the store seeing every seeing the http machinery. Need to have
+      a standard api with as few exposure points as possible. There isn't
+      actually any need for a pure cookie solution: my cookie container
+      already does this all very nicely.
+      
+    - the store need only be able to __getitem__, __setitem__, and __delitem__
+    - how to lazy load:
+        1) proxy dict access to the actual object, loading it on first access
+        2) get_session(environ) gets it
+
+
+- design a generic Middleware class which abstracts away the details of the
+protocol. This should be compatible with both wsgi and web3
+
+- query signing should be a part of crypto, not query
+	crypto.sign_map(map) or crypto.hmac_map(obj)
+	crypto.verify_map_signature(map) or crypto.verify_map_hmac(obj)
+
+
+- write my own auth solution like repoze.who/repose.what. take their API and
+  make it even simpler where possible. Consider copying all of their code and
+  making crazy rewriting motions.
+
+	- look at the ruby aclatraz
+	
+	call it KeyMan
+	
+	- global/class-based/object-based roles/permissions
+	
+	- role based security. this is effectively what repoze does, but calls it
+	  groups
+	
+	- Perhaps we do not need a classifier.
+	
+	- can have a list of handlers which expose methods to fill the different
+	  functions:
+	
+		- classify: Return a token representing the type of the request. This
+		  ultimately may not be required, and may only be a single function at
+		  most. This need not be a do-everything library.
+		
+		- identify(environ): return a dict of credentials (id). Stored at
+			environ['nitrogen.auth.creds']
+		
+		- authenticate(credentials): verify the authenticity of the found credentials
+		  and return a canonical user_id token if they are good. Stored at
+			environ['nitrogen.auth.user_id']
+		
+		- get_info(user_id): return more data for this user. Stored at
+			environ['nitrogen.auth.info']. This may not be required.
+		
+		- persist(user_id): Return the headers necessary to persist this user
+		  id
+		
+		- challenge(environ): Return body, status, headers for a challenge (ie.
+		  an HTML form)
+
+
+
+- should all jquery plugins have the jquery prefix? YES.
+
+- make a FileRouter, and move some javascript into nitrogen
+- consider adding a compass directory which compiles into the public css directory
+
+
+
+- fix json view filter. it is being a pain in the ass.
+    
+    I think that it is the filtering mechanism that is being a pain, coercing
+    things to strings before even running through the filters. 
+
+- some way to register a route generation data mutator function. These are
+  passed the data, and are given free range to mutate them at will. This would
+  allow one to create shortcuts or overrides.
+
+	data = {'crew': <mike object>'} -> {'controller':'film', 'film_page':'crew', 'crew':'Mike-Boers'}
+	
+	You could even pass positional arguments which then get mutated into
+	keyword arguments. This would allow for easy naming, as we could have a
+	global mutator that registers names to the keyword arguments they
+	represent.
+	
+	Perhaps the data should be mutated at every step along the way. If we are
+	doing a relative route then we ought to travel backwards along the routed
+	path allowing routers to mutate as they go
+	
+	
+- Session is unable to persist when one of the status exceptions are thrown
+  because then the session start method gets completely bypassed. I should
+  consider setting the session middleware up behind the exception handler.
+
+- Try to extend beaker sessions so that the id token is regenerated on every
+  request, OR that I am able to manually reset it
+
+- Write a basic comet app.
+	- How to have javascript run as soon as the server releases it?
+		- long polling with ajax or script tags
+		- streaming into an iframe with chunked content
+			- How do I send chunked content? Does the wsgi server have to do
+			  that for me? It looks like the mod_fcgid is doing that.
+	- How to have the wsgi app terminate when the browser kills the connection
+		- When we yield it may just not call for another iterable.
+		- Looks like a close() method on the iterable will be called if it
+		  exists.
+			- Must write a class for mutating an output stream on the fly and
+			  maintain a close method. nitrogen.wsgi.util.StreamMutator
+
+
+
+- extract route into it's own package preserving history as much as possible
+	- rename it:
+		- route
+		- pathfinder
+		- routefinder
+		- router
+		- webber
+		- pystar (Py*)
+		- webstar (Web*)
+		- querystar
+		- getstar
+		- pstar
+		- wsgistar
+		- wstar
+
+- make all of the middleware retain the close method if there is one. This is
+  likely easiest accomplished by writing a Middleware class which is
+  overrideable to provide whatever functinality you want, and maintain best
+  practises without you having to try too hard.
+
+	Could also have a couple of classes for dealing with specific parts. Ie. a
+	nitrogen.wsgi.util.StreamMutator can be a wrapper around an interator
+	which mutates it in a given way, and maintains the close method
+
+
+- cleanup crud.js:
+	
+	- $.autocrud() looks for data-crud-url attribute, and pulls is as the numeric
+	  part of the id attribute
+	
+	- try to break the main function up into smaller functions, using
+	significantly fewer closures. will have to use $$.data a lot to maintain
+	the proper state
+	    
+	    $.fn.crud(opts)
+		    set up GUI. need to be careful about how we deal with
+		    this being called twice. Throw a hissy fit, perhaps.
+		    
+		edit/create: setup the form
+		save: TRY to save the form, inserting the new HTML or the form with
+			  errors
+		delete: delete this object
+	
+	- api methods:
+		
+		- get_form
+			id
+			version (optional)
+		- get_metadata
+			returns permissions and such
+		- preview
+			parms: all the data
+			
+		
+	
+	- use http://json.org/json2.js JSON.stringify to serialize the request.
+	this will require the server side to parse the request manually
+	
+	- perhaps have a registry of types that contain defaults:
+		$.crud('setup-type', {'type': 'blog-post', url:'whatever'})
+		$('...').crud('init', {'type':'blog-post', 'id': 123})
+  
+	$('#whatever').crud('delete', {<more options>})
+	$.crud('create', {url: 'whatever'})
+	
+	Should "url" be "entry_point"? or "uri"?
+	
+	- get proper permission checking in here everywhere
+	- proper etags to make sure that things haven't changes
+	- accept: application/json, and reject others
+	- content-type: application/json
+	- proper rest-style status codes
+	- perhaps the request itself could be a json object so that I can pass
+	  more complex information to it
+
+
+- write my own template wrapper class which:
+	- render's directly (.render(name, _type=None, **kwargs))
+		this could pull from the name what type of template it is
+	- replicates what mako does (.get_template(name))
+	- can be inserted into mako templates for <%include /> tags
+		look like it would need get_template and adjust_uri (from _lookup_template
+		in mako.runtime). adjust_uri can be lifted right from mako TemplateLookup
+	- have it's path extended dynamically
+	- have the render function extended dynamically (although I can easily do
+	  it manually: render = lambda name, **kw: tpl.tender(name, x=1, y=2, **kw)
+
+
+- pull the blog into nitrogen.blog
+
+	- the class should take:
+		- render
+		- Session
+	- the class needs to abstract:
+		- determining if we are in edit mode
+		- template names should be relative (so they can be joined)
+	- building all of the various classes should be done in methods so that
+	  it can be extended (ie add fields to forms or models)
+	- should attachments/authorship be a permanent feature, or an extension?
+		If a permanent feature then they remain columns on the Post class.
+		If an extension, then they have their own migrate repo which adds the
+		columns and a mixin to add to the model.
+		
+		I could simply turn off authorship and that sort of thing. It seems like
+		it would actually be more straight forward to have it all be part of
+		the trunk, and turn features off.
+	
+	- attachments should handle straight urls of images as well
+	- attachments should be able to handle local files as well
+	
+	- how can I bundle the migrate repo along with the package?
+
+
+
+- consider having .json on response object
+- or a JSONapplication
+
+
+- reload checker must not use iter version
+	- can also loop over the modules themselves
+
+
+
+- Response should have an .abort and .redirect method
+
+- move login.html to nitrogen
+
+- del cookies['key']: should it expire or delete from this collection?
+
+    It should remove it from the collection. .expire will actually expire it.
+
+	
+- new router that uses string.format symantics
+	{name:format}
+	{id:d}
+
+- add string conversion options to ReRouter:
+	{name!int:\d+} will do auto-conversions
+
+- ReRouter parsers and formatters should not be prefixed with underscores
+	@register(r'/route/{id:\d+}', parsers=dict(id=int)
+	@register(r'/route, defaults=dict(id=0))
+
+- PatternRouter
+	will do any of the RawReRouter (ReRouter), ReRouter (PatternRouter), FormatRouter (new string.format)
+	
+	methods:
+		router.match
+		router.pattern
+		router.format
+	
+	router.register takes a type kwarg (one of 're', 'pattern', 'format')
+
+
+
+	
+- AuthAppMixin uses repoze.who and what
+	see if I can make a mixin so that permissions and groups are not cached
+		just clear out the loaded_sections if we can tell that stuff has been
+		updated
+	
+- Make a lock manager:
+	handle = Lock('whatever')
+	handle.acquire()
+	handle.release()
+	with Lock('whatever'):
+		# do something
+	
+	Take a look at the various ways I was doing this before. Also look into
+	using shared memory.
+	
+	beaker seems to do this already, just not with the context manager. could
+	simply extend the NameLock to do this
+
+- App.make_cookie_factory(namespace='default')
+	return cookies with different namespaces; either prefixes on the keys or
+	prefixes on the signing key
+
+- write my own session (or adapt beaker):
+	- decide if we want to write/save on item access, or the whole thing
+		Likely the whole thing (by default)
+	- auto save at the end if dirty
+	- no regards for mutable objects
+	- explicit save method will save everything, or just the keys you provide
+	- locks:
+		with session.lock():
+			blah blah
+		with session.lock('namespace'):
+			blah blah
+	- id is regenerated constantly
+	- method to regenerate id
+	- id could be a random tag, and a counter that gets incremented constantly
+	- maintain a creation_time, modification_time, and access_time attribute
+		
+
+
+AppCore needs a root
+	templatemixin adds root + '/templates'
+	sessionmixin defaults to using it for data
+	
+
+- Perhaps we do not need a rewind_body_cache; change assert_body_cache to
+  cache_body or make_body_seekable, and then one can simply tell/seek on the
+  body at will.
+
+- webio.body.assert_body_cache has no protection against massive requests
+
+- Make sure that my cookies.Container.expire takes a path and domain. Document
+  that it is called expire, and not delete.
+
+- Cookies should be adjusted to take into account that we can set multiple
+  cookies to the same name but with different path and domain. The dict access
+  and .set method should delete everything of the same name, but a new 'add'
+  method should not (ie. use append to the container).
+
+- unicode.encoder should autodetect if there is a charset in the content-type, and
+  use that. Otherwise it should add a utf-8 to the charset if the mimetype
+  starts with "text/".
+
+  Could also just remove it.
+
+
+
+- nitrogen.App
+	
+	
+	- text blobs are actually a mixin!
+		- registers it's own MapRouter
+		- adds to the app.view_globals
+	
+			register __textblob in the master MapRouter
+			they have their own template path
+				within that path they are 'ext-textblob/textblob.html'
+			they serve the javascript files themselves
+				use FileRouter, which just serves files from a directory
+				lift the stuff behind this directly from flask
+	
+	
+		
+	
+	
+
+- see if I really have to add an IP and such to logs on my own: perhaps
+  the logs that I pipe into apache stderr get that sort of thing added on
+
+
+- nitrogen.route.ReRouter could have some builtin types:
+    @router.register(r'/photos/{photo_id:d}')
+    this could make sure that photo_id matches r'\d+', and gets casted to/from
+    an integer
+
+
+
+
+
+- Replace my textarea plugin with http://plugins.jquery.com/project/a-tools
+
+- Consider replacing my attrdata plugin with http://plugins.jquery.com/project/customdata
+
+- Turn some modules into their own projects:
+	- flickr
+	- imgsizer
+	- mail as "easymailer"
+	- route as "webstar"
+	- uri as "uri"
+
+- etagger should only work if the iterable is not an iterator (ie. not an instance of collections.Iterator)
+
+- request.unrouted should work even if nothing was routed
+
+- request.user_agent should never be None (it is coming from PayPal IPN)
+- Consider using alternate WSGI setup where the app must return a 3-tuple of
+  (status, headers, iterable). It seems the thing I would actually lose from
+  this would be the write function which gets returned from the start_callback
+  (which I have never actually used, and would break horribly if I used it).
+
+  It should be pretty easy to adapt from one style to the other:
+	
+		import collections
+		import itertools
+
+		def newstyle_to_old(app):
+		    def oldstyle(environ, start):
+		        status, headers, content = app(environ)
+		        start(status, headers)
+		        return content
+		    return oldstyle
+
+		def _warn_on_write(*args):
+		    raise DeprecationWarning('newstyle WSGI does not have a write method')
+
+		def oldstyle_to_newstyle(app):
+		    def newstyle_app(environ):
+		        state = []
+		        def start(status, headers, exc_info=None):
+		            state[:] = (status, headers)
+		            return _warn_on_write
+		        content = list(app(environ, start))
+		        return state[0], state[1], content
+		    return newstyle_app
+
+		def anystyle_to_newstyle(app):
+		    if app.func_code.co_argcount > 1:
+		        return oldstyle_to_newstyle(app)
+		    return app
+		
+  Id you want to do some streaming then you will need to use the newstyle or
+  write a a custom translator which is more forgiving about when start is
+  called.
+
+  Could use app.func_code.co_argcount to determine if it is a newstyle or
+  oldstyle WSGI app. Then a wsgi.call(app, environ) function could exist that
+  is smart about the calling style of the app and gives you back newstyle
+  parameters
+
+- route Request properties could be provided by a route.RequestMixin
+
+- Consider never allowing Request.cache_control to be None; the parameters of
+  the object will all be None, but the object itself will always exist.
+
+- Write action throttler; when called it sleeps for an amount of time to make
+  sure we don't pass it any faster than we should be allowed to.
+
+  It needs to work off of both non-spoofable things, and client side. Key by
+  the IP, and the class B and C network (to differing amounts, obviously).
+  Also by a cookie that is sent to the client (this one most strongly).
+
+  It has either a sleep method or a get_delay method or a test method
+  
+  see: http://stackoverflow.com/questions/549/the-definitive-guide-to-website-authentication-beta#477585
+    should implement several different methods from here, as they all have their
+    own place
+  
+  the short_sleep(max_delay) method will sleep if less than max_delay, or throw
+  an exception (which we can then turn into a server error)
+
+- Consider forcing ReRouter defaults to be provided in a defaults kwarg, and
+  then parsers, formatters, etc, need not have "_" prefix anymore.
+
+- Write middleware to set HTTP "Server" response header to:
+	"'; DROP TABLE servertypes; --"
+
+is there any way for the app to know if the browser has killed the connection?
+    This could be handy for very long delays of the throttler
+
+WSGI BEST PRACTISES
+===================
+
+Really need to STOP buffering output. Part of the specification
+(http://www.python.org/dev/peps/pep-0333/#buffering-and-streaming) states that
+middleware must always forward the entire block it receives to it's parent
+gateway/server.
+
+    - middleware which is fine:
+        compressor
+        log_formatter
+        error_logger
+        utf8_encoder
+        model/view_context setup
+        cookies.setup_factory
+        prep_view_context
+        auth.wrap... I'm not sure
+        not_found_catcher
+        routers
+    - middleware which is NOT fine:
+        output_buffer
+        error_notifier
+		etagger
+
+If I assure that I will only call start_response once, then I can likely do
+this
+
+
+
+
+
+
+REQUEST LOCAL OBJECTS
+=====================
+
+MAYBE set up a global werkzeug local manager as middleware to register against. Perhaps this is automatically done by the servers
+
+It may be a better idea in general to have each object which uses a local object clear out its local object itself...
+
+What needs to use this mechanism?
+    - loggers need to pull IP and such from the environ
+    - view context needs to clear out flash messages
+    - model context needs to destroy the context session
+
+VIEW CONTEXT and TEMPLATE PATHs
+===============================
+
+I want to write my own Mako loader so that it is trivially easy for me to
+modify the path.
+
+The various ways I could do this are:
+    - a bare bones class which only has the minimal API
+    - extend the current loader and override the path property.
+    - the path property of the view context can manipulate the loader
+
+The loader (which may well be the entire view context) should have a copy method which returns us another loader/context with the same values. Then we can proceed to modify paths and defaults, etc.
+
+
+HEIRARCHICAL HTTP SIGNALS, STATUSES and ERRORS
+==============================================
+
+
+- the signal_converter middleware should be very very closet to the top of the
+  stack.
+    - store the exception in 'nitrogen.http.signal.caught'
+- middleware which turns exceptions into HTTPServerError (or whatever, via a
+  mapping, maybe) and raises them. 
+- middleware logs all of the non-http exceptions
+- middleware converts non-http exceptions into a 500 internal server error
+    - this one will need to attach the original exception so that I can get
+      a traceback to the client for debug servers. could pass the causing
+      exception as the detail. (Python 3 would nicely remove the need for
+      doing this manually.)
+    - OR, this can use the exact same function that the next middleware does
+      and simply feeds in a 500 "Internal Server Error" with the detail saying
+      that an unknown error has occoured, and to please try again.
+- other middleware does the actual reporting
+
+- exception catcher should first try to catch HttpExceptions, and then grab
+  everything. the non-HttpException should be turned into a ServerError with
+  a traceback iff the server is in debug mode
+  
+  
+RANDOM IDEAS
+============
+
+
+
+
+- "Dear valued user,
+
+    You have found the error page for the error page...
+    You win!!
+
+"
+
+
+- Request.peek_path_info() and pop_path_info() (for routers, so they don't have to use the full uri.path.Path)
+
+
+
+- multimap._conform_value could take both the key AND the value.
+    
+- either bring in the bucket or make it it's own project
+- bring in PyTomCrypt (try to get it to compile with just the setup)
+
+- try to design a class for generic middleware which respects the intricacies
+  of the 3rd parameter to start. perhaps design it as a class with methods to
+  overide.
+  
+  - it would allow you to restart until the first real content was sent down
+    the pipe
+  - i dont really understand how to fail gracefully with an exception...
+
+- the exception catcher should buffer the whole request, and reset it every
+  time a start is called which passes on exc_info
+  - this would require all my middleware to use it properly...
+
+- remove the magic from nitrogen.model.__init__
+
+- model and view contexts could be callable wsgi middleware themselves,
+  instead of having a WSGI reset.
+
+- use repoze instead of my own auth stuff
+    - light wrapper around the authorizor to move 'repoze.who.identity' somewhere
+      else so that we can have multiple classes of user
+    - looks like I can use repoze.who fairly easily, but repoze.what is going
+      to be a bit nastier
+    - perhaps I still have to write my own user permission/groups code, but
+      dont have to do any of the authentication low-level stuff
+
+  
+
+- bottle (http://bottle.paws.de/) has an interesting idea where they have a 
+  view decorator which injects whatever was returned from the controller into
+  the template view.
+  
+      @view('some_template.mako')
+      @as_request
+      def something(req, res):
+        # blah blah blah
+        return {'key':'value'}
+
+- small wsgi app that serves files. you can ive it a filename and a root. it
+  will normalize the filename and do proper cache headers and so forth
+        
+        return StaticFileHandler(filename, root='/path/to/files', maxage=600)(req.environ, res.start)
+
+- consider using redis as key-value store instead of bucket
+
+
+- need to either bulk up the encoder or replace it with something else.
+	- IE does not supply a Accept-Charset header, but it still does accept
+	  UTF-8.
+	- Should only be auto encoding stuff for text/* content types.
+
+
+- figure out which parts can be seperated out
+	- flickr
+		- "milkr" is NOT taken on pypi
+	- uri
+		- "uri" is taken on pypi
+		- "uritools", "urilib
+		
+
+	- route
+		- "router"
+		- "wsgi-router"
+        
+- mailer does wierd things with unicode email addresses
+
+
+
+- See about getting https working.
+
+- Compress all of the javascript and css files together with minify (or write
+my own minifier, which sounds like a bad idea).
+    - css doesn't need compression if it is coming from sass
+    - Shane said to look at sprockets (it is in ruby)
+
+
+- rename the nitrogen.logs.FileLogger to something that indicates it is time based
+
+- logs should be timestamping with utc time, not local time
+
+
+- write a session
+
+- consider having default log path include the thread-id as well so that they are running into seperate files
+
+
+- file logger should put the format string through `time.strftime(format.replace('%(', '%%')), time.gmtime()) % params`
+  to get the file name (also so it is in GMT). actually need to double the number of percent signs in except for those that precede a single letter
+
+
+- pull out a bunch of todo itesm from http://www.catonmat.net/blog/50-ideas-for-the-new-catonmat-website/?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+catonmat+%28good+coders+code%2C+great+reuse%29&utm_content=Google+Reader 
+  as it has some good ideas
+	
+- MapRouter should sort keys by length before trying to match.
+- ModuleMapRouter could map prefixes to module names to import: "app.controller.news.main"
+  could run "main" of "app.controller.news". This just seems kinda lazy on my
+  part though
+
+
+
+- redirectors
+	mappings of paths (or path regexes) to map from/to with a http status code
+	(301?) and a location header
+
+- the App object can have mail_admins(...) that proxies sendmail to whomever
+  are specified as admins for the app (either in the config or the database?)
+
+	- mail_managers(...) or mail_group(groupname, ...)
+	- the From address should be automatically added. no-reply@domain.com
+	- the subject could have a prefix attached
+	- they could take only a subject and a message:
+		app.mail_admins('Help!', 'Something has exploded!')
+
+- the django mailers only check for newlines '\r' or '\n' in addresses, not for
+  something that completely parses properly.
+
+- django conditional view processing is pretty neat. a condition(etag_func=None, last_modified_func=None)
+  returns a decorator that will use the passed functions (which are given only
+  the request object) to see if the etag matches or the last_modified matches.
+  then it can send whatever headers it wants or calls the app. this is only
+  suggested (by me) if these calculations are very lightweight.
+
+	- @check_etag and @check_last_modified would both be for just one of the two
+	- you dont want to chain them though, as perhaps one would be true and the
+	  other false, and you want them BOTH to be true...
+
+- django has an intersting idea with a set_test_cookie() on the session. it
+  sets a test cookie. you can check for it with test_cookie_worked() and del
+  with delete_test_cookie(). You set the test cookie when displaying a login
+  form, and check for it when someone posts credentials back. you reject them
+  if they have not set cookies yet.
+  http://docs.djangoproject.com/en/1.1/topics/http/sessions/#module-django.contrib.sessions
+
+
+- read about the Atom publishing protocol, and the set of REST URLs that go with it
+  it seems the Pylons uses that setup a bunch (for resources in the route mapper
+  http://pylonshq.com/docs/en/0.9.7/thirdparty/routes/#routes.base.Mapper.resource )
+
+
+- in place editors:
+	- take all the options out of the email I sent shane
+	- consider http://usabilitythoughts.com/edit-in-place.html
+	- research other usability issues
+	- http://www.digital-web.com/articles/usability_for_rich_internet_applications/
+
+
+
+
+
+
+beta and stage should have a whitelist to allow entry. that whitelist should
+be able to be added to from the web with a password or by visiting some signed URL
+	
+	whitelist
+	checkpoint
+	sentinel
+	guard
+	gatekeeper
+	doorkeeper
+	monitor
+	sentry
+
+
+FieldSet._render should take a multipart=True param which allows for file uploads.
+	that should be passed into the viewenviron.render call, and the template
+	set enctype="multipart/form-data"
+
+
+
+
+- users
+	- should not be able to verify an email if you are already logged in
+	- should automatically login when a password is set for the first time
+
+
+- nitrogen.app.Basic
+    - setup the basic stuff for running an app automagically
+        logs, routing, ect
+    - nitrogn.app.Basic.from_config(module=config)
+    - the server objects can be greatly simplified, or just replaced with a
+      hostname and install path ("//host/path")
+    - the config object can be an actual class that has every config option
+      as a property (or something). this could simply be the whole application
+      class.
+
+
+- use this openid selector http://code.google.com/p/openid-selector/
+
+- use my own tomcrypt library
+	- password hashing
+	- encrypted cookies
+
+- make sure i'm not doing any of http://googletesting.blogspot.com/2008/07/how-to-write-3v1l-untestable-code.html
+
+- pull in http://www.mechanicalcat.net/richard/log/Python/Simple__elegant_HTML_generation
