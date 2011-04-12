@@ -11,7 +11,7 @@ import collections
 import logging
 
 from ..uri.path import Path, encode, decode
-from ..http.status import HTTPNotFound
+from ..status import HTTPNotFound
 
 
 log = logging.getLogger(__name__)

@@ -4,7 +4,7 @@ from datetime import datetime
 from .app import *
 from sqlalchemy import *
 
-from nitrogen.webio.cookies import parse_cookies
+from nitrogen.cookies import parse_cookies
 from nitrogen import forms
 
 crud_app = router = ReRouter()

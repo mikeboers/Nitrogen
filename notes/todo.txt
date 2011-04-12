@@ -9,6 +9,9 @@
 
 - pyramid.decorator.reify is pretty awesome
 
+- str_GET which is cached in the environ and GET which is the decoded one
+    - same with POST and FILES
+
 - remove RawReRouter
 
 - routers need a `scan` method to import everyting

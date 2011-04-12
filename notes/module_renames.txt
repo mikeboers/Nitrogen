@@ -1,0 +1,9 @@
+.wsgi.server -> .serve
+.wsgi.unicode -> .unicode
+.webio.body -> .body
+.webio.cookies -> .cookies
+.webio.headers -> .headers
+.webio.query -> .uri.query
+.http.encode -> .compress
+.http.etag -> .etagger
+.http.status -> .status

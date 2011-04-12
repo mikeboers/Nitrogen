@@ -1,7 +1,7 @@
 
 from .app import *
 
-from nitrogen.webio.cookies import parse_cookies
+from nitrogen.cookies import parse_cookies
 
 script_app = router = ReRouter()
 

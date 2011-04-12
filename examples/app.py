@@ -1,6 +1,5 @@
 import os
 
-from nitrogen.wsgi.server import serve
 from nitrogen.core import *
 from nitrogen.files import StaticRouter
 
