@@ -3,7 +3,6 @@ import os
 import logging
 import time
 
-from nitrogen.wsgi.server import serve
 from nitrogen.core import *
 from nitrogen.status import abort
 from nitrogen.api import ApiRequest as Api
@@ -195,4 +194,5 @@ def do_request(environ, start):
     yield 'DONE'
 
 if __name__ == '__main__':
-    app.run(via='socket')
+    from nitrogen.serve import serve_via_socket as serve
+    serve(app)

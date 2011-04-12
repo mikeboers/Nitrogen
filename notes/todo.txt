@@ -17,7 +17,8 @@
 - replace webhelpers with lxml
 
 - strip out runners
-
+    - look at what is in the fcgi one though
+    
 - Authnz package could provide a router object which tests ACLs
 - authn is extracting principals (uid and gid) from a request
 - authz is determening if principals are ALLOWed or DENYied by an __acl__

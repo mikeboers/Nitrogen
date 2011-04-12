@@ -1,6 +1,7 @@
 """WSGI application runners.
 
-This is only here to be backwards compatible with my earlier sites.
+I would like to remove these but it appears I have done some not insignificant
+work in the fcgi module.
 
 """
 
