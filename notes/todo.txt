@@ -1,4 +1,6 @@
 
+- can body be longer than CONTENT_LENGTH
+
 - consider using venusian
 - remove all the packages that were there for b/c
     - record them as we go so we can have something to rewrite it
@@ -8,6 +10,9 @@
     - OR strip werkzeugs out
 
 - pyramid.decorator.reify is pretty awesome
+
+- back to my body parser
+    sha c2f49140397c447fbbe07f1ebf523fa9c125f060
 
 - str_GET which is cached in the environ and GET which is the decoded one
     - same with POST and FILES

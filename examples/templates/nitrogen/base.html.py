@@ -3,9 +3,9 @@ from mako import runtime, filters, cache
 UNDEFINED = runtime.UNDEFINED
 __M_dict_builtin = dict
 __M_locals_builtin = locals
-_magic_number = 5
-_modified_time = 1285968335.459389
-_template_filename=u'/srv/secrettrial5.com/src/nitrogen/templates/nitrogen/base.html'
+_magic_number = 6
+_modified_time = 1302566051.846525
+_template_filename=u'/Users/mikeboers/Desktop/nitrogen/templates/nitrogen/base.html'
 _template_uri=u'/nitrogen/base.html'
 _template_cache=cache.Cache(__name__, _modified_time)
 _source_encoding='utf-8'
@@ -43,7 +43,6 @@ def render_body(context,**pageargs):
             
             __M_locals_builtin_stored = __M_locals_builtin()
             __M_locals.update(__M_dict_builtin([(__M_key, __M_locals_builtin_stored[__M_key]) for __M_key in ['page_title'] if __M_key in __M_locals_builtin_stored]))
-            __M_writer(u'')
             # SOURCE LINE 12
             if page_title:
                 # SOURCE LINE 13

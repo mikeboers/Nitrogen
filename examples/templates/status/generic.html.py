@@ -3,9 +3,9 @@ from mako import runtime, filters, cache
 UNDEFINED = runtime.UNDEFINED
 __M_dict_builtin = dict
 __M_locals_builtin = locals
-_magic_number = 5
-_modified_time = 1285968335.4448459
-_template_filename='/srv/secrettrial5.com/src/nitrogen/templates/status/generic.html'
+_magic_number = 6
+_modified_time = 1302566051.829042
+_template_filename='/Users/mikeboers/Desktop/nitrogen/templates/status/generic.html'
 _template_uri='/status/generic.html'
 _template_cache=cache.Cache(__name__, _modified_time)
 _source_encoding='utf-8'
