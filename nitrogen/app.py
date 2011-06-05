@@ -4,10 +4,11 @@ import os
 
 from werkzeug import cached_property
 
+import webstar
+
 from . import cookies
 from . import local
 from . import request
-from . import route
 from .compress import compressor
 from .proxy import Proxy
 from .serve import serve
@@ -71,10 +72,10 @@ class Core(object):
         # method) for simple apps, or append your own router to the routers
         # list. Feel free to wrap .wsgi_app at will. It will be automatically
         # wrapped by the AppMixins at every request.
-        self.primary_router = route.ReRouter()
-        self.static_router = StaticRouter(self.config.static_path)
-        self.routers = route.Chain([self.primary_router, self.static_router])
-        self.wsgi_app = self.routers
+        self.router = webstar.Router()
+        self._static_router = StaticRouter(self.config.static_path)
+        self.router.register(None, self._static_router)
+        self.wsgi_app = self.router
         
         # Setup middleware stack. This is a list of tuples; the second is a
         # function to call that takes a WSGI app, and returns one. The first
@@ -167,11 +168,11 @@ class Core(object):
         
     @property
     def route(self):
-        return self.primary_router.register
+        return self.router.register
     
     @property
     def url_for(self):
-        return self.routers.url_for
+        return self.router.url_for
     
     @property
     def local_manager(self):

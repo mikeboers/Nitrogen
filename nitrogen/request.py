@@ -13,10 +13,10 @@ import werkzeug as wz
 import werkzeug.utils as wzutil
 
 from multimap import MultiMap
+from webstar.core import Route, get_route_data
 
 from . import body
 from . import cookies
-from .route.core import get_route_history
 from .uri import query
 
 log = logging.getLogger(__name__)
@@ -108,7 +108,7 @@ class Request(CommonCore, wz.Request):
     max_content_length = 2 * 1024 * 1028
     
     # Function to use to create file objects at parse time. Defaults to
-    # rejecting all files. There are more supplied in nitrogen.webio.body.
+    # rejecting all files. There are more supplied in nitrogen.body.
     # See http://werkzeug.pocoo.org/documentation/0.6/http.html#werkzeug.parse_form_data
     # for more info.
     stream_factory = body.reject_factory
@@ -181,7 +181,7 @@ class Request(CommonCore, wz.Request):
     
     @property
     def route_history(self):
-        return get_route_history(self.environ)
+        return Route.from_environ(self.environ)
     
     @property
     def url_for(self):
@@ -189,7 +189,7 @@ class Request(CommonCore, wz.Request):
     
     @property
     def unrouted(self):
-        return self.route_history[-1].path
+        return self.route_history[-1].unrouted
     
     route = _environ_property('wsgiorg.routing_args', load_func=lambda x: x[1])    
     

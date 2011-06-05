@@ -9,8 +9,9 @@ import logging
 
 from werkzeug import Headers, wrap_file
 
+import webstar.core as core
+
 from .request import Request, Response
-from .route.core import Router as BaseRouter
 
 
 log = logging.getLogger(__name__)
@@ -175,7 +176,7 @@ class WSGIWrapper(object):
         )
         
         
-class StaticRouter(BaseRouter):
+class StaticRouter(core.RouterInterface):
     
     def __init__(self, path, data_key='filename'):
         self.path = path
@@ -189,13 +190,18 @@ class StaticRouter(BaseRouter):
         for base in self.path:
             fullpath = os.path.join(base, path)
             if os.path.exists(fullpath) and os.path.isfile(fullpath):
-                return WSGIWrapper(fullpath), '', {self.data_key: path}
+                yield core.RouteStep(
+                    head=WSGIWrapper(fullpath),
+                    router=self,
+                    consumed=path,
+                    unrouted='',
+                    data={self.data_key: path},
+                )
     
     def generate_step(self, data):
         path = data.get(self.data_key)
         if path is not None:
-            # The actual file is not a router, so no need to pass it on.
-            return path, None
+            yield core.GenerateStep(segment=path, head=None)
 
 
 
