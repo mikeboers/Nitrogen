@@ -158,7 +158,7 @@ class FCGIServer(FCGIMixin, _FCGIServer):
 class FCGIPreForkServer(FCGIMixin, _FCGIPreForkServer):
 
     def __init__(self, app, min_spare=1, max_spare=4, max_children=10,
-        max_requests=0, setup=None, teardown=None):
+        max_requests=0, setup=None, teardown=None, **kwargs):
         
         kwargs.setdefault('minSpare', min_spare)
         kwargs.setdefault('maxSpare', max_spare)
@@ -202,7 +202,7 @@ class FCGIPreForkServer(FCGIMixin, _FCGIPreForkServer):
 
         self.setup_child()
 
-        ret = super(FCGIForkServer, self)._child(*args)
+        ret = super(FCGIPreForkServer, self)._child(*args)
 
         self.teardown_child()
 
