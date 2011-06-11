@@ -135,7 +135,7 @@ class LoggingAppMixin(object):
         levels = config.setdefault('log_levels', {})
         for name, level in {
             '': logging.DEBUG,
-            'nitrogen.webio': logging.INFO,
+            'nitrogen': logging.INFO,
             'nitrogen.route': logging.WARNING,
         }.items():
             levels.setdefault(name, level)
