@@ -9,7 +9,6 @@ import webstar
 from . import cookies
 from . import local
 from . import request
-from .compress import compressor
 from .proxy import Proxy
 from .serve import serve
 from .serve.fcgi import reloader
@@ -93,7 +92,6 @@ class Core(object):
         self._flattened_wsgi_app = None
         
         self.register_middleware((self.FRAMEWORK_LAYER, 0), encoder)
-        self.register_middleware((self.TRANSPORT_LAYER, 1000), compressor)
         
         if self.config.reload:
             self.register_middleware((self.TRANSPORT_LAYER, 10000), reloader, (self.config.reloader_packages, ))
@@ -210,7 +208,7 @@ class Core(object):
             for x in app(environ, _start):
                 yield x
         finally:
-            self.finish_request(*self._local.start_args)
+            self.finish_request(*self._local.start_args[:2])
     
     def run(self, via=None, *args, **kwargs):
         self.flatten_middleware()

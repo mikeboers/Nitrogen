@@ -21,6 +21,10 @@ import zlib
 import gzip
 from wsgiref.headers import Headers
 from cStringIO import StringIO
+import logging
+
+
+log = logging.getLogger(__name__)
 
 
 def ZlibCompressor(level=9):
@@ -160,150 +164,7 @@ def decompress_gzip(data, level=9):
 
 
 def compressor(app):
-    def compressor_app(environ, start):
-
-        # Figure out which compression algos we are allowed to use
-        algos = []
-        algos_map = dict(
-            gzip=GzipCompressor,
-            deflate=DeflateCompressor
-        )
-        for algo in algos_map:
-            if algo in environ.get('HTTP_ACCEPT_ENCODING', '').lower():
-                algos.append(algo)
-
-        def compressor_start(status, headers, exc_info=None):
-            headers = Headers(headers)
-            if 'content-encoding' in headers:
-                algos[:] = []
-            if algos:
-                headers['Content-Encoding'] = algos[0]
-                try:
-                    del headers['Content-Length']
-                except KeyError:
-                    pass
-            start(status, headers.items())
-
-        # Do the compression.
-        compressor = None
-        for x in app(environ, compressor_start):
-            if compressor is None:
-                if algos:
-                    compressor = algos_map[algos[0]]()
-                else:
-                    compressor = False
-            x = compressor.compress(x) if compressor else x
-            yield x
-        if compressor:
-            yield compressor.flush()
-
-    return compressor_app
+    log.warning(__name__ + '.compressor has been deprecated; use mod_deflate')
+    return compressor
 
 
-
-
-
-
-
-def test_compress_plain():
-    """Nose test, checking that plaintext is returned."""
-
-    from webtest import TestApp
-
-    def app(environ, start):
-        start('200 OK', [('Content-Type', 'text-plain')])
-        yield 'Hello, world!'
-    app = TestApp(app)
-
-    res = app.get('/')
-    assert 'Content-Encoding' not in res.headers, "Content encoding is set."
-    assert res.body == 'Hello, world!', "Output is wrong."
-
-
-def test_compress_chunked():
-    """Nose test, checking that plaintext is returned."""
-
-    from webtest import TestApp
-
-    def app(environ, start):
-        start('200 OK', [('Content-Type', 'text-plain'),
-            ('Content-Encoding', 'chunked')])
-        yield 'Hello, world!'
-    app = TestApp(app)
-
-    res = app.get('/')
-    assert 'Content-Encoding' in res.headers, "Content encoding is not set."
-    assert res.headers['Content-Encoding'] == 'chunked', "Content encoding has been changed."
-    assert res.body == 'Hello, world!', "Output is wrong."
-
-
-def test_compress_deflate():
-    """Nose test, checking that compressed data is returned."""
-
-    from webtest import TestApp
-
-    def app(environ, start):
-        start('200 OK', [('Content-Type', 'text/plain')])
-        yield "Hello, world!"
-    app = compressor(app)
-    app = TestApp(app)
-
-
-    res = app.get('/', extra_environ={'HTTP_ACCEPT_ENCODING': 'other1,deflate,other2'})
-
-    assert 'Content-Encoding' in res.headers, "Did not get content encoding."
-    assert res.headers['Content-Encoding'] == 'deflate', "Wrong content encoding."
-
-    assert res.body != 'Hello, world!', "Recieved plaintext."
-    output = decompress_deflate(res.body)
-    assert output == "Hello, world!", "Failed decode."
-
-
-
-def test_compress_deflate():
-    """Nose test, checking that compressed data is returned."""
-
-    from webtest import TestApp
-
-    def app(environ, start):
-        start('200 OK', [('Content-Type', 'text/plain')])
-        yield "Hello, world!"
-    app = compressor(app)
-    app = TestApp(app)
-
-
-    res = app.get('/', extra_environ={'HTTP_ACCEPT_ENCODING': 'other1,gzip,other2'})
-
-    assert 'Content-Encoding' in res.headers, "Did not get content encoding."
-    assert res.headers['Content-Encoding'] == 'gzip', "Wrong content encoding."
-
-    assert res.body != 'Hello, world!', "Recieved plaintext."
-    output = decompress_gzip(res.body)
-    assert output == "Hello, world!", "Failed decode."
-
-
-def test_compress_either():
-    """Nose test, checking that compressed data is returned."""
-
-    from webtest import TestApp
-
-    def app(environ, start):
-        start('200 OK', [('Content-Type', 'text/plain')])
-        yield "Hello, world!"
-    app = compressor(app)
-    app = TestApp(app)
-
-
-    res = app.get('/', extra_environ={'HTTP_ACCEPT_ENCODING': 'gzip,deflate'})
-
-    assert 'Content-Encoding' in res.headers, "Did not get content encoding."
-    assert res.headers['Content-Encoding'] == 'gzip', "Wrong content encoding."
-
-    assert res.body != 'Hello, world!', "Recieved plaintext."
-    output = decompress_gzip(res.body)
-    assert output == "Hello, world!", "Failed decode."
-
-
-
-if __name__ == '__main__':
-    import nose; nose.run(defaultTest=__name__)
