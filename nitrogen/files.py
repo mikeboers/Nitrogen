@@ -163,24 +163,25 @@ def send_file(filename_or_fp, environ=None, mimetype=None, as_attachment=False,
 
 class WSGIWrapper(object):
     
-    def __init__(self, path):
+    def __init__(self, path, use_x_sendfile):
+        self.use_x_sendfile = use_x_sendfile
         self.path = path
     
     @Request.application
     def __call__(self, request):
-        use_x_sendfile = False #request.environ.get('SERVER_SOFTWARE', '').startswith('Apache')
         return send_file(self.path,
             environ=request.environ,
             conditional=True,
-            use_x_sendfile=use_x_sendfile
+            use_x_sendfile=self.use_x_sendfile
         )
         
         
 class StaticRouter(core.RouterInterface):
     
-    def __init__(self, path, data_key='filename'):
-        self.path = path
+    def __init__(self, path, data_key='filename', use_x_sendfile=True):
+        self.path = map(os.path.abspath, path)
         self.data_key = data_key
+        self.use_x_sendfile = use_x_sendfile
         super(StaticRouter, self).__init__()
     
     def route_step(self, path):
@@ -191,7 +192,7 @@ class StaticRouter(core.RouterInterface):
             fullpath = os.path.join(base, path)
             if os.path.exists(fullpath) and os.path.isfile(fullpath):
                 yield core.RouteStep(
-                    head=WSGIWrapper(fullpath),
+                    head=WSGIWrapper(fullpath, self.use_x_sendfile),
                     router=self,
                     consumed=path,
                     unrouted='',
