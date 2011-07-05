@@ -45,10 +45,8 @@ myself. It really wouldn't be all that bad.
 					some stuff in the test. you break out again by dropping out
 					of the if. the only nasty part is that we couldn't start
 					a tag in one block and finish it in another.
-				! endif
 				! for key in data:
 					## do something with key in here
-				! endfor
 				$ 'an expression'.title()
 				Or perhaps an ${'inline'.upper()} expression?				
 				## comment

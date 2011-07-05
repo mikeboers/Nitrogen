@@ -1,8 +1,0 @@
-Use the WSGI (env/start) style apps everywhere.
-
-There is a @request_app decorator which turns stuff into a request object
-	the request object should have a .run(app) which runs a lower app passing
-	the env and start.
-	
-	This has to deal with being bound to a method (which takes self or cls).
-	Also needs to pass on extra args from a ReRouter

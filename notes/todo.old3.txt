@@ -1,95 +1,5 @@
 
-- upgrade to Werkzeug 0.7
-
-- werkzeug tracks all of the amounts posted, we dont need to at request.py:143
-	I think we may still need to.
-
-- constructive things to do
-	- plugin architecture and/or namespaces for app plugins
-	- new authentication system that works with new routers
-	- AuthMixin based off of st5 extensions to App
-	- ImgSizer that uses x_sendfile
-		- Some base class for generating content that gets saves into files.
-
-- Response.from_static_file(path, use_x_sendfile=True)
-	- set last_modified to mtime of file
-
-- FileMutator
-	- a couple of methods to override to have a file served that is built from
-	  another. the results will be cached
-
-- versioned_static_url('/path/to/asset')
-	- makes a '/t=<mtime-of-file>/path/to/asset?v=<mtime-of-file>'
-	- these should be served with a HUGE cache time
-
-- nitrogen.sign
-	- sign(secret, str_to_sign, **kwargs) -> signature
-	- verify(secret, str_to_sign, signature, **kwargs) -> bool
-	
-	- either use a deterministic repr or only allow strings to be signed
-	
-- deprecate some Request properties
-
-- nitrogen.lock.FileLock
-	__init__(path, mode='shared', recursive=False)
-	acquire
-	locked
-	release
-	upgrade -> convert shared to exclusive
-	downgrade -> convert exclusive to shared
-
-
-
-- remove beaker extensions (not used)
-- remove compress (handled by apache)
-- remove lipsum (just use your own)
-- remove serve extensions (just write your own...)
-- remove unicode (should be handled by Response)
-- remove api
-	- add Request.assert_args(*names) -> throws an exception if it doesn't have them
-	- rewrite CRUD
-- move flash messages to session AppMixin
-- remove all of the b/c modules
-- remove headers (werkzeugs are good)
-- remove pager
-- remove proxy
-- remove status
-- rename to seekable_body and Request.make_body_seekable
-- rename db to sqlalchemy
-	- remove session extensions
-	- remove declarative extensions
-- remove etagger (handled by my Request.application extension)
-- remove HTTP prefixed exceptions
-- rename files to static
-- remove flickr
-- rename forms to wtforms
-- remove uri
-	- move signing to nitrogen.sign
-	- keep encode/decode
-	- keep parse/format
-	- keep remove_dot_segments
-	- keep resolve_relative
-	- keep query_encode/decode
-- remove most of crypto (replaced by pytomcrypt)
-
-
-- new session	
-	- __ctime__, __atime__, __mtime__ in the dict
-	- .lock(name='__main__', shared=False) method creates a /<root>/<id>.<name>.lock file and returns it
-	- .purge/.reset/.clear/.save methods
-	- the dict must detect mutations
-	- save by writing to /<root>/<name>.<random>.journal and moving into place
-		this avoids a race condition
-
-
-
-- instead of naming app mixin classes ResponseMixin, perhaps have a decorator
-which marks something as a mixin.
-	
-	@mixin('Response')
-	class ResponseMixin(object):
-		pass
-
+- can body be longer than CONTENT_LENGTH
 
 - consider using venusian
 - remove all the packages that were there for b/c
@@ -97,33 +7,29 @@ which marks something as a mixin.
 - replace as much of werkzeug as we can with paste/webob
     - go back to the monkey patched cgi.FieldStorage
         - perhaps make this it's own project?
-        - parse_(query|form|files) caches the NON decoded version in the environ
-            parse_query(environ, charset=None) -> non decoded
-            parse_query(environ, charset='utf8') -> decoded
     - OR strip werkzeugs out
 
 - pyramid.decorator.reify is pretty awesome
 
+- back to my body parser
+    sha c2f49140397c447fbbe07f1ebf523fa9c125f060
+
 - replace webhelpers with lxml
 
+    
 - Authnz package could provide a router object which tests ACLs
 - authn is extracting principals (uid and gid) from a request
-- authz is determining if principals are ALLOWed or DENYied by an __acl__
+- authz is determening if principals are ALLOWed or DENYied by an __acl__
 - Pyramid authn_policy interface only supplies:
     - unauthenticated_userid(self, request)
     - remember(self, request, principal, **kw)
     - forget(self, request)
-
 - should the things that AppMixins export be namespaced? Instead of exporting
   everything they could export a single object such as "db" with all the DB
   stuff
 
 - AppPlugin instead of AppMixin
 	- use c3linearize to determine proper ordering of plugins
-
-    
-- perhaps absolute uri.path.Path should have an empty first element, or a '/'
-  first element. It seems more sensible that it be an empty first element
 
 - move mako stuff into nitrogen.templates.mako.helpers
 
@@ -135,6 +41,22 @@ which marks something as a mixin.
 
 - asset specification is nice: http://docs.pylonsproject.org/projects/pyramid/1.0/narr/assets.html#asset-specifications
 
+- take a look at Pyramid routing; it is awfully similar to our own ({foo:\d+} syntax and everything)
+    - consider adding predicates (see: Custom Route Predicates in http://docs.pylonsproject.org/projects/pyramid/1.0/narr/urldispatch.html)
+    - predicates are also used for doing conversions from strings into native types
+    - def map_kwargs(func, *names):
+        def _map_kwargs(data):
+            for name in names:
+                data[name] = func(data[name])
+            return True
+        return _map_kwargs
+    - translate the existing parsers to predicates internally
+    - perhaps a {name:re:format} -> {id:\d+:%4d}
+        - it would be even nicer if we just used the printf syntax to do the pattern matching...
+    - can we have a format_predicates as well? It would recieve the data and convert it into the string repr before getting formatted.
+
+- consider simplifying how much information the RouteHistory stores. Perhaps just a list of the routers and the final matched data is good enough to rebuild the route. Perhaps it should be defined such that that is enough.
+
 - consider moving to an events-like notification system for the before_request and after_request sort of callbacks.
 
 - my authorization system should use the __acl__ instance and class properties (building the full ACL from the entire mro of the object).
@@ -144,6 +66,7 @@ which marks something as a mixin.
     - we calculate the full ACL as the merge of the __acl__ parameters along the MRO of the object.
         - we can provide an __acl_bases__ which is used instead of __class__.__bases__ in the C3 (ie. mro) algo.
 
+- make a c3linearize module/package which does the MRO calculation for us, optionally looking at a different attribute for the bases.
 - use this new linearizer for the building of classes out of mixins on the AppMixins
 
 - take a good hard look at some sort of plugin architechture or the ZCA (Zope Component Architecture) instead of multiple inheritance for linking all of the App pieces together.
@@ -157,6 +80,11 @@ which marks something as a mixin.
 - have to look really hard at the "context" resource that Pyramid is always talking about.
 
 - consider putting the full python virtualenv into an env subdirectory in all of the sites. This may make everything a little bit more self contained and easier to work in.
+
+- nitrogen.route.ChainRouter should accept both lists of routers, and individual routers into *args.
+- consider rename of ChainRouter to Fork? They are not actually chaines; we traverse them depth-first until something matches.
+- consider moving primary routing algos off of the routers themselves. Then it makes more sense that replacing them in child classes doesn't actually do anything.
+- measure the memory footprint of all of the python code I am using on st5.com; perhaps there are a few things I can rip out of other projects and/or replace (ie. beaker depends on paste, repoze.who on repoze) to bring that way down.
 
 - take a look at how pyramid tests itself
 
@@ -182,12 +110,9 @@ which marks something as a mixin.
     - aceept classes look cleaner
     - cookies are cleaner, but mine is more functional (ie. signed cookies)
     - post is NOT nice because cgi.FieldStorage does not have a maximum
-		(surely it does though...)
 
 - go back to a patched cgi.FieldStorage for the parsing instead of wz
     - need to provide max_memory, max_file_size, etc
-	- theoretically Content-Length is the max around the cgi.fieldstorage
-	  would read anyways, so we can simply reject based on that number
 
 - remove all of the wsgi runners
 - split proxy module into it's own package
@@ -208,7 +133,64 @@ which marks something as a mixin.
 - add getone (and others) from webob.multidict to MultiMap
 
 
+- route.ReRouter:
+	- _parsers -> parsers (drop the underscore, but still support it for
+	  compatibility)
 
+- route
+	- A router like the werkzeug Map: patterns map to endpoints
+	- string formatting-like patterns: '/%(id)d/%(title)s'
+	- trailing slash on the pattern marks as a branch, not a leaf
+		a request to a branch without a slash redirects to the slashed version
+		(as that is the canonical one)
+		
+		- ModuleRouter(s) are a branch, not a leaf
+		- even if the ReRouter consumes the slash on the end, a slash will
+		  still be passed to the next router
+	
+	- the primary routing function should take the route and immediately
+	  generate a URL from it to see if it matches. if it does match, it is the
+	  canonical route, and let it go through. if it doesnt generate then the
+	  definition is incomplete. if it generates to something else then go
+	  through the routing/generating process until 1) we get a canonical route,
+	  then redirect to it 2) we cannot route/generate 3) we generate a url we
+	  have already routed in this pass, and call it an incomplete definition
+	  
+	    - can use one of the redirects that has the browser redo the same
+	      request with the same mode and everything (with the same data as
+	      well, I think...) (this would be a 307)
+	    - normalize the request before it even hits the routing algo, then do
+	      a redirect at the end
+    
+    - ModuleRouter(s) should immediately import all their child modules
+    
+    - in the docs specify that the routing tree is must be a DAG. We may not
+      actually go about asserting this, but it is a good idea.
+      
+        - SignedGateway could be installed optionally by:
+            >>> main = ReRouter(...)
+            >>> gate = SignedGateway(main, ...)
+            >>> __app__ = Chain([gate, main])
+            
+            This is still a DAG.
+    
+    - reconsider adding names/keys to routes. you would have a list of names
+      and walk back up the route looking for the nearest one that matches the
+      first name, then pop it off and go down that branch. if you hit the root
+      start going down every route looking for a match. this should be a
+      breadth-first search, so consider slowly building up a massive set of
+      generators. as soon as one matches the first namespace we restart the
+      process with the next one. if kwargs are provided as well then we start
+      that routing process at the namespace tip
+    
+    - is there actually any requirement to store the unrouted path as part of
+      the route, or can I just keep the routers, args and kwargs they spit off?
+      I think the only thing I'm using it for now is to build up the SCRIPT_NAME
+      in the __call__ method, but I could just do this in the route method. OR
+      use the regenerated part to figure this out
+    
+    - consider if the path ReRouter matches against should really always
+      start with a slash. Likely yes, as PATH_INFO does this.
       
 - send a 413 Request Entity Too Large for when limits are exceeded
 
