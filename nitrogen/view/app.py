@@ -108,12 +108,6 @@ class ViewAppMixin(object):
         data = self._prep_data(data)
         return template.render_unicode(**data)
     
-    def render_string(self, template_string, **data):
-        """Render a string as a template with the given keyword args."""
-        template = mako.template.Template(template_string, lookup=self.lookup)
-        data = self._prep_data(data)
-        return template.render_unicode(**data)
-    
     def _get_flash_messages(self):
         
         # Try to store them in the session (if it exists).

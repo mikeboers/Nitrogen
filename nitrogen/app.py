@@ -70,11 +70,9 @@ class Core(object):
         
         # Setup initial routers. Use the primary router (or just the .route
         # method) for simple apps, or append your own router to the routers
-        # list. Feel free to wrap .wsgi_app at will. It will be automatically
-        # wrapped by the AppMixins at every request.
+        # list.
         self.router = webstar.Router()
         self.router.register(None, StaticRouter(self.config.static_path))
-        self.wsgi_app = self.router
         
         # Setup middleware stack. This is a list of tuples; the second is a
         # function to call that takes a WSGI app, and returns one. The first
@@ -148,7 +146,7 @@ class Core(object):
         self.middleware.append((priority, func, args or (), kwargs or {}))    
     
     def _call_wsgi_app(self, environ, start):
-        return self.wsgi_app(environ, start)
+        return self.router(environ, start)
     
     def flatten_middleware(self):
         if self._flattened_wsgi_app is None:
@@ -209,9 +207,5 @@ class Core(object):
             self.request_finished.trigger(environ)
             for obj in self.__managed_locals:
                 obj.__dict__.clear()
-    
-    def run(self, via=None, *args, **kwargs):
-        self.flatten_middleware()
-        kwargs.setdefault('debug', self.config.debug)
-        serve(via or self.config['run_mode'], self, *args, **kwargs)
+
 
