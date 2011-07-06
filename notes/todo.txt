@@ -1,4 +1,36 @@
 
+- nitrogen.signal.Signal
+	- same API as http://millermedeiros.github.com/js-signals/
+		- Signal.add
+		- Signal.dispatch
+		- Signal.remove
+
+- webstar.Router.__call__ should move most of it's functionality to a helper
+  method which takes what it wants from the environment and returns the route,
+  etc.. Then nitrogen will use that instead of calling the router directly.
+  This will allow us to check __acl__ attributes on the entire route, and we
+  can pass nitrogen.request.Request objects directly. All of the wsgi-style
+  middleware can be applied around this call_app method.
+	- determine if there is ever any other wsgi-style middleware applied
+	  directly to actions
+	- @wsgi_middleware(func)
+		creates a __wsgi_stack__ attribute on the function which is what would
+		actually be called by nitrogen if it was present
+	- the request should have a response attribute created on it, which will
+	  be the response object that renderers will use
+
+- @renderer(html='/path/to/template')
+	- requesting something.json would give us the JSON dump
+	- requesting something.html would give us the rendered page
+	- anything else would default to the rendered page
+
+- nitrogen.util.deprecated
+	- log the usage just once per process
+
+- some way to convert data to json format if requested, otherwise actually
+  render everything. Will need to be sure that there aren't any secret things
+  being passed to the templates...
+
 - upgrade to Werkzeug 0.7
 
 - werkzeug tracks all of the amounts posted, we dont need to at request.py:143
@@ -72,6 +104,9 @@
 	- keep query_encode/decode
 - remove most of crypto (replaced by pytomcrypt)
 
+
+- consider moving Cookie signing code into the cookies themselves, and the
+  container has a list of classes to use to try to parse the raw values
 
 - new session	
 	- __ctime__, __atime__, __mtime__ in the dict
