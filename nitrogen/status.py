@@ -10,8 +10,6 @@ from httplib import responses as _code_to_message
 from paste import httpexceptions as _httpexceptions
 from paste.util.quoting import strip_html, html_quote, no_quote, comment_quote
 
-from .headers import Headers
-
 log = logging.getLogger(__name__)
 
 

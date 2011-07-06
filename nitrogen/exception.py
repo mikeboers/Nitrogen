@@ -7,10 +7,10 @@ import traceback
 import logging
 
 from werkzeug.exceptions import HTTPException as WZException
+from werkzeug.datastructures import Headers
 from mako.exceptions import RichTraceback as MakoTraceback
 
 from . import status
-from .headers import Headers
 
 log = logging.getLogger(__name__)
 
@@ -189,7 +189,7 @@ def exception_handler(app, get_template=None, debug=False):
         
         if isinstance(e, status.Move):
             headers = Headers(e.headers)
-            log.info('caught %d %s (to %r): %r' % (e.code, e.title, headers['location'], e.detail))
+            log.info('caught %d %s (to %r): %r' % (e.code, e.title, headers['Location'], e.detail))
             for x in e(environ, start):
                 yield x
             return
