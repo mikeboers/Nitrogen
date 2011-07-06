@@ -1,13 +1,13 @@
 
 import logging
 import os
+import threading
 
 from werkzeug import cached_property
 
 import webstar
 
 from . import cookies
-from . import local
 from . import request
 from .proxy import Proxy
 from .serve import serve
@@ -97,7 +97,6 @@ class Core(object):
             self.register_middleware((self.TRANSPORT_LAYER, 10000), reloader, (self.config.reloader_packages, ))
         
         self._local = self.local()
-        self.request = self._local('request')
         
         Core.RequestMixin.cookie_factory = self.cookie_factory
         Core.ResponseMixin.cookie_factory = self.cookie_factory
@@ -128,7 +127,6 @@ class Core(object):
             Request=self.Request,
             Response=self.Response,
             route=self.route,
-            request=self.request,
             config=self.config,
         )
     
@@ -172,11 +170,9 @@ class Core(object):
     def url_for(self):
         return self.router.url_for
     
-    @property
-    def local_manager(self):
-        # This is a property so we can access it without calling __init__
-        self.__dict__['local_mananger'] = obj = local.LocalManager()
-        return obj
+    @cached_property
+    def _locals(self):
+        return []
     
     def local(self):
         """Return a managed thread-local object, reset for every request.
@@ -185,16 +181,16 @@ class Core(object):
         local objects (which we assume to be clean every time).
         
         """
-        obj = self.local_manager.local()
-        self.__dict__.setdefault('_locals', []).append(obj)
+        obj = threading.local()
+        self._locals.append(obj)
         return obj
     
     def init_request(self, environ):
         self._local.environ = environ
-        self._local.request = self.Request(environ)
     
-    def finish_request(self, status, headers):
-        self.local_manager.cleanup()
+    def finish_request(self, environ, status, headers):
+        for obj in self._locals:
+            obj.__dict__.clear()
         
     def __call__(self, environ, start):
         app = self.flatten_middleware()
@@ -208,7 +204,7 @@ class Core(object):
             for x in app(environ, _start):
                 yield x
         finally:
-            self.finish_request(*self._local.start_args[:2])
+            self.finish_request(environ, *self._local.start_args[:2])
     
     def run(self, via=None, *args, **kwargs):
         self.flatten_middleware()

@@ -179,9 +179,9 @@ class LoggingAppMixin(object):
         if self.access_log:
             self._local.start_time = time.time()
     
-    def finish_request(self, status, headers):
+    def finish_request(self, environ, status, headers):
         if self.access_log:
-            params = self._local.environ.copy()
+            params = environ.copy()
             params['STATUS_CODE'] = status
             params['DURATION_MS'] = 1000 * (time.time() - self._local.start_time)
             self.access_log.info(self.config.access_log_format % params)
