@@ -1,6 +1,17 @@
 
-- convert init_request and request_finished to Events
-
+- the App is calling controllers with a single Request object, not environ/start
+    - def as_request(func):
+        def _as_request(req):
+            return func(req, req.response)
+        return _as_request
+    - Request.application should add the original func to the __Request_app__
+      attribute of the return value. The App dispatcher can pick this up and
+      call it directly
+     
+- define the scope of the new auth[nz] packages
+    - remembering/forgetting user_id
+    - ACL based authorization
+    - apps handle their own login mechanisms, and pass the userid to app.login(user_id)
 
 - remove beaker extensions (not used)
 - remove serve extensions (just write your own...)
