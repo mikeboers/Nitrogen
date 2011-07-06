@@ -57,13 +57,9 @@ class ViewAppMixin(object):
             input_encoding='utf-8',
         )
         
-        self.view_globals['url_for'] = self.url_for
+        self.view_globals['url_for'] = lambda *args, **kwargs: self._local.request.url_for(*args, **kwargs)
         self.view_globals['get_flash_messages'] = self.get_flash_messages
         self._warned_no_session = False
-        
-    def init_request(self, environ):
-        super(ViewAppMixin, self).init_request(environ)
-        self.view_locals['url_for'] = lambda *args, **kwargs: self.request.url_for(*args, **kwargs)
         
     def export_to(self, map):
         super(ViewAppMixin, self).export_to(map)

@@ -102,6 +102,7 @@ class Core(object):
         Core.RequestMixin.cookie_factory = self.cookie_factory
         Core.ResponseMixin.cookie_factory = self.cookie_factory
         
+        self.request_started = Event()
         self.request_finished = Event()
         
         
@@ -175,7 +176,7 @@ class Core(object):
         return self.router.url_for
     
     @cached_property
-    def _locals(self):
+    def __locals(self):
         return []
     
     def local(self):
@@ -186,15 +187,16 @@ class Core(object):
         
         """
         obj = threading.local()
-        self._locals.append(obj)
+        self.__locals.append(obj)
         return obj
     
-    def init_request(self, environ):
-        self._local.environ = environ
-        
     def __call__(self, environ, start):
         app = self.flatten_middleware()
-        self.init_request(environ)
+        
+        self._local.environ = environ
+        self._local.request = self.Request(environ)
+        
+        self.request_started.trigger(environ)
         
         def _start(*args):
             self._local.start_args = args
@@ -206,7 +208,7 @@ class Core(object):
                 
         finally:
             self.request_finished.trigger(environ, self._local.start_args[0])     
-            for obj in self._locals:
+            for obj in self.__locals:
                 obj.__dict__.clear()
     
     def run(self, via=None, *args, **kwargs):

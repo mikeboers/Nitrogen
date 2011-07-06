@@ -71,20 +71,12 @@ class ThreadLocalFormatter(logging.Formatter):
         
         return message
     
-    def init_request(self, environ):    
+    def on_request_started(self, environ):    
         with self.request_count_lock:
             self.request_count += 1
             self.local_extra['request_index'] = self.request_count
             self.local_extra['remote_addr'] = environ.get('REMOTE_ADDR')
-        
-    def wsgi_setup(self, app):
-        def ThreadLocalFormatter_wsgi_setup_app(environ, start):
-            self.init_request(environ)
-            return app(environ, start)
-        return ThreadLocalFormatter_wsgi_setup_app
     
-    # For reverse compatibility.
-    setup_wsgi = wsgi_setup
 
 class ProcLocalFormatter(ThreadLocalFormatter):
     
@@ -156,6 +148,9 @@ class LoggingAppMixin(object):
         if self.config.access_log_name and self.config.access_log_format:
             self.access_log = logging.getLogger(self.config.access_log_name)
         
+        
+        self.request_started.listen(self.__on_request_started)
+        self.request_started.listen(self.log_formatter.on_request_started)
         self.request_finished.listen(self.__on_request_finished)
     
     def setup_logging(self):
@@ -175,9 +170,7 @@ class LoggingAppMixin(object):
         def _handle_access_log(environ, start):
             pass
         
-    def init_request(self, environ):
-        super(LoggingAppMixin, self).init_request(environ)
-        self.log_formatter.init_request(environ)
+    def __on_request_started(self, environ):
         if self.access_log:
             self._local.start_time = time.time()
     
