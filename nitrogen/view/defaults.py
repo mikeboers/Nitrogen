@@ -19,7 +19,6 @@ import webhelpers.text
 import webhelpers.html
 from markdown import markdown
 
-from .. import lipsum
 from ..markdown import markdown
 from ..uri.query import encode as query_encode
 from .util import urlify_name, clean_html, smart_html_escape
@@ -46,7 +45,6 @@ context['html'] = webhelpers.html.HTML
 context['urlify_name'] = urlify_name
 context['clean_html'] = clean_html
 
-context['lipsum'] = lipsum
 
 context['q'] = query_encode
 context['query_encode'] = query_encode

@@ -10,11 +10,10 @@ import webstar
 from . import cookies
 from . import request
 from .event import Event
-from .proxy import Proxy
-from .serve import serve
+from .files import StaticRouter
 from .serve.fcgi import reloader
 from .unicode import encoder
-from .files import StaticRouter
+
 
 log = logging.getLogger(__name__)
 
