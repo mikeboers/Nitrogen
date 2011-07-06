@@ -1,9 +1,40 @@
 
-- nitrogen.signal.Signal
-	- same API as http://millermedeiros.github.com/js-signals/
-		- Signal.add
-		- Signal.dispatch
-		- Signal.remove
+- convert init_request and request_finished to Events
+
+
+- remove beaker extensions (not used)
+- remove compress (handled by apache)
+- remove lipsum (just use your own)
+- remove serve extensions (just write your own...)
+- remove unicode (should be handled by Response)
+- remove api
+	- add Request.assert_args(*names) -> throws an exception if it doesn't have them
+	- rewrite CRUD
+- move flash messages to session AppMixin
+- remove all of the b/c modules
+- remove headers (werkzeugs are good)
+- remove pager
+- remove proxy
+- remove status
+- rename to seekable_body and Request.make_body_seekable
+- rename db to sqlalchemy
+	- remove session extensions
+	- remove declarative extensions
+- remove etagger (handled by my Request.application extension)
+- remove HTTP prefixed exceptions
+- rename files to static
+- remove flickr
+- rename forms to wtforms
+- remove uri
+	- move signing to nitrogen.sign
+	- keep encode/decode
+	- keep parse/format
+	- keep remove_dot_segments
+	- keep resolve_relative
+	- keep query_encode/decode
+- remove most of crypto (replaced by pytomcrypt)
+
+
 
 - webstar.Router.__call__ should move most of it's functionality to a helper
   method which takes what it wants from the environment and returns the route,
@@ -72,37 +103,7 @@
 
 
 
-- remove beaker extensions (not used)
-- remove compress (handled by apache)
-- remove lipsum (just use your own)
-- remove serve extensions (just write your own...)
-- remove unicode (should be handled by Response)
-- remove api
-	- add Request.assert_args(*names) -> throws an exception if it doesn't have them
-	- rewrite CRUD
-- move flash messages to session AppMixin
-- remove all of the b/c modules
-- remove headers (werkzeugs are good)
-- remove pager
-- remove proxy
-- remove status
-- rename to seekable_body and Request.make_body_seekable
-- rename db to sqlalchemy
-	- remove session extensions
-	- remove declarative extensions
-- remove etagger (handled by my Request.application extension)
-- remove HTTP prefixed exceptions
-- rename files to static
-- remove flickr
-- rename forms to wtforms
-- remove uri
-	- move signing to nitrogen.sign
-	- keep encode/decode
-	- keep parse/format
-	- keep remove_dot_segments
-	- keep resolve_relative
-	- keep query_encode/decode
-- remove most of crypto (replaced by pytomcrypt)
+
 
 
 - consider moving Cookie signing code into the cookies themselves, and the

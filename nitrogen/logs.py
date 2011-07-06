@@ -155,6 +155,8 @@ class LoggingAppMixin(object):
         self.access_log = None
         if self.config.access_log_name and self.config.access_log_format:
             self.access_log = logging.getLogger(self.config.access_log_name)
+        
+        self.request_finished.listen(self.__on_request_finished)
     
     def setup_logging(self):
         self.log_formatter = self.config.log_formatter
@@ -179,7 +181,7 @@ class LoggingAppMixin(object):
         if self.access_log:
             self._local.start_time = time.time()
     
-    def finish_request(self, environ, status, headers):
+    def __on_request_finished(self, environ, status, *args):
         if self.access_log:
             params = environ.copy()
             params['STATUS_CODE'] = status

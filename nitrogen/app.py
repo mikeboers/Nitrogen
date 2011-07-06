@@ -9,6 +9,7 @@ import webstar
 
 from . import cookies
 from . import request
+from .event import Event
 from .proxy import Proxy
 from .serve import serve
 from .serve.fcgi import reloader
@@ -101,6 +102,9 @@ class Core(object):
         Core.RequestMixin.cookie_factory = self.cookie_factory
         Core.ResponseMixin.cookie_factory = self.cookie_factory
         
+        self.request_finished = Event()
+        
+        
     def setup_config(self):
         self.config.setdefaults(
             root='',
@@ -187,10 +191,6 @@ class Core(object):
     
     def init_request(self, environ):
         self._local.environ = environ
-    
-    def finish_request(self, environ, status, headers):
-        for obj in self._locals:
-            obj.__dict__.clear()
         
     def __call__(self, environ, start):
         app = self.flatten_middleware()
@@ -203,8 +203,11 @@ class Core(object):
         try:
             for x in app(environ, _start):
                 yield x
+                
         finally:
-            self.finish_request(environ, *self._local.start_args[:2])
+            self.request_finished.trigger(environ, self._local.start_args[0])     
+            for obj in self._locals:
+                obj.__dict__.clear()
     
     def run(self, via=None, *args, **kwargs):
         self.flatten_middleware()
