@@ -144,14 +144,15 @@ class LoggingAppMixin(object):
         if not self.config.log_formatter:
             self.config['log_formatter'] = ThreadLocalFormatter()
         self.setup_logging()
+        
         self.access_log = None
         if self.config.access_log_name and self.config.access_log_format:
             self.access_log = logging.getLogger(self.config.access_log_name)
+            self.request_started.listen(self.__on_request_started)
+            self.wsgi_started.listen(self.__on_wsgi_started)
+            self.request_finished.listen(self.__on_request_finished)
         
-        
-        self.request_started.listen(self.__on_request_started)
         self.request_started.listen(self.log_formatter.on_request_started)
-        self.request_finished.listen(self.__on_request_finished)
     
     def setup_logging(self):
         self.log_formatter = self.config.log_formatter
@@ -171,15 +172,17 @@ class LoggingAppMixin(object):
             pass
         
     def __on_request_started(self, environ):
-        if self.access_log:
-            self._local.start_time = time.time()
+        self._local.status_code = None
+        self._local.start_time = time.time()
     
-    def __on_request_finished(self, environ, status, *args):
-        if self.access_log:
-            params = environ.copy()
-            params['STATUS_CODE'] = status
-            params['DURATION_MS'] = 1000 * (time.time() - self._local.start_time)
-            self.access_log.info(self.config.access_log_format % params)
+    def __on_wsgi_started(self, status, *args):
+        self._local.status_code = status
+    
+    def __on_request_finished(self, environ):
+        params = environ.copy()
+        params['STATUS_CODE'] = self._local.status_code
+        params['DURATION_MS'] = 1000 * (time.time() - self._local.start_time)
+        self.access_log.info(self.config.access_log_format % params)
     
     
     

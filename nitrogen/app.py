@@ -73,8 +73,7 @@ class Core(object):
         # list. Feel free to wrap .wsgi_app at will. It will be automatically
         # wrapped by the AppMixins at every request.
         self.router = webstar.Router()
-        self._static_router = StaticRouter(self.config.static_path)
-        self.router.register(None, self._static_router)
+        self.router.register(None, StaticRouter(self.config.static_path))
         self.wsgi_app = self.router
         
         # Setup middleware stack. This is a list of tuples; the second is a
@@ -103,6 +102,7 @@ class Core(object):
         Core.ResponseMixin.cookie_factory = self.cookie_factory
         
         self.request_started = Event()
+        self.wsgi_started = Event()
         self.request_finished = Event()
         
         
@@ -160,8 +160,7 @@ class Core(object):
                 app = func(app, *args, **kwargs)
             self._flattened_wsgi_app = app
         return self._flattened_wsgi_app
-        
-        
+    
     def cookie_factory(self, *args, **kwargs):
         if self.config.private_key:
             return cookies.SignedContainer(self.config.private_key, *args, **kwargs)
@@ -176,7 +175,7 @@ class Core(object):
         return self.router.url_for
     
     @cached_property
-    def __locals(self):
+    def __managed_locals(self):
         return []
     
     def local(self):
@@ -187,7 +186,7 @@ class Core(object):
         
         """
         obj = threading.local()
-        self.__locals.append(obj)
+        self.__managed_locals.append(obj)
         return obj
     
     def __call__(self, environ, start):
@@ -199,7 +198,7 @@ class Core(object):
         self.request_started.trigger(environ)
         
         def _start(*args):
-            self._local.start_args = args
+            self.wsgi_started.trigger(*args)
             return start(*args)
         
         try:
@@ -207,8 +206,8 @@ class Core(object):
                 yield x
                 
         finally:
-            self.request_finished.trigger(environ, self._local.start_args[0])     
-            for obj in self.__locals:
+            self.request_finished.trigger(environ)
+            for obj in self.__managed_locals:
                 obj.__dict__.clear()
     
     def run(self, via=None, *args, **kwargs):
