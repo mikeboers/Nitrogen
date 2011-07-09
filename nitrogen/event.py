@@ -1,5 +1,8 @@
 '''Very basic Observer pattern.'''
 
+
+from werkzeug.utils import cached_property
+
 class Event(object):
     
     def __init__(self):
@@ -17,5 +20,11 @@ class Event(object):
             
     def trigger(self, *args, **kwargs):
         return list(self.itrigger(*args, **kwargs))
+
+
+def instance_event(name):
+    return cached_property(lambda x: Event(), name=name)
+    
+    
 
         

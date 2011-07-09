@@ -9,7 +9,7 @@ import webstar
 
 from . import cookies
 from . import request
-from .event import Event
+from .event import instance_event
 from .files import StaticRouter
 from .serve.fcgi import reloader
 from .unicode import encoder
@@ -59,6 +59,11 @@ def build_inheritance_mixin_class(parent_class, base, name=None):
 
 class Core(object):
     
+    request_started = instance_event('request_started')
+    wsgi_started = instance_event('wsgi_started')
+    request_finished = instance_event('request_finished')
+    
+    
     def __init__(self, *args, **kwargs):
         
         self.config = Config()
@@ -98,9 +103,6 @@ class Core(object):
         Core.RequestMixin.cookie_factory = self.cookie_factory
         Core.ResponseMixin.cookie_factory = self.cookie_factory
         
-        self.request_started = Event()
-        self.wsgi_started = Event()
-        self.request_finished = Event()
         
         
     def setup_config(self):
