@@ -13,6 +13,47 @@
     - ACL based authorization
     - apps handle their own login mechanisms, and pass the userid to app.login(user_id)
 
+
+- if I do swap from a wsgi structure within the controllers to passing requests
+  and wanting responses back, how do I deal with:
+	1) wsgi middleware
+		a wrap_with(wsgi_middleware) decorator could add wsgi_middleware to
+		__wsgi_middleware__ on the function. these could be stacked up to
+		simulate a wsgi call later on. I'm not sure that we can fully emulate
+		the full experience.
+	2) new-style middleware
+		if we MUST return a response then it is somewhat mutatable on the way
+		back. some other middleware could be responsible for converting data
+		via a template or json.dumps, and that would return a response
+	
+	What WSGI middleware do we need to wrap around individual functions?
+		- app.auth.requires
+			- could attach to __auth_predicates__
+			- the App dispatcher could handle this
+				append all predicates together and run them through an `all`
+		- webstar.Router.register
+			- if the app dispatcher is expecting request-call-style functions
+			  and it is handling calling them itself, then this is no problem
+		- Request.application
+			- this can be turned into a no-op
+			- add __Request_application_func__ with the original function
+			- the App dispatcher handles this
+		- as_request
+			- this can be turned into a no-op
+			- add __as_request_func__ with the original function
+			- the App dispatcher handles this
+	
+	What other endpoints do we route to?
+		- ImgSizer
+		- CRUD
+		
+		These could be mitigated with a wrapper which adapts to Request
+		calling style if not given a Request.
+
+- Router.register(..., permissions=('view', 'edit'))
+	the app dispatcher can make user of the permissions data in the route to
+	make sure that the ACL of the given route allows it
+
 - remove beaker extensions (not used)
 - remove serve extensions (just write your own...)
 - remove unicode (should be handled by Response)
@@ -20,7 +61,6 @@
 	- add Request.assert_args(*names) -> throws an exception if it doesn't have them
 	- rewrite CRUD
 - move flash messages to session AppMixin
-- remove headers (werkzeugs are good)
 - remove pager
 - rename to seekable_body and Request.make_body_seekable
 - rename db to sqlalchemy
@@ -96,6 +136,10 @@
 	- either use a deterministic repr or only allow strings to be signed
 	
 - deprecate some Request properties
+	is_get/etc.
+	is_ajax
+- deprecate some Response properties
+	as_html/etc.
 
 - nitrogen.lock.FileLock
 	__init__(path, mode='shared', recursive=False)

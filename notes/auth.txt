@@ -1,0 +1,47 @@
+__acl__ = [
+	(Allow, ANY, 'view'),
+	(Allow, 'alice', ('new', 'edit')),
+	(Allow, 'role:blogger', ('new', 'edit', 'delete')),
+	(Allow, 'role:admin', ALL_PERMISSIONS).
+]
+
+	- first is Allow or Deny
+	- second is a predicate (eg. a function that matches against a given user)
+	  if a string is passed then that string must be one of the "principals"
+	  of the user
+	- third is a set of permissions allowed/denied by this patch. If a string,
+	  tuple, list, then it is converted to a set. Any other object must support
+	  lookup via __contains__
+
+We want this implementation to be able to check both if routes are viewable,
+and to protect resources (ie. anything else) with an __acl__. We can use
+Pyramid's "location aware" __parent__ attributes if we like to determine
+lineage, or supply a list, or perhaps an MRO.
+
+THE BIG QUESTION: Do ACLs on a route determine which permissions are required
+to view the route, or which permissions users have? Everything I have seen
+implies the second (eg. a "view" permission is required to look at a page, and
+everyong is given "view" by default, but the __acl__ on the cpanel router
+denies "view" to everyone that isn't "role:cpanelable").
+
+see: "Authenticaion API functions" @ api/security
+
+If we trigger an event when the App dispatcher gets a non-200 response, any
+even handler could return a new response. That could be the hook to direct to
+a login form.
+
+So, ACLs determine what permissions a set of principals has. Group membership
+is attached to the user_id. Objects can have ACLs of their own which can be
+checked manually.
+
+If __parent__ was __parents__ we can use the c3linearizer to figure out a full
+chain. Special string "__class__" (or "__mro__") could pull in the class
+hierarchy as well.
+
+Router.register(..., permissions=('add', 'edit')): we could look at the data
+for each step in a route to find permissions that are required in order to
+traverse this route. Would need to pop them out of the data dicts as they
+could end up messing with URL generation.
+
+How can we go about adding to the ACL so that we deny users access to other
+user's pages? If the route pattern is "/user/{user}/edit_profile",
