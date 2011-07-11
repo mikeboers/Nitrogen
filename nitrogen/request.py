@@ -284,14 +284,16 @@ class Response(CommonCore, wz.Response):
     
     """
     
+    default_mimetype = 'text/html'
+    
     def __init__(self, response=None, status=None, headers=None, **kwargs):
         
+        # Pull out all the args that would normally be passed to werkzeug's
+        # Response constructor.
         super_kwargs = {}
         for name in 'mimetype', 'content_type', 'direct_passthrough':
             super_kwargs[name] = kwargs.pop(name, None)
         super(Response, self).__init__(response, status, headers, **super_kwargs)
-        
-        self._wsgi_start = kwargs.pop('start_response', None) or kwargs.pop('start', None)
         
         for k, v in kwargs.items():
             if not hasattr(self, k):
@@ -311,15 +313,11 @@ class Response(CommonCore, wz.Response):
         self.cookies.expire(*args, **kwargs)
     delete_cookie = expire_cookie
     
-    # Depricated. Set mimetype directly instead.
-    as_html = _mimetype_flag('text/html')
-    as_text = _mimetype_flag('text/plain')
-    as_json = _mimetype_flag('application/json')
-    
     # Depricated. Use set_etag or add_etag instead.
     etag = wz.header_property('etag', read_only=False)
     
     def get_wsgi_headers(self, environ):
+        # This is how we inject our extra cookie headers.
         headers = super(Response, self).get_wsgi_headers(environ)
         headers.extend(self.cookies.build_headers())
         return headers
@@ -347,77 +345,8 @@ class Response(CommonCore, wz.Response):
                 self.headers.discard('content-disposition')
         else:
             raise ValueError('cant set filename for disposition %r' % cdisp)
-        
-    def start(self, status=None, headers=None, start=None, plain=None, html=None, **kwargs):
-        """Start the wsgi return sequence. DEPRICATED
-        
-        Can be called just like the standard start_response, but you can also
-        pass kwargs to be set as attributes before starting.
-        """
-        
-        # Deal with content-type overrides and properties.
-        if plain or html:
-            log.warning('Response.start html/plain kwargs are depreciated')
-            if html:
-                self.mimetype = 'text/html'
-            else:
-                self.mimetype = 'text/plain'
-        
-        for k, v in kwargs.items():
-            if not hasattr(self, k):
-                raise ValueError('no response attribute %r' % k)
-            setattr(self, k, v)
-        
-        if isinstance(status, int):
-            self.status_code = status
-        elif status:
-            self.status = status
-        
-        headers = self.headers.to_list(self.charset) + self.cookies.build_headers() + (list(headers) if headers else [])
-        (start or self._wsgi_start)(self.status, headers)
-    
-    def redirect(self, location, status=303, **kwargs):
-        self.start(status, location=location, **kwargs)
 
 
-class RequestMiddleware(object):
-    
-    request_class = None
-    response_class = None
-    
-    def __init__(self, app):
-        self.app = app
-    
-    @classmethod
-    def _get_pair(cls, environ, start_response):
-        request  = (cls.request_class  or Request )(environ)
-        response = (cls.response_class or Response)(start=start_response)
-        return request, response
-    
-    def _handle_response(self, environ, start_response, response):
-        if isinstance(response, Response):
-            iter, status, headers = response.get_wsgi_response(environ)
-            start_response(status, headers)
-            response = iter
-        return response
-    
-    def __call__(self, environ, start):
-        return self._handle_response(
-            environ,
-            start,
-            self.app(*self._get_pair(environ, start))
-        )
-    
-    def __get__(self, instance, owner):
-        if not instance:
-            return self
-        return lambda environ, start: self._handle_response(
-            environ,
-            start,
-            self.app(instance, *self._get_pair(environ, start))
-        )
-
-as_request = RequestMiddleware
 
 
 
