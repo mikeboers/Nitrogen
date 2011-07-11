@@ -1,6 +1,6 @@
 
 from .app import Core
-from .db.app import DBAppMixin
+from .sqlalchemy.app import SQLAlchemyAppMixin
 from .exception import ExceptionAppMixin
 from .forms import FormAppMixin
 from .imgsizer import ImgSizerAppMixin
@@ -10,6 +10,8 @@ from .textblobs import TextBlobAppMixin
 from .view.app import ViewAppMixin
 from .crud import CRUDAppMixin
 
+__all__ = ['App']
+
 # Be careful about the order of these.
 class App(
     ImgSizerAppMixin, # Must be before View
@@ -18,20 +20,10 @@ class App(
     CRUDAppMixin, # Must be before View and DB
     ViewAppMixin,
     SessionAppMixin,
-    DBAppMixin,
+    SQLAlchemyAppMixin,
     LoggingAppMixin,
     ExceptionAppMixin, # Must be after anything that may throw exceptions.
     Core
 ):
     pass
-
-del Core
-del DBAppMixin
-del ExceptionAppMixin
-del FormAppMixin
-del ImgSizerAppMixin
-del LoggingAppMixin
-del SessionAppMixin
-del TextBlobAppMixin
-del ViewAppMixin
 

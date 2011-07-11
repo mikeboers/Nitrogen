@@ -1,3 +1,12 @@
+- DEV
+	- official static router in webstar
+	- pass template to router.register
+	- migrate to new auth
+		- strip out all the old auth
+			- write down which ones are protected
+			- XXX NEEDS AUTH
+		- detect __acl__ on the routing path
+		- process them
 
 
 - define the scope of the new auth[nz] packages
@@ -55,10 +64,6 @@
 - move flash messages to session AppMixin
 - remove pager
 - rename to seekable_body and Request.make_body_seekable
-- rename db to sqlalchemy
-	- remove session extensions
-	- remove declarative extensions
-- remove HTTP prefixed exceptions
 - rename files to static
 - rename forms to wtforms
 - remove uri
@@ -301,8 +306,6 @@ which marks something as a mixin.
 - instead of using submodules I could have a pip requirements file that is
   only going off of the "editing" modules. `make freeze-subs` could
 
-- http.status exceptions should NOT have HTTP prefix as they module chain has
-  the "http" in there already.
 
 - seperate uri package into it's own project
 
