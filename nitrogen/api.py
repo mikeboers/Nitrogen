@@ -71,10 +71,6 @@ class ApiRequest(Request, collections.Mapping):
     def encode(self, obj, indent=4, sort_keys=True):
         return json.dumps(obj, indent=indent, sort_keys=sort_keys, default=self.json_default)
     
-    abort = staticmethod(status.abort)
-    redirect = staticmethod(status.redirect)
-    error = staticmethod(lambda *args: status.abort(400, *args))
-    
     @classmethod
     def application(cls, func):
         def _application(*args):
@@ -97,9 +93,8 @@ class ApiRequest(Request, collections.Mapping):
                 body = 'internal server error'
                 code = 500
             
-            body = request.encode(body)
-            cls.response_class(start=start).start(code)
-            return body
+            response = Response(request.encode(body), code)
+            return response(environ, start)
             
         return _application
     

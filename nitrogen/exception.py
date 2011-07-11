@@ -6,7 +6,12 @@ import sys
 import traceback
 import logging
 
-from werkzeug.exceptions import HTTPException as WZException
+try:
+    from paste.httpexceptions import HTTPException as PasteException
+except ImportError:
+    class PasteException(object):
+        pass
+
 from werkzeug.datastructures import Headers
 from mako.exceptions import RichTraceback as MakoTraceback
 
@@ -175,7 +180,7 @@ def exception_handler(app, get_template=None, debug=False):
                 pass
         except status.HTTPException as e:
             e.original = None
-        except WZException as original:
+        except PasteException as original:
             e = status.exceptions.get(original.code) or status.InternalServerError
             e = e()
             e.original = original
@@ -187,14 +192,13 @@ def exception_handler(app, get_template=None, debug=False):
                 yield x
             return
         
-        if isinstance(e, status.Move):
-            headers = Headers(e.headers)
-            log.info('caught %d %s (to %r): %r' % (e.code, e.title, headers['Location'], e.detail))
+        if isinstance(e, status.HTTPRedirection):
+            log.info('caught %d %s; redirects to %r' % (e.code, e.title, e.location))
             for x in e(environ, start):
                 yield x
             return
         
-        log.info('caught %d %s: %r' % (e.code, e.title, e.detail))
+        log.info('caught %d %s: %r' % (e.code, e.title, e.description))
         
         try:
             text_report = format_report(environ, False) if debug else None

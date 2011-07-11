@@ -1,86 +1,118 @@
 """Module for WSGI status helping functions."""
 
-from __future__ import absolute_import
-
-import sys
-import re
 import logging
-from httplib import responses as _code_to_message
 
-from paste import httpexceptions as _httpexceptions
-from paste.util.quoting import strip_html, html_quote, no_quote, comment_quote
+from werkzeug.exceptions import HTTPException, default_exceptions as _wz_exceptions
+from werkzeug.utils import redirect
+
+
+__all__ = ['HTTPException', 'redirect']
+
 
 log = logging.getLogger(__name__)
 
 
-_message_to_code = dict((v.lower(), k) for k, v in _code_to_message.items())
+# Pull in all the exceptions from Werkzeug.
+for e in _wz_exceptions.itervalues():
+    globals()[e.__name__] = e
+del e
 
+# Add a status_code synonym to make it look more like a Response
+def _HTTPException_status_code(self):
+    return self.code
+HTTPException.status_code = property(_HTTPException_status_code)
+HTTPException.title = HTTPException.name
 
-exceptions = {}
+class HTTPRedirection(HTTPException):
+    """Base class for 300's status code (redirections)."""
+    pass
 
+    def __init__(self, location, headers=None):
+        super(HTTPRedirection, self).__init__(location)
+        self.location = location
+        self.headers = headers or []
 
-class _Mixin(object):
-    
-    # I am intensionally leaving the closing tags off here so that extra can
-    # be appended by whatever is calling the exception.
-    html_template = (
-    '<html>\r'
-    '  <head><title>%(title)s</title></head>\r'
-    '  <body>\r'
-    '    <h1>%(title)s</h1>\r'
-    '    <p>%(body)s</p>\r'
-    '    <hr noshade>\r'
-    '    <div align="right">%(server)s</div>\r'
-    )
-    
-    def html(self, environ):
-        """ text/html representation of the exception """
-        body = self.make_body(environ, self.template, html_quote, comment_quote)
-        return self.html_template % {
-                   'title': self.title,
-                   'code': self.code,
-                   'server': environ['SERVER_NAME'],
-                   'body': body }
-    
-    # A few things to make them look more like Werkzeug Responses.
-    @property
-    def status_code(self):
-        return self.code
-    
     def get_response(self, environ):
-        from .request import Response
-        headers, content = self.prepare_content(environ)
-        return Response(content, self.code, headers)
-
-                   
-
-# Retrieve all of the exceptions, and set them to both the HTTP prefixed, and
-# non-prefixed versions.
-StatusException = HTTPException = _httpexceptions.HTTPException
-Redirection = HTTPRedirection = _httpexceptions.HTTPRedirection
-Move = HTTPMove = _httpexceptions._HTTPMove
-Error = HTTPError = _httpexceptions.HTTPError
-BadRequest = HTTPBadRequest = _httpexceptions.HTTPBadRequest
-for name in dir(_httpexceptions):
-    if not name.startswith('HTTP'):
-        continue
-    base = getattr(_httpexceptions, name)
-    if not getattr(base, 'code', None):
-        continue
-    name = name[4:]
-    cls = type(name, (_Mixin, base), {})
-    globals()[name] = cls
-    globals()['HTTP' + name] = cls
-    exceptions[cls.code] = cls
-
-
-def abort(code, *args, **kwargs):
-    raise exceptions[code](*args, **kwargs)
+        response = redirect(self.location, 301)
+        response.headers.extend(self.headers)
+        return response
     
+        
+# All the other exceptions that Paste provides.  
+class MultipleChoices(HTTPRedirection):
+    code = 300
+    title = 'Multiple Choices'
 
-def redirect(location, code=303, *args, **kwargs):
-    raise exceptions[code](location, *args, **kwargs)
+class MovedPermanently(HTTPRedirection):
+    code = 301
+    title = 'Moved Permanently'
 
+class Found(HTTPRedirection):
+    code = 302
+    title = 'Found'
 
+class SeeOther(HTTPRedirection):
+    code = 303
+    title = 'See Other'
 
+class NotModified(HTTPException):
+    code = 304
+    title = 'Not Modified'
+    message = ''
+    def plain(self, environ):
+        return ''
+    def html(self, environ):
+        return ''
+
+class UseProxy(HTTPException):
+    code = 305
+    description = (
+        '<p>The resource must be accessed through a proxy '
+        'located at</p>')
+
+class TemporaryRedirect(HTTPRedirection):
+    code = 307
+
+class PaymentRequired(HTTPException):
+    code = 402
+    description = ('<p>Access was denied for financial reasons.</p>')
+
+class ProxyAuthenticationRequired(HTTPException):
+    code = 407
+    description = ('<p>Authentication /w a local proxy is needed.</p>')
+
+class Conflict(HTTPException):
+    code = 409
+    description = ('<p>There was a conflict when trying to complete '
+                   'your request.</p>')
+                   
+class RequestRangeNotSatisfiable(HTTPException):
+   code = 416
+   description = ('<p>The Range requested is not available.</p>')
+
+class ExpectationFailed(HTTPException):
+   code = 417
+   description = ('<p>Expectation failed.</p>')
+   
+class GatewayTimeout(HTTPException):
+   code = 504
+   description = ('<p>The gateway has timed out.</p>')
+
+class VersionNotSupported(HTTPException):
+   code = 505
+   description = ('<p>The HTTP version is not supported.</p>')
+                                   
+
+# Build up a dict, and set __all__.
+exceptions = {}
+for name, e in globals().items():
+    if name.startswith('_'):
+        continue
+    if (
+        isinstance(e, type) and
+        issubclass(e, HTTPException) and
+        isinstance(getattr(e, 'code', None), int)
+    ):
+        exceptions[e.code] = e
+        __all__.append(name)
 
