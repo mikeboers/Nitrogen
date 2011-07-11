@@ -8,11 +8,16 @@ routing, etc.
 
 import logging
 import functools
+import hashlib
+import os
+import mimetypes
 
 import werkzeug as wz
 import werkzeug.utils
 import werkzeug.wrappers
 import werkzeug.http
+import werkzeug.wsgi
+import werkzeug.datastructures
 
 from multimap import MultiMap
 from webstar.core import Route, get_route_data
@@ -242,7 +247,44 @@ class Response(wz.wrappers.Response):
                 self.headers.discard('content-disposition')
         else:
             raise ValueError('cant set filename for disposition %r' % cdisp)
+    
+    use_x_sendfile = True
+    
+    @property
+    def sendfile(self):
+        return getattr(self, '_sendfile_filename', None)
+    
+    @sendfile.setter
+    def sendfile(self, filename):
+        
+        self._sendfile_filename = filename = os.path.abspath(filename)
+        mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
 
+        if self.use_x_sendfile:
+            self.headers['X-Sendfile'] = filename
+            data = None
+        else:
+            file = open(filename, 'rb')
+            data = wz.wsgi.FileWrapper(file)
+
+        self.mimetype = mimetype
+        self.direct_passthrough = True
+        self.last_modified = os.path.getmtime(filename)
+        
+        self.set_etag('sendfile-%s-%s-%s' % (
+            os.path.getmtime(filename),
+            os.path.getsize(filename),
+            hashlib.md5(
+                filename.encode('utf8') if isinstance(filename, unicode)
+                else filename
+            ).hexdigest()[:8]
+        ))
+        # if conditional:
+        #     rv = rv.make_conditional(request)
+        #     # make sure we don't send x-sendfile for servers that
+        #     # ignore the 304 status code for x-sendfile.
+        #     if rv.status_code == 304:
+        #         rv.headers.pop('x-sendfile', None)
 
 
 

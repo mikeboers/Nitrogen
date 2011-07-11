@@ -1,12 +1,13 @@
-- DEV
-	- official static router in webstar
-	- pass template to router.register
-	- migrate to new auth
-		- strip out all the old auth
-			- write down which ones are protected
-			- XXX NEEDS AUTH
-		- detect __acl__ on the routing path
-		- process them
+
+
+- official static router in webstar
+- pass template to router.register
+- migrate to new auth
+	- strip out all the old auth
+		- write down which ones are protected
+		- XXX NEEDS AUTH
+	- detect __acl__ on the routing path
+	- process them
 
 
 - define the scope of the new auth[nz] packages
@@ -51,7 +52,6 @@
 	the app dispatcher can make user of the permissions data in the route to
 	make sure that the ACL of the given route allows it
 
-- remove beaker extensions (not used)
 - remove serve extensions (just write your own...)
 - remove unicode (should be handled by Response)
 - remove api
