@@ -10,8 +10,9 @@ import logging
 import functools
 
 import werkzeug as wz
-import werkzeug.utils as wzutil
-from werkzeug.utils import environ_property
+import werkzeug.utils
+import werkzeug.wrappers
+import werkzeug.http
 
 from multimap import MultiMap
 from webstar.core import Route, get_route_data
@@ -27,7 +28,7 @@ log = logging.getLogger(__name__)
 
 
 
-class Request(wz.Request):
+class Request(wz.wrappers.Request):
     
     """WSGI/HTTP request abstraction class.
     
@@ -120,19 +121,18 @@ class Request(wz.Request):
             content_length,
         )
     
-    # I am supplying this synonym for the Werkzeug property simply for
-    # backwards compatibility.
-    post = wz.Request.form
+    # I prefer this name.
+    post = wz.wrappers.Request.form
     
-    @wz.cached_property
+    @wz.utils.cached_property
     def query(self):
         return query.FrozenQuery.from_environ(self.environ, charset=self.charset, decode_errors=self.encoding_errors)
     args = query # Werkzeug's name.
     
     # My cookies are much nicer. 
-    cookie_string = environ_property('HTTP_COOKIE')
+    cookie_string = wz.utils.environ_property('HTTP_COOKIE')
     cookie_factory = cookies.Container
-    @wz.cached_property
+    @wz.utils.cached_property
     def cookies(self):
         raw = self.cookie_factory(self.cookie_string,
             charset=self.charset,
@@ -141,7 +141,7 @@ class Request(wz.Request):
         # Throw it into an immutable container.
         return MultiMap((k, c.value) for k, c in raw.iterallitems())
     
-    session = environ_property('beaker.session')
+    session = wz.utils.environ_property('beaker.session')
     
     @property
     def route_history(self):
@@ -155,10 +155,10 @@ class Request(wz.Request):
     def unrouted(self):
         return self.route_history[-1].unrouted
     
-    route = environ_property('wsgiorg.routing_args', load_func=lambda x: x[1])
+    route = wz.utils.environ_property('wsgiorg.routing_args', load_func=lambda x: x[1])
     
     # Werkzeug supplies if_none_match, which is likely better.
-    etag = environ_property('HTTP_IF_NOT_MATCH')
+    etag = wz.utils.environ_property('HTTP_IF_NOT_MATCH')
 
 
 
@@ -166,7 +166,7 @@ class Request(wz.Request):
 
 
 
-class Response(wz.Response):
+class Response(wz.wrappers.Response):
     
     """WSGI/HTTP response abstraction.
     
@@ -199,7 +199,7 @@ class Response(wz.Response):
         
         
     cookie_factory = cookies.Container
-    @wz.cached_property
+    @wz.utils.cached_property
     def cookies(self):
         return self.cookie_factory()
     
@@ -211,7 +211,7 @@ class Response(wz.Response):
     delete_cookie = expire_cookie
     
     # Depricated. Use set_etag or add_etag instead.
-    etag = wz.header_property('etag', read_only=False)
+    etag = wz.utils.header_property('etag', read_only=False)
     
     def get_wsgi_headers(self, environ):
         # This is how we inject our extra cookie headers.
@@ -223,7 +223,7 @@ class Response(wz.Response):
     def _content_disposition(self):
         cdisp = self.headers.get('content-disposition')
         if cdisp:
-            return wz.parse_options_header(cdisp)
+            return wz.http.parse_options_header(cdisp)
         return cdisp, None
         
     @property
@@ -237,7 +237,7 @@ class Response(wz.Response):
         cdisp, opts = self._content_disposition
         if cdisp is None or cdisp.lower() == 'attachment':
             if value is not None:
-                self.headers['content-disposition'] = wz.dump_options_header('attachment', {'filename': value})
+                self.headers['content-disposition'] = wz.http.dump_options_header('attachment', {'filename': value})
             else:
                 self.headers.discard('content-disposition')
         else:
