@@ -58,15 +58,12 @@ class ViewAppMixin(object):
         )
         
         self.view_globals['url_for'] = lambda *args, **kwargs: self._local.request.url_for(*args, **kwargs)
-        self.view_globals['get_flash_messages'] = self.get_flash_messages
-        self._warned_no_session = False
         
     def export_to(self, map):
         super(ViewAppMixin, self).export_to(map)
         map.update(
             render=self.render,
             get_template=self.get_template,
-            flash=self.flash,
         )
     
     @property
@@ -108,46 +105,6 @@ class ViewAppMixin(object):
         data = self._prep_data(data)
         return template.render_unicode(**data)
     
-    def _get_flash_messages(self):
-        
-        # Try to store them in the session (if it exists).
-        session = self.request.session
-        if session is not None:
-            return session.get('_flash_messages', [])
-        
-        if not self._warned_no_session:
-            log.warning('No session to store flash_messages in. Please setup session support.')
-            self._warned_no_session = True
-        
-        # Store them locally if not, but they will not persist.
-        return self._local.__dict__.get('flash_messages', [])
-    
-    def _set_flash_messages(self, messages):
-        
-        # Try to store them in the session (if it exists).
-        session = self.request.session
-        if session is not None:
-            if not messages:
-                session.pop('_flash_messages', None)
-            else:
-                session['_flash_messages'] = messages
-            session.save()
-            return
-        
-        self._local.__dict__['flash_messages'] = messages
-        
-    def get_flash_messages(self):
-        messages = self._get_flash_messages()
-        self._set_flash_messages([])
-        return messages
-    
-    # Depricated    
-    def add_flash_message(self, class_, message):
-        self.flash(message, class_)
-    
-    def flash(self, message, class_=None):
-        messages = self._get_flash_messages() + [(class_, message)]
-        self._set_flash_messages(messages)
     
     
 

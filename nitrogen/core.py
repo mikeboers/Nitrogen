@@ -14,12 +14,12 @@ __all__ = ['App']
 
 # Be careful about the order of these.
 class App(
-    ImgSizerAppMixin, # Must be before View
-    TextBlobAppMixin, # Must be before Form and CRUD.
-    FormAppMixin, # Must be before View
-    CRUDAppMixin, # Must be before View and DB
+    ImgSizerAppMixin, # Needs View
+    TextBlobAppMixin, # Needs Form and CRUD.
+    FormAppMixin, # Needs View
+    CRUDAppMixin, # Needs View and SQLAlchemy
+    SessionAppMixin, # Needs View (for view_globals)
     ViewAppMixin,
-    SessionAppMixin,
     SQLAlchemyAppMixin,
     LoggingAppMixin,
     ExceptionAppMixin, # Must be after anything that may throw exceptions.

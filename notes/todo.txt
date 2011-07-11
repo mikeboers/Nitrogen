@@ -39,10 +39,6 @@
 			- this can be turned into a no-op
 			- add __Request_application_func__ with the original function
 			- the App dispatcher handles this
-		- as_request
-			- this can be turned into a no-op
-			- add __as_request_func__ with the original function
-			- the App dispatcher handles this
 	
 	What other endpoints do we route to?
 		- ImgSizer
@@ -61,7 +57,6 @@
 - remove api
 	- add Request.assert_args(*names) -> throws an exception if it doesn't have them
 	- rewrite CRUD
-- move flash messages to session AppMixin
 - remove pager
 - rename to seekable_body and Request.make_body_seekable
 - rename files to static

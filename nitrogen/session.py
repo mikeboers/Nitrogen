@@ -5,83 +5,9 @@ import threading
 
 import beaker.session
 import beaker.middleware
-
-
+import werkzeug.utils
 
 log = logging.getLogger(__name__)
-
-
-BeakerSignedCookie = beaker.session.SignedCookie
-BeakerSession = beaker.session.Session
-BeakerSessionObject = beaker.session.SessionObject
-BeakerCookieSession = beaker.session.CookieSession
-BeakerSessionMiddleware = beaker.middleware.SessionMiddleware
-
-
-_local = threading.local()
-
-def _start_patching():
-    _local.depth = getattr(_local, 'depth', 0) + 1
-
-def _stop_patching():
-    _local.depth -= 1
-
-class PatchMeta(type):
-    
-    def __new__(mcls, name, bases, ns):
-        assert len(bases) == 1, 'Cannot patch more complex classes'
-        ns['__patched_beaker_class__'] = bases[0]
-        bases = (mcls.Patch, ) + bases
-        return super(PatchMeta, mcls).__new__(mcls, name, bases, ns)
-
-    class Patch(object):
-        def __new__(cls, *args, **kwargs):
-            if not getattr(_local, 'depth', 0):
-                return cls.__patched_beaker_class__(*args, **kwargs)
-            return super(PatchMeta.Patch, cls).__new__(cls, *args, **kwargs)
-
-       
-class SignedCookie(BeakerSignedCookie):
-    __metaclass__ = PatchMeta
-
-class Session(BeakerSession):
-    __metaclass__ = PatchMeta
-
-class CookieSession(BeakerCookieSession):
-    __metaclass__ = PatchMeta
-    
-class SessionObject(BeakerSessionObject):
-    __metaclass__ = PatchMeta
-
-class SessionMiddleware(BeakerSessionMiddleware):
-    __metaclass__ = PatchMeta
-    
-
-
-
-def patch_beaker_session_middleware(app):
-    def _patch_beaker_middleware(environ, start):
-        _start_patching()
-        try:
-            for x in app(environ, start):
-                yield x
-        finally:
-            _stop_patching()
-    return _patch_beaker_middleware
-
-def make_patched_constructor(new_cls, old_cls):
-    def _patched_constructor(*args, **kwargs):
-        if getattr(_local, 'depth', 0):
-            return new_cls(*args, **kwargs)
-        return old_cls(*args, **kwargs)
-    return _patched_constructor
-
-
-beaker.session.SignedCookie      = SignedCookie
-beaker.session.Session           = Session
-beaker.session.CookieSession     = CookieSession
-beaker.session.SessionObject     = SessionObject
-beaker.session.SessionMiddleware = SessionMiddleware
 
 
 class SessionAppMixin(object):
@@ -109,10 +35,46 @@ class SessionAppMixin(object):
         secret = 'session-' + secret if secret else None
         opts['secret'] = secret
         
-        # self.register_middleware((self.FRAMEWORK_LAYER, 10), patch_beaker_session_middleware)
-        self.register_middleware((self.FRAMEWORK_LAYER, 9), SessionMiddleware, None, opts)
+        self.register_middleware((self.FRAMEWORK_LAYER, 9), beaker.middleware.SessionMiddleware, None, opts)
         
+        self.view_globals['get_flash_messages'] = self.get_flash_messages
         
-        
-        
+    def export_to(self, map):
+        super(SessionAppMixin, self).export_to(map)
+        map.update(
+            flash=self.flash,
+        )
+    
+    def _get_flash_messages(self):
+
+        # Try to store them in the session (if it exists).
+        session = self.request.session
+        if session is not None:
+            return session.get('_flash_messages', [])
+
+        # Store them locally if not, but they will not persist.
+        return self._local.__dict__.get('flash_messages', [])
+
+    def _set_flash_messages(self, messages):
+
+        # Try to store them in the session (if it exists).
+        session = self.request.session
+        if session is not None:
+            if not messages:
+                session.pop('_flash_messages', None)
+            else:
+                session['_flash_messages'] = messages
+            session.save()
+            return
+
+        self._local.__dict__['flash_messages'] = messages
+
+    def get_flash_messages(self):
+        messages = self._get_flash_messages()
+        self._set_flash_messages([])
+        return messages
+
+    def flash(self, message, class_=None):
+        messages = self._get_flash_messages() + [(class_, message)]
+        self._set_flash_messages(messages)
         
