@@ -21,7 +21,20 @@ del e
 def _HTTPException_status_code(self):
     return self.code
 HTTPException.status_code = property(_HTTPException_status_code)
+
+# Backwards compatibility with Paste exceptions.
 HTTPException.title = HTTPException.name
+def _make_bc_property(name):
+    @property
+    def _bc_property(self):
+        log.warning('something asked for Paste-style HTTPException.%s' % name)
+        return ''
+    return _bc_property
+HTTPException.explanation = _make_bc_property('explanation')
+HTTPException.detail = _make_bc_property('detail')    
+HTTPException.comment = _make_bc_property('comment')
+
+
 
 class HTTPRedirection(HTTPException):
     """Base class for 300's status code (redirections)."""
