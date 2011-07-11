@@ -11,6 +11,7 @@ import functools
 
 import werkzeug as wz
 import werkzeug.utils as wzutil
+from werkzeug.utils import environ_property
 
 from multimap import MultiMap
 from webstar.core import Route, get_route_data
@@ -22,33 +23,11 @@ from .uri import query
 log = logging.getLogger(__name__)
 
 
-def _environ_parser(func, *args, **kwargs):
-    def parser(self):
-        return func(self.environ, *args, **kwargs)
-    return property(parser)
-
-def _environ_property(key, load_func=None, default=None):
-    if load_func:
-        @property
-        def _property(self):
-            return load_func(self.environ.get(key, default))
-    else:
-        @property
-        def _property(self):
-            return self.environ.get(key, default)
-    return _property
-        
-
-class CommonCore(object):
-    
-    cookie_factory = None
-    
-    @classmethod
-    def build_class(cls, name, extra_bases=(), **namespace):
-    	return type(name, (cls, ) + extra_bases, namespace)
 
 
-class Request(CommonCore, wz.Request):
+
+
+class Request(wz.Request):
     
     """WSGI/HTTP request abstraction class.
     
@@ -117,13 +96,6 @@ class Request(CommonCore, wz.Request):
     # information.
     parameter_storage_class = MultiMap
     
-    # Properties for quick method testing. Depricated.
-    is_get = _environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'GET')
-    is_post = _environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'POST')
-    is_put = _environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'PUT')
-    is_delete = _environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'DELETE')
-    is_head = _environ_property('REQUEST_METHOD', load_func=lambda x: x.upper() == 'HEAD')
-    
     def _get_file_stream(self, total_content_length, content_type, filename=None,
         content_length=None):
         """Called to get a stream for the file upload.
@@ -158,26 +130,18 @@ class Request(CommonCore, wz.Request):
     args = query # Werkzeug's name.
     
     # My cookies are much nicer. 
-    raw_cookies = _environ_property('HTTP_COOKIE')
+    cookie_string = environ_property('HTTP_COOKIE')
+    cookie_factory = cookies.Container
     @wz.cached_property
     def cookies(self):
-        raw = self.cookie_factory(self.raw_cookies,
+        raw = self.cookie_factory(self.cookie_string,
             charset=self.charset,
             decode_errors=self.encoding_errors
         )
         # Throw it into an immutable container.
         return MultiMap((k, c.value) for k, c in raw.iterallitems())
     
-    body = _environ_property('wsgi.input')
-    
-    def assert_body_cache(self):
-        body.assert_body_cache(self.environ)
-    
-    # Depricated. Use request.body.seek(0) after caching it.
-    def rewind_body_cache(self):
-        body.rewind_body_cache(self.environ)
-    
-    session = _environ_property('beaker.session')
+    session = environ_property('beaker.session')
     
     @property
     def route_history(self):
@@ -191,85 +155,18 @@ class Request(CommonCore, wz.Request):
     def unrouted(self):
         return self.route_history[-1].unrouted
     
-    route = _environ_property('wsgiorg.routing_args', load_func=lambda x: x[1])    
+    route = environ_property('wsgiorg.routing_args', load_func=lambda x: x[1])
     
-    # These get a little more attension because Netscape extended HTTP/1.0 to
-    # add the length of the previous request as an option to this header. IE 6
-    # does this too.
-    if_modified_since = _environ_property('HTTP_IF_MODIFIED_SINCE',
-        load_func=lambda x: wz.parse_date((x or '').split(';', 1)[0]))
-    if_unmodified_since = _environ_property('HTTP_IF_UNMODIFIED_SINCE',
-        load_func=lambda x: wz.parse_date((x or '').split(';', 1)[0]))
-    
-    # Depricated.
-    etag = _environ_property('HTTP_IF_NOT_MATCH')
-    
-    # Werkzeug supplies referrer, which is the correct spelling, but I want
-    # this here for completeness.
-    referer = wz.Request.referrer
-        
-    # Werkzeug only supplied the remote_addr.
-    remote_port = _environ_property('REMOTE_PORT', load_func=int)
-    
-    # Werkzeug supplies host, which includes the port if supplied.
-    hostname = _environ_property('HTTP_HOST')
-        
-    # Werkzeug does not supply these most basic of headers (likely because it
-    # has much better high-level ones).
-    path_info = _environ_property('PATH_INFO')
-    script_name = _environ_property('SCRIPT_NAME')
-    
-    # Synonym. Likely better to use the original.
-    is_ajax = wz.Request.is_xhr
+    # Werkzeug supplies if_none_match, which is likely better.
+    etag = environ_property('HTTP_IF_NOT_MATCH')
 
 
 
 
 
-def _mimetype_flag(spec):
-    """Build a property for quick setting of content types.
-    
-    You can only set these properties to be True. When you do so, the content-
-    type of the response is set to the type specified by `spec`.
-    
-    """
-    
-    @property
-    def prop(self):
-        return self.mimetype == spec
-    @prop.setter
-    def prop(self, value):
-        if not value:
-            raise ValueError('cannot be set to non-true value')        
-        self.mimetype = spec
-    return prop
 
 
-def _autoupdate_header(name, load_func):
-    def on_update(obj):
-        headers = obj._nitrogen_response.headers
-        value = str(obj)
-        if obj:
-            headers[name] = obj
-        else:
-            try:
-                del headers[name]
-            except KeyError:
-                pass
-    def header_get(self):
-        x = load_func(self.headers.get(name), on_update=on_update)
-        x._nitrogen_response = self
-        return x
-    header_get.__name__ = name
-    def header_set(self, v):
-        if v is None:
-            self.headers.discard(name)
-        else:
-            self.headers[name] = str(v)
-    return property(header_get, header_set)
-
-
-class Response(CommonCore, wz.Response):
+class Response(wz.Response):
     
     """WSGI/HTTP response abstraction.
     
@@ -301,10 +198,10 @@ class Response(CommonCore, wz.Response):
             setattr(self, k, v)
         
         
-    
+    cookie_factory = cookies.Container
     @wz.cached_property
     def cookies(self):
-        return (self.cookie_factory or cookies.Container)()
+        return self.cookie_factory()
     
     def set_cookie(self, *args, **kwargs):
         self.cookies.set(*args, **kwargs)
