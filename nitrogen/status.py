@@ -46,6 +46,11 @@ class _Mixin(object):
     @property
     def status_code(self):
         return self.code
+    
+    def get_response(self, environ):
+        from .request import Response
+        headers, content = self.prepare_content(environ)
+        return Response(content, self.code, headers)
 
                    
 
