@@ -35,6 +35,13 @@ class Config(dict):
         for name, default in kwargs.iteritems():
             results[name] = self.setdefault(name, default)
         return results
+    
+    def filter_prefix(self, prefix):
+        filtered = {}
+        for key, value in self.iteritems():
+            if key.startswith(prefix):
+                filtered[key[len(prefix):]] = value
+        return filtered
             
 
 
@@ -76,7 +83,7 @@ class Core(object):
         # method) for simple apps, or append your own router to the routers
         # list.
         self.router = webstar.Router()
-        self.router.register(None, StaticRouter(self.config.static_path))
+        self.router.register(None, StaticRouter(**self.config.filter_prefix('static_')))
         
         # Setup middleware stack. This is a list of tuples; the second is a
         # function to call that takes a WSGI app, and returns one. The first
@@ -112,9 +119,12 @@ class Core(object):
             private_key=None,
             reload=False,
             reloader_packages=('nitrogen', 'app'),
+            static_cache_max_age=3600,
+            static_use_x_sendfile=True,
         )
-        static_path = self.config.setdefault('static_path', [])
-        static_path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/static')
+        self.config.setdefault('static_path', []).append(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/static'
+        )
     
     # These are stubs for us to add on to in the __init__ method.
     class RequestMixin(object): pass
