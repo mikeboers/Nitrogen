@@ -262,7 +262,7 @@ class Response(wz.wrappers.Response):
     use_x_sendfile = True
     
     def send_file(self, filename, mimetype=None, as_attachment=False,
-        attachment_filename=None, add_etags=None, cache_max_age=60 * 60 * 12,
+        attachment_filename=None, add_etags=None, cache_max_age=None,
     ):
         """Lifted from flask.
         
@@ -298,9 +298,8 @@ class Response(wz.wrappers.Response):
         self.direct_passthrough = True
         self.last_modified = mtime
 
-
         self.cache_control.public = True
-        if cache_max_age:
+        if cache_max_age is not None:
             self.cache_control.max_age = cache_max_age
             self.expires = int(time.time() + cache_max_age)
 
