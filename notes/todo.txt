@@ -11,6 +11,24 @@
 	- process them
 
 
+- remove serve extensions (just write your own...)
+- remove api
+	- add Request.assert_args(*names) -> throws an exception if it doesn't have them
+	- rewrite CRUD
+- remove pager
+- rename to seekable_body and Request.make_body_seekable
+- rename forms to wtforms
+- remove uri
+	- move signing to nitrogen.sign
+	- keep encode/decode
+	- keep parse/format
+	- keep remove_dot_segments
+	- keep resolve_relative
+	- keep query_encode/decode
+- remove most of crypto (replaced by pytomcrypt)
+- move mako stuff into nitrogen.templates.mako.helpers
+
+
 - define the scope of the new auth[nz] packages
     - remembering/forgetting user_id
     - ACL based authorization
@@ -53,21 +71,7 @@
 	the app dispatcher can make user of the permissions data in the route to
 	make sure that the ACL of the given route allows it
 
-- remove serve extensions (just write your own...)
-- remove api
-	- add Request.assert_args(*names) -> throws an exception if it doesn't have them
-	- rewrite CRUD
-- remove pager
-- rename to seekable_body and Request.make_body_seekable
-- rename forms to wtforms
-- remove uri
-	- move signing to nitrogen.sign
-	- keep encode/decode
-	- keep parse/format
-	- keep remove_dot_segments
-	- keep resolve_relative
-	- keep query_encode/decode
-- remove most of crypto (replaced by pytomcrypt)
+
 
 
 
@@ -90,8 +94,6 @@
 	- requesting something.html would give us the rendered page
 	- anything else would default to the rendered page
 
-- nitrogen.util.deprecated
-	- log the usage just once per process
 
 - some way to convert data to json format if requested, otherwise actually
   render everything. Will need to be sure that there aren't any secret things
@@ -200,7 +202,6 @@ which marks something as a mixin.
 - perhaps absolute uri.path.Path should have an empty first element, or a '/'
   first element. It seems more sensible that it be an empty first element
 
-- move mako stuff into nitrogen.templates.mako.helpers
 
 - Pyramid renderers are rather nice.
     @Request.application # or @Request.wrap
@@ -264,21 +265,9 @@ which marks something as a mixin.
 	- theoretically Content-Length is the max around the cgi.fieldstorage
 	  would read anyways, so we can simply reject based on that number
 
-- remove all of the wsgi runners
-- split proxy module into it's own package
-- split route into pystar package
-- remove the API module
-
-- split cookies into their own package (or look at webob's)
-- remove lipsum
-- remove pager into it's own package
-
-- rename nitrogen.db to nitrogen.sqla
 
 - pull the mixin class builder into a package of its own?
 
-
-- webob.exc is very nice
 
 - add getone (and others) from webob.multidict to MultiMap
 
