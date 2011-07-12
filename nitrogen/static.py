@@ -1,13 +1,6 @@
 
 import os
-import sys
-import posixpath
-import mimetypes
-from time import time
-from zlib import adler32
 import logging
-
-from werkzeug import Headers, wrap_file
 
 import webstar.core as core
 
@@ -16,22 +9,6 @@ from .request import Request, Response
 
 log = logging.getLogger(__name__)
 
-
-
-
-class WSGIWrapper(object):
-    
-    def __init__(self, path, router):
-        self.path = path
-        self.router = router
-    
-    @Request.application
-    def __call__(self, request):
-        return Response().send_file(self.path,
-            use_x_sendfile=self.router.use_x_sendfile,
-            cache_max_age=self.router.cache_max_age,
-        ).make_conditional(request)
-        
         
 class StaticRouter(core.RouterInterface):
     
@@ -52,7 +29,7 @@ class StaticRouter(core.RouterInterface):
             fullpath = os.path.join(base, path)
             if os.path.exists(fullpath) and os.path.isfile(fullpath):
                 yield core.RouteStep(
-                    head=WSGIWrapper(fullpath, self),
+                    head=_StaticApp(fullpath, self),
                     router=self,
                     consumed=path,
                     unrouted='',
@@ -65,4 +42,16 @@ class StaticRouter(core.RouterInterface):
             yield core.GenerateStep(segment=path, head=None)
 
 
+class _StaticApp(object):
+
+    def __init__(self, path, router):
+        self.path = path
+        self.router = router
+
+    @Request.application
+    def __call__(self, request):
+        return Response().send_file(self.path,
+            use_x_sendfile=self.router.use_x_sendfile,
+            cache_max_age=self.router.cache_max_age,
+        ).make_conditional(request)
 

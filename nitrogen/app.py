@@ -10,8 +10,8 @@ import webstar
 from . import cookies
 from . import request
 from .event import instance_event
-from .files import StaticRouter
 from .serve.fcgi import reloader
+from .static import StaticRouter
 from .unicode import encoder
 
 
