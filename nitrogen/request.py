@@ -263,6 +263,7 @@ class Response(wz.wrappers.Response):
     
     def send_file(self, filename, mimetype=None, as_attachment=False,
         attachment_filename=None, add_etags=None, cache_max_age=None,
+        use_x_sendfile=None
     ):
         """Lifted from flask.
         
@@ -286,7 +287,7 @@ class Response(wz.wrappers.Response):
         if as_attachment:
             self.filename = attachment_filename or os.path.basename(filename)
 
-        if self.use_x_sendfile and filename:
+        if (use_x_sendfile or (use_x_sendfile is None and self.use_x_sendfile)) and filename:
             self.headers['X-Sendfile'] = filename
             data = None
         else:

@@ -1,4 +1,5 @@
 
+- asset specification -> "package.name:file_name.txt"
 
 - official static router in webstar
 - pass template to router.register
