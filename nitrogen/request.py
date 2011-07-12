@@ -11,6 +11,7 @@ import functools
 import hashlib
 import os
 import mimetypes
+import time
 
 import werkzeug as wz
 import werkzeug.utils
@@ -219,9 +220,18 @@ class Response(wz.wrappers.Response):
     etag = wz.utils.header_property('etag', read_only=False)
     
     def get_wsgi_headers(self, environ):
-        # This is how we inject our extra cookie headers.
         headers = super(Response, self).get_wsgi_headers(environ)
+        
+        # Our cookies are better.
         headers.extend(self.cookies.build_headers())
+        
+        # Some servers can't deal with X-Sendfile if not 200.
+        if (100 <= self.status_code < 200 or
+            self.status_code == 204 or
+            300 <= self.status_code < 400
+        ):
+            headers.pop('X-Sendfile', None)
+        
         return headers
     
     @property
@@ -247,45 +257,64 @@ class Response(wz.wrappers.Response):
                 self.headers.discard('content-disposition')
         else:
             raise ValueError('cant set filename for disposition %r' % cdisp)
+
     
     use_x_sendfile = True
     
-    @property
-    def sendfile(self):
-        return getattr(self, '_sendfile_filename', None)
-    
-    @sendfile.setter
-    def sendfile(self, filename):
+    def send_file(self, filename, mimetype=None, as_attachment=False,
+        attachment_filename=None, add_etags=None, cache_max_age=60 * 60 * 12,
+    ):
+        """Lifted from flask.
         
-        self._sendfile_filename = filename = os.path.abspath(filename)
-        mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+        Mimetype is pulled from filename if not given. Attachment filename is
+        the basename of the filename if not given. Uses X-Sendfile if
+        Response.use_x_sendfile is True (default). If add_etags is None will
+        add an etag if there isn't one already set. cache_max_age also sets
+        cache_control.expires.
+        
+        Uses a generic werkzeug.FileWrapper instead of what is availible in
+        the environment. Also pulled out all conditional code.
+        """
+        
+        filename  = os.path.abspath(filename)
+        
+        if mimetype is None and (filename or attachment_filename):
+            mimetype = mimetypes.guess_type(filename or attachment_filename)[0]
+        if mimetype is None:
+            mimetype = 'application/octet-stream'
 
-        if self.use_x_sendfile:
+        if as_attachment:
+            self.filename = attachment_filename or os.path.basename(filename)
+
+        if self.use_x_sendfile and filename:
             self.headers['X-Sendfile'] = filename
             data = None
         else:
             file = open(filename, 'rb')
             data = wz.wsgi.FileWrapper(file)
 
+        mtime = os.path.getmtime(filename)
         self.mimetype = mimetype
         self.direct_passthrough = True
-        self.last_modified = os.path.getmtime(filename)
-        
-        self.set_etag('sendfile-%s-%s-%s' % (
-            os.path.getmtime(filename),
-            os.path.getsize(filename),
-            hashlib.md5(
-                filename.encode('utf8') if isinstance(filename, unicode)
-                else filename
-            ).hexdigest()[:8]
-        ))
-        # if conditional:
-        #     rv = rv.make_conditional(request)
-        #     # make sure we don't send x-sendfile for servers that
-        #     # ignore the 304 status code for x-sendfile.
-        #     if rv.status_code == 304:
-        #         rv.headers.pop('x-sendfile', None)
+        self.last_modified = mtime
 
+
+        self.cache_control.public = True
+        if cache_max_age:
+            self.cache_control.max_age = cache_max_age
+            self.expires = int(time.time() + cache_max_age)
+
+        if add_etags or add_etags is None and 'etag' not in self.headers:
+            self.set_etag('sendfile-%s-%s-%s' % (
+                mtime,
+                os.path.getsize(filename),
+                hashlib.md5(
+                    filename.encode('utf8') if isinstance(filename, unicode)
+                    else filename
+                ).hexdigest()[:8]
+            ))
+
+        return self
 
 
 
