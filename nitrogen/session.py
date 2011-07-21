@@ -48,7 +48,7 @@ class SessionAppMixin(object):
     def _get_flash_messages(self):
 
         # Try to store them in the session (if it exists).
-        session = self.request.session
+        session = self.local_request().session
         if session is not None:
             return session.get('_flash_messages', [])
 
@@ -58,7 +58,7 @@ class SessionAppMixin(object):
     def _set_flash_messages(self, messages):
 
         # Try to store them in the session (if it exists).
-        session = self.request.session
+        session = self.local_request().session
         if session is not None:
             if not messages:
                 session.pop('_flash_messages', None)

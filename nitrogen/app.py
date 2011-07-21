@@ -195,6 +195,9 @@ class Core(object):
         self.__managed_locals.append(obj)
         return obj
     
+    def local_request(self):
+        return self.Request(self._local.environ)
+    
     def __call__(self, environ, start):
         app = self.flatten_middleware()
         
