@@ -289,10 +289,10 @@ class Response(wz.wrappers.Response):
 
         if (use_x_sendfile or (use_x_sendfile is None and self.use_x_sendfile)) and filename:
             self.headers['X-Sendfile'] = filename
-            data = None
+            self.response = None
         else:
             file = open(filename, 'rb')
-            data = wz.wsgi.FileWrapper(file)
+            self.response = wz.wsgi.FileWrapper(file)
 
         mtime = os.path.getmtime(filename)
         self.mimetype = mimetype
