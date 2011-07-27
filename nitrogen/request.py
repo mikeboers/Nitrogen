@@ -149,6 +149,13 @@ class Request(wz.wrappers.Request):
     
     session = wz.utils.environ_property('beaker.session')
     
+    @wz.utils.cached_property
+    def body(self):
+        content_length = self.headers.get('content-length', type=int)
+        if content_length is not None:
+            return werkzeug.wsgi.LimitedStream(self.environ['wsgi.input'], content_length)
+        return self.environ['wsgi.input']
+    
     @property
     def route_history(self):
         return Route.from_environ(self.environ)
@@ -165,6 +172,10 @@ class Request(wz.wrappers.Request):
     
     # Werkzeug supplies if_none_match, which is likely better.
     etag = wz.utils.environ_property('HTTP_IF_NOT_MATCH')
+
+    # I prefer these names.
+    path_info = wz.wrappers.Request.path
+    script_name = wz.wrappers.Request.script_root
 
 
 
