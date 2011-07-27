@@ -135,7 +135,7 @@ class LoggingAppMixin(object):
         config.setdefault('log_handlers', [])
         
         config.setdefault('access_log_name', 'http.access')
-        config.setdefault('access_log_format', '%(REQUEST_METHOD)s %(REQUEST_URI)s -> %(STATUS_CODE)s in %(DURATION_MS).1fms')
+        config.setdefault('access_log_format', '%(REQUEST_METHOD)s %(SCRIPT_NAME)s%(PATH_INFO)s -> %(STATUS_CODE)s in %(DURATION_MS).1fms')
         
             
     def __init__(self, *args, **kwargs):
