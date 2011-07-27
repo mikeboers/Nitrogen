@@ -270,7 +270,7 @@ class Response(wz.wrappers.Response):
             raise ValueError('cant set filename for disposition %r' % cdisp)
 
     
-    use_x_sendfile = True
+    use_x_sendfile = 'USE_X_SENDFILE' in os.environ
     
     def send_file(self, filename, mimetype=None, as_attachment=False,
         attachment_filename=None, add_etags=None, cache_max_age=None,
@@ -300,7 +300,7 @@ class Response(wz.wrappers.Response):
 
         if (use_x_sendfile or (use_x_sendfile is None and self.use_x_sendfile)) and filename:
             self.headers['X-Sendfile'] = filename
-            self.response = None
+            self.response = ()
         else:
             file = open(filename, 'rb')
             self.response = wz.wsgi.FileWrapper(file)

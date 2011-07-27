@@ -12,12 +12,15 @@ log = logging.getLogger(__name__)
         
 class StaticRouter(core.RouterInterface):
     
-    def __init__(self, path, data_key='filename', use_x_sendfile=True,
+    use_x_sendfile = 'USE_X_SENDFILE' in os.environ
+    
+    def __init__(self, path, data_key='filename', use_x_sendfile=None,
         cache_max_age=3600
     ):
         self.path = map(os.path.abspath, path)
         self.data_key = data_key
-        self.use_x_sendfile = use_x_sendfile
+        if use_x_sendfile is not None:
+            self.use_x_sendfile = use_x_sendfile
         self.cache_max_age = cache_max_age
         super(StaticRouter, self).__init__()
     
@@ -50,6 +53,7 @@ class _StaticApp(object):
 
     @Request.application
     def __call__(self, request):
+        
         return Response().send_file(self.path,
             use_x_sendfile=self.router.use_x_sendfile,
             cache_max_age=self.router.cache_max_age,

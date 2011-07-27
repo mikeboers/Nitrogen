@@ -117,7 +117,6 @@ class Core(object):
             reload=False,
             reloader_packages=('nitrogen', 'app'),
             static_cache_max_age=3600,
-            static_use_x_sendfile=True,
         )
         self.config.setdefault('static_path', []).append(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/static'
