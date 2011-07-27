@@ -6,11 +6,15 @@ routing, etc.
 
 """
 
-import logging
+from cStringIO import StringIO
+import cStringIO as cstringio
 import functools
 import hashlib
-import os
+import io
+import logging
 import mimetypes
+import os
+import StringIO as stringio
 import time
 
 import werkzeug as wz
@@ -156,6 +160,13 @@ class Request(wz.wrappers.Request):
             return werkzeug.wsgi.LimitedStream(self.environ['wsgi.input'], content_length)
         return self.environ['wsgi.input']
     
+    def make_body_seekable(self):
+        stdin = self.environ['wsgi.input']
+        # The OutputType here is just me being paranoid. Likely not nessesary.
+        if not isinstance(stdin, (cstringio.InputType, io.StringIO, stringio.StringIO, cstringio.OutputType)):
+            self.body = self.environ['wsgi.input'] = StringIO(self.body.read())
+            self.body.seek(0)
+        
     @property
     def route_history(self):
         return Route.from_environ(self.environ)

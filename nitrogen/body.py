@@ -12,36 +12,6 @@ from multimap import MutableMultiMap
 
 
 
-def assert_body_cache(environ):
-    """Recieves the rest of the request's body into a StringIO object.
-    
-    Useful if we know that we want to process the body of the request mutliple
-    times, as we can simply seek to 0 when we want to process it again.
-    
-    Currently does not protect against massive requests.
-    
-    """
-    stdin = environ['wsgi.input']
-    # The OutputType here is just me being paranoid. Likely not nessesary.
-    if not isinstance(stdin, (cstringio.InputType, io.StringIO, stringio.StringIO, cstringio.OutputType)):
-        cache = StringIO(stdin.read())
-        cache.seek(0)
-        environ['wsgi.input'] = cache
-
-def get_body_cache(environ):
-    assert_body_cache(environ)
-    return environ['wsgi.input']
-
-def rewind_body_cache(environ):
-    get_body_cache(environ).seek(0)
-
-def get_body(environ):
-    file = get_body_cache(environ)
-    current_pos = file.tell()
-    body = file.read()
-    file.seek(current_pos)
-    return body
-
 
 
 
