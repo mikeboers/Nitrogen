@@ -6,13 +6,9 @@ class SocketServer(object):
         self.app = app
         self.host = host
         self.port = port
-
-    def _wrapped_app(self, environ, start):
-        environ['REQUEST_URI'] = environ['PATH_INFO']
-        return self.app(environ, start)
     
     def make_server(self):
-        return _make_server(self.host, self.port, self._wrapped_app)
+        return _make_server(self.host, self.port, self.app)
 
     def run_once(self):
         try:
