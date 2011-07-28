@@ -9,13 +9,13 @@ class ConfigFile(collections.Mapping):
     def __init__(self, path, defaults=()):
         self.path = path
         self.defaults = defaults
-        self.data = {}
+        self.data = dict(defaults)
         self._exists = False
         
         try:
             self.load()
         except IOError:
-            self.data.update(dict(self.defaults))
+            pass
     
     @property
     def exists(self):
@@ -32,7 +32,7 @@ class ConfigFile(collections.Mapping):
     
     def load(self):
         with open(self.path, 'rb') as f:
-            self.data = json.load(f)
+            self.data.update(json.load(f))
             self._exists = True
     
     def save(self):
