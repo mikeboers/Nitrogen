@@ -86,9 +86,12 @@ class UseProxy(HTTPException):
 class TemporaryRedirect(HTTPRedirection):
     code = 307
 
+
 class PaymentRequired(HTTPException):
     code = 402
     description = ('<p>Access was denied for financial reasons.</p>')
+
+NotFound.description = '<p>The requested URL was not found on the server.</p>'
 
 class ProxyAuthenticationRequired(HTTPException):
     code = 407
@@ -106,7 +109,8 @@ class RequestRangeNotSatisfiable(HTTPException):
 class ExpectationFailed(HTTPException):
    code = 417
    description = ('<p>Expectation failed.</p>')
-   
+
+
 class GatewayTimeout(HTTPException):
    code = 504
    description = ('<p>The gateway has timed out.</p>')

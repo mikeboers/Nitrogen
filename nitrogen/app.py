@@ -201,7 +201,7 @@ class Core(object):
         app = self.flatten_middleware()
         
         self._local.environ = environ
-        self._local.request = self.Request(environ)
+        self._local.request = self.local_request()
         
         self.request_started.trigger(environ)
         

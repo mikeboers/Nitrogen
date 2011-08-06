@@ -99,7 +99,6 @@ class ViewAppMixin(object):
         Searches on the current `self.path`.
         
         """
-        
         if isinstance(template, basestring):
             template = self.lookup.get_template(template)
         data = self._prep_data(data)
