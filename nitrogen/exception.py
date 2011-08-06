@@ -13,9 +13,10 @@ except ImportError:
         pass
 
 from werkzeug.datastructures import Headers
-from mako.exceptions import RichTraceback as MakoTraceback
+from mako.exceptions import RichTraceback as MakoTraceback, TopLevelLookupException as MakoLookupError
 
 from . import status
+
 
 log = logging.getLogger(__name__)
 
@@ -169,7 +170,7 @@ logger = exception_logger
 
 
 
-def exception_handler(app, get_template=None, debug=False):
+def exception_handler(app, render=None, debug=False):
     def _exception_handler(environ, start):
         
         try:
@@ -207,19 +208,21 @@ def exception_handler(app, get_template=None, debug=False):
             text_report = html_report = None
             log.exception('Exception while formating error report.')
         
-        template = get_template and (get_template('/status/%d.html' % e.code) or get_template('/status/generic.html'))
-        
-        if template:
-            try:
-                output = template.render_unicode(
-                    exception=e,
-                    environ=environ,
-                    text_report=text_report,
-                    html_report=html_report,
-                ).encode('utf8')
-            except:
-                log.exception('Exception while building error page.')
-            else:
+        if render:
+            output = None
+            for template in ('/status/%d.html' % e.code, '/status/generic.html'):
+                try:
+                    output = render(template, exception=e,
+                        environ=environ,
+                        text_report=text_report,
+                        html_report=html_report,
+                    ).encode('utf8')
+                except MakoLookupError:
+                    continue
+                except:
+                    log.exception('Exception while building error page.')
+                break
+            if output:
                 try:
                     start('%d %s' % (e.code, e.title), [('Content-Type', 'text/html; charset=utf-8')])
                 except:
@@ -252,7 +255,7 @@ class ExceptionAppMixin(object):
         self.register_middleware((self.FRAMEWORK_LAYER, 99), logger, None, dict(ignore=(status.HTTPException, )))
         self.register_middleware((self.FRAMEWORK_LAYER, 100), handler, None, dict(
             debug=self.config.debug,
-            get_template=getattr(self, 'get_template', None),
+            render=getattr(self, 'render', None),
         ))
         
 
