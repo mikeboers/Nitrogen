@@ -21,7 +21,7 @@ class FormAppMixin(object):
     
     class FormMixin(object):
         def render(self):
-            return self._app.render('/form.html', form=self)
+            return self._app.render('/_wtform.html', form=self)
     
     build_form_class = lambda self: app.build_inheritance_mixin_class(self.__class__, Form, 'Form')
     Form = wz.cached_property(build_form_class, name='Form')
