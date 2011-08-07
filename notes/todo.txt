@@ -1,22 +1,11 @@
 
 - asset specification -> "package.name:file_name.txt"
 
-
-- pass template to router.register
-- migrate to new auth
-	- strip out all the old auth
-		- write down which ones are protected
-		- XXX NEEDS AUTH
-	- detect __acl__ on the routing path
-	- process them
-
-
 - remove serve extensions (just write your own...)
 - remove api
 	- add Request.assert_args(*names) -> throws an exception if it doesn't have them
 	- rewrite CRUD
 - remove pager
-- rename to seekable_body and Request.make_body_seekable
 - rename forms to wtforms
 - remove uri
 	- move signing to nitrogen.sign
@@ -28,66 +17,6 @@
 - remove most of crypto (replaced by pytomcrypt)
 - move mako stuff into nitrogen.templates.mako.helpers
 
-
-- define the scope of the new auth[nz] packages
-    - remembering/forgetting user_id
-    - ACL based authorization
-    - apps handle their own login mechanisms, and pass the userid to app.login(user_id)
-
-
-- if I do swap from a wsgi structure within the controllers to passing requests
-  and wanting responses back, how do I deal with:
-	1) wsgi middleware
-		a wrap_with(wsgi_middleware) decorator could add wsgi_middleware to
-		__wsgi_middleware__ on the function. these could be stacked up to
-		simulate a wsgi call later on. I'm not sure that we can fully emulate
-		the full experience.
-	2) new-style middleware
-		if we MUST return a response then it is somewhat mutatable on the way
-		back. some other middleware could be responsible for converting data
-		via a template or json.dumps, and that would return a response
-	
-	What WSGI middleware do we need to wrap around individual functions?
-		- app.auth.requires
-			- could attach to __auth_predicates__
-			- the App dispatcher could handle this
-				append all predicates together and run them through an `all`
-		- webstar.Router.register
-			- if the app dispatcher is expecting request-call-style functions
-			  and it is handling calling them itself, then this is no problem
-		- Request.application
-			- this can be turned into a no-op
-			- add __Request_application_func__ with the original function
-			- the App dispatcher handles this
-	
-	What other endpoints do we route to?
-		- ImgSizer
-		- CRUD
-		
-		These could be mitigated with a wrapper which adapts to Request
-		calling style if not given a Request.
-
-- Router.register(..., permissions=('view', 'edit'))
-	the app dispatcher can make user of the permissions data in the route to
-	make sure that the ACL of the given route allows it
-
-
-
-
-
-- webstar.Router.__call__ should move most of it's functionality to a helper
-  method which takes what it wants from the environment and returns the route,
-  etc.. Then nitrogen will use that instead of calling the router directly.
-  This will allow us to check __acl__ attributes on the entire route, and we
-  can pass nitrogen.request.Request objects directly. All of the wsgi-style
-  middleware can be applied around this call_app method.
-	- determine if there is ever any other wsgi-style middleware applied
-	  directly to actions
-	- @wsgi_middleware(func)
-		creates a __wsgi_stack__ attribute on the function which is what would
-		actually be called by nitrogen if it was present
-	- the request should have a response attribute created on it, which will
-	  be the response object that renderers will use
 
 - @renderer(html='/path/to/template')
 	- requesting something.json would give us the JSON dump
@@ -106,13 +35,6 @@
 
 - constructive things to do
 	- plugin architecture and/or namespaces for app plugins
-	- new authentication system that works with new routers
-	- AuthMixin based off of st5 extensions to App
-	- ImgSizer that uses x_sendfile
-		- Some base class for generating content that gets saves into files.
-
-- Response.from_static_file(path, use_x_sendfile=True)
-	- set last_modified to mtime of file
 
 - FileMutator
 	- a couple of methods to override to have a file served that is built from
@@ -127,12 +49,7 @@
 	- verify(secret, str_to_sign, signature, **kwargs) -> bool
 	
 	- either use a deterministic repr or only allow strings to be signed
-	
-- deprecate some Request properties
-	is_get/etc.
-	is_ajax
-- deprecate some Response properties
-	as_html/etc.
+
 
 - nitrogen.lock.FileLock
 	__init__(path, mode='shared', recursive=False)

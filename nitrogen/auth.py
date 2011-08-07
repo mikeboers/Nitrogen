@@ -3,7 +3,7 @@ from urllib import urlencode
 
 import werkzeug.utils
 import werkzeug as wz
-from webstar.core import RouteStep
+from webstar.core import RouteStep, get_route_attr_list
 
 from .request import Request, Response
 from . import status
@@ -28,19 +28,10 @@ def requires(*predicates):
     return _requires
 
 
-def get_route_prop_list(route, name):
-    acl = []
-    for step in reversed(route):
-        # The router or final app.
-        acl.extend(getattr(step.head, name, []))
-        # In the route data.
-        acl.extend(step.data.get(name, []))
-        # In __acl__ on the module if from register_module.
-        acl.extend(getattr(step.data.get('__module__', None), name, []))
-    return acl
 
-get_route_acl = lambda route: get_route_prop_list(route, '__acl__')
-get_route_predicates = lambda route: get_route_prop_list(route, '__auth_predicates__')
+
+get_route_acl = lambda route: get_route_attr_list(route, '__acl__')
+get_route_predicates = lambda route: get_route_attr_list(route, '__auth_predicates__')
 
 
 def check_acl_for_permission(request, acl, permission):
@@ -134,6 +125,23 @@ class AuthAppMixin(object):
 
 # predicates
 
+def parse_predicate(input):
+    
+    if isinstance(input, basestring):
+        negate = input.startswith('!')
+        if negate:
+            input = input[1:]
+        predicate = string_predicates.get(input) or Principal(input)
+        if negate:
+            predicate = Not(predicate)
+        return predicate
+    
+    if isinstance(input, (tuple, list)):
+        return And(parse_predicate(x) for x in input)
+    
+    return input
+
+
 class Any(object):
     def __call__(self, request):
         return True
@@ -142,7 +150,7 @@ class Any(object):
 
 class Not(object):
     def __init__(self, predicate):
-        self.predicate = predicate
+        self.predicate = parse_predicate(predicate)
     def __call__(self, request):
         return not self.predicate(request)
     def __repr__(self):
@@ -151,7 +159,7 @@ class Not(object):
 class And(object):
     op = all
     def __init__(self, *predicates):
-        self.predicates = predicates
+        self.predicates = [parse_predicate(x) for x in predicates]
     def __call__(self, request):
         return self.op(x(request) for x in self.predicates)
     def __repr__(self):
@@ -191,25 +199,12 @@ string_predicates = {
     '__authenticated__': Authenticated(),
     '__local__': Local(),
     '__remote__': Remote(),
+    
+    # Likely don't need these many synonyms.
     '__any__': Any(),
+    '__all__': Any(),
     '*': Any(),
 }
-
-def parse_predicate(input):
-    
-    if isinstance(input, basestring):
-        negate = input.startswith('!')
-        if negate:
-            input = input[1:]
-        predicate = string_predicates.get(input) or Principal(input)
-        if negate:
-            predicate = Not(predicate)
-        return predicate
-    
-    if isinstance(input, (tuple, list)):
-        return And(parse_predicate(x) for x in input)
-    
-    return input
 
 
 # More general predicate.
@@ -226,6 +221,7 @@ class AllPermissions(object):
         return True
         
 string_permissions = {
+    '__any__': AllPermissions(),
     '__all__': AllPermissions(),
     '*': AllPermissions(),
 }

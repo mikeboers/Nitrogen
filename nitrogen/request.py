@@ -31,11 +31,8 @@ from . import body
 from . import cookies
 from .uri import query
 
+
 log = logging.getLogger(__name__)
-
-
-
-
 
 
 class Request(wz.wrappers.Request):
