@@ -187,6 +187,10 @@ class Request(wz.wrappers.Request):
     # I prefer these names.
     path_info = wz.wrappers.Request.path
     script_name = wz.wrappers.Request.script_root
+    
+    @property
+    def full_path(self):
+        return '/' + (self.script_name.rstrip('/') + '/' + self.path_info).strip('/')
 
 
 

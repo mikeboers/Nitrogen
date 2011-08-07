@@ -16,6 +16,7 @@ import threading
 import multiprocessing
 import time
 
+from .request import Request
 
 
 base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(request_index)d ip:%(remote_addr)s %(name)s - %(message)s"
@@ -135,7 +136,7 @@ class LoggingAppMixin(object):
         config.setdefault('log_handlers', [])
         
         config.setdefault('access_log_name', 'http.access')
-        config.setdefault('access_log_format', '%(REQUEST_METHOD)s %(SCRIPT_NAME)s%(PATH_INFO)s -> %(STATUS_CODE)s in %(DURATION_MS).1fms')
+        config.setdefault('access_log_format', '%(REQUEST_METHOD)s %(PATH)s -> %(STATUS_CODE)s in %(DURATION_MS).1fms')
         
             
     def __init__(self, *args, **kwargs):
@@ -182,6 +183,7 @@ class LoggingAppMixin(object):
         params = environ.copy()
         params['STATUS_CODE'] = self._local.status_code
         params['DURATION_MS'] = 1000 * (time.time() - self._local.start_time)
+        params['PATH'] = Request(environ).full_path
         self.access_log.info(self.config.access_log_format % params)
     
     
