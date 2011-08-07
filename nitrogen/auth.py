@@ -27,8 +27,8 @@ def ACL(*acl):
 def get_route_acl(route):
     acl = []
     for step in reversed(route):
-        acl.extend(step.head.__dict__.get('__acl__', []))
-    acl.extend(route[0].router.__dict__.get('__acl__', []))
+        acl.extend(getattr(step.head, '__acl__', []))
+    acl.extend(getattr(route[0].router, '__acl__', []))
     return acl
 
 
@@ -52,10 +52,7 @@ class AuthAppMixin(object):
         for ace in get_route_acl(route):
             log.info('ACE: %r' % (ace, ))
             if not ace[0]:
-                route.append(RouteStep(
-                    head=self.authn_required_app,
-                    router=self
-                ))
+                route.step(self.authn_required_app, router=self)
         return True
     
     @Request.application
