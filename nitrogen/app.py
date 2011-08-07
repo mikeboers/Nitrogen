@@ -13,7 +13,6 @@ from . import status
 from .event import instance_event
 from .serve.fcgi import reloader
 from .static import StaticRouter
-from .request import Request
 
 
 log = logging.getLogger(__name__)
@@ -134,8 +133,12 @@ class Core(object):
         raise status.NotFound('could not route')
     
     def auto_request_app_route_predicate(self, route):
-        if route.app.__code__.co_argcount == 1:
-            route.step(Request.application(route.app), router=self)
+        try:
+            if route.app.__code__.co_argcount == 1:
+                route.step(self.Request.application(route.app), router=self)
+        except AttributeError as e:
+            # methods and callable classes don't have __code__
+            pass
         return True
     
     # These are stubs for us to add on to in the __init__ method.
