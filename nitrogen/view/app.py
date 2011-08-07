@@ -10,7 +10,7 @@ from mako.exceptions import TopLevelLookupException as MakoLookupError
 from mako.template import Template
 
 from .defaults import context
-
+from . import util
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +89,8 @@ class ViewAppMixin(object):
     
     def get_template(self, template):
         try:
-            return self.lookup.get_template(template)
+            template = self.lookup.get_template(template)
+            template.preprocessor = lambda x: util.inline_control_statements(util.whitespace_control(x))
         except MakoLookupError as e:
             return None
     

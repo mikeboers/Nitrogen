@@ -36,3 +36,21 @@ def urlify_name(name):
     urlified names to figure out what photo or photoset we are talking about).
     """
     return re.sub(r'\W+', '-', name).strip('-')
+
+
+# preprocessors
+
+def _inline_callback(m):
+    statement = m.group(1).strip()
+    return '\\\n%% %s%s\n' % (statement, '' if statement.startswith('end') else ':')
+
+_inline_re = re.compile(r'%{([^}]+)}')
+
+def inline_control_statements(source):
+    return _inline_re.sub(_inline_callback, source)
+
+_post_white_re = re.compile(r'([$%]){(.*?)-}\s*')
+_pre_white_re = re.compile(r'\s*([$%]){-(.*?)}')
+def whitespace_control(source):
+    source = _post_white_re.sub(r'\1{\2}', source)
+    return _pre_white_re.sub(r'\1{\2}', source)
