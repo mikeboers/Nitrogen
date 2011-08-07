@@ -27,8 +27,12 @@ def ACL(*acl):
 def get_route_acl(route):
     acl = []
     for step in reversed(route):
+        # The router or final app.
         acl.extend(getattr(step.head, '__acl__', []))
-    acl.extend(getattr(route[0].router, '__acl__', []))
+        # In the route data.
+        acl.extend(step.data.get('__acl__', []))
+        # In __acl__ on the module if from register_module.
+        acl.extend(getattr(step.data.get('__module__', None), '__acl__', []))
     return acl
 
 
