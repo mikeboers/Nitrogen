@@ -133,12 +133,9 @@ class Core(object):
         raise status.NotFound('could not route')
     
     def auto_request_app_route_predicate(self, route):
-        try:
-            if route.app.__code__.co_argcount == 1:
-                route.step(self.Request.application(route.app), router=self)
-        except AttributeError as e:
-            # methods and callable classes don't have __code__
-            pass
+        wrapped = self.Request.auto_application(route.app)
+        if route.app is not wrapped:
+            route.step(wrapped, router=self)
         return True
     
     # These are stubs for us to add on to in the __init__ method.

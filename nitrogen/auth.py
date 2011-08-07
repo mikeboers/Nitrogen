@@ -21,20 +21,29 @@ def ACL(*acl):
         return func
     return _ACL
 
+def require(*predicates):
+    def _require(func):
+        func.__dict__.setdefault('__auth_predicates__', []).extend(parse_predicate(x) for x in predicates)
+        return func
+    return _require
 
-def get_route_acl(route):
+
+def get_route_prop_list(route, name):
     acl = []
     for step in reversed(route):
         # The router or final app.
-        acl.extend(getattr(step.head, '__acl__', []))
+        acl.extend(getattr(step.head, name, []))
         # In the route data.
-        acl.extend(step.data.get('__acl__', []))
+        acl.extend(step.data.get(name, []))
         # In __acl__ on the module if from register_module.
-        acl.extend(getattr(step.data.get('__module__', None), '__acl__', []))
+        acl.extend(getattr(step.data.get('__module__', None), name, []))
     return acl
 
+get_route_acl = lambda route: get_route_prop_list(route, '__acl__')
+get_route_predicates = lambda route: get_route_prop_list(route, '__auth_predicates__')
 
-def has_permission(request, acl, permission):
+
+def acl_has_permission(request, acl, permission):
     for state, predicate, permissions in acl:
         predicate = parse_predicate(predicate)
         if predicate(request):
@@ -44,6 +53,7 @@ def has_permission(request, acl, permission):
     return False
 
 
+            
 
 class AuthAppMixin(object):
     
@@ -51,9 +61,10 @@ class AuthAppMixin(object):
         super(AuthAppMixin, self).__init__(*args, **kwargs)
         self.router.predicates.append(self.route_acl_predicate)
         self.router.__acl__ = [
-            (True , '__any__', 'view'),
+            (True , '__any__', 'route'),
             (False, '__any__', '__all__'),
         ]
+        self.router.__auth_predicates__ = [HasPermission('route')]
     
     def setup_config(self):
         super(AuthAppMixin, self).setup_config()
@@ -63,11 +74,19 @@ class AuthAppMixin(object):
         )
         
     def route_acl_predicate(self, route):
-        if not has_permission(self._local.request, get_route_acl(route), 'view'):
-            if self._local.request.user_id is None:
-                route.step(self.authn_required_app, router=self)
-            else:
-                route.step(self.authz_denied_app, router=self)
+        
+        # We need to remember the route we are testing because it is not in
+        # the environment yet, and HasPermission needs to test for it later.
+        self._local.route = route
+        
+        request = self.local_request()
+        for predicate in get_route_predicates(route):
+            if not predicate(request):
+                if self._local.request.user_id is None:
+                    route.step(self.authn_required_app, router=self)
+                else:
+                    route.step(self.authz_denied_app, router=self)
+                break
         return True
     
     @Request.application
@@ -94,7 +113,7 @@ class AuthAppMixin(object):
             return principals
         
         def has_permission(self, permission):
-            return has_permission(self, get_route_acl(self.route_steps), permission)
+            return acl_has_permission(self, get_route_acl(self.route_steps), permission)
             
     
     class ResponseMixin(object):
@@ -190,7 +209,17 @@ def parse_predicate(input):
     return input
 
 
+# More general predicate.
+class HasPermission(object):
+    def __init__(self, permission):
+        self.permission = permission
+    def __call__(self, request):
+        # I would love to use request.route_steps, but since the routers have
+        # not finished running at this point it doesn't exist yet.
+        return acl_has_permission(request, get_route_acl(request.app._local.route), self.permission)
+        
 
+# Permissions
 class AllPermissions(object):
     def __contains__(self, other):
         return True

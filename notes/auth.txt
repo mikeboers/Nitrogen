@@ -50,17 +50,24 @@ user's pages? If the route pattern is "/user/{user}/edit_profile",
 
 ---
 
-predicates operate on the environ
-environ['nitrogen.auth.principals'] exist
-    non-false principals is used to test for anonymousness
+
+predicates are functions which take a request object and return True/False
+leading '!' on string means not
+some special strings have special lookups (__any__, __anonymous__, etc)
 strings converted to principal lookup
 tuples/lists converted to and_
-leading '!' on string means not
+
+some permission strings have special lookups (__all__)
+permissions strings are converted to sets with a single item
+lookup is done via: requested_permission in permissions
 
 
-permission strings are split on commas, otherwise assumed to be a set that we
-test with 'in'
+---
+
+is it possible to throw different status codes or have other handlers run
+instead? why would we want this?
 
 
+@auth.require(predicate)
 
 

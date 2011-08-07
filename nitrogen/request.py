@@ -52,6 +52,18 @@ class Request(wz.wrappers.Request):
     """
     
     @classmethod
+    def auto_application(cls, func=None, **kwargs):
+        if func is None:
+            return functools.partial(cls.auto_application, **kwargs)
+        try:
+            if func.__code__.co_argcount == 1:
+                return cls.application(func, **kwargs)
+        except AttributeError as e:
+            # methods and callable classes don't have __code__
+            pass
+        return func
+    
+    @classmethod
     def application(cls, func=None, add_etag=None, conditional=True):
         """Decorator to adapt WSGI to a request/response model.
         
@@ -171,16 +183,14 @@ class Request(wz.wrappers.Request):
             self.body.seek(0)
         
     @property
-    def route_history(self):
+    def route_steps(self):
         return Route.from_environ(self.environ)
+    
+    route_history = route_steps
     
     @property
     def url_for(self):
-        return self.route_history.url_for
-    
-    @property
-    def unrouted(self):
-        return self.route_history[-1].unrouted
+        return self.route_steps.url_for
     
     route = wz.utils.environ_property('wsgiorg.routing_args', load_func=lambda x: x[1])
     
