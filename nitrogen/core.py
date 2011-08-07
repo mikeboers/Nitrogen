@@ -9,6 +9,7 @@ from .session import SessionAppMixin
 from .textblobs import TextBlobAppMixin
 from .view.app import ViewAppMixin
 from .crud import CRUDAppMixin
+from .auth import AuthAppMixin
 
 __all__ = ['App']
 
@@ -21,6 +22,7 @@ class App(
     SessionAppMixin, # Needs View (for view_globals)
     ViewAppMixin,
     SQLAlchemyAppMixin,
+    AuthAppMixin,
     LoggingAppMixin,
     ExceptionAppMixin, # Must be after anything that may throw exceptions.
     Core
