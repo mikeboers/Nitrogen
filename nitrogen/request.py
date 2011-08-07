@@ -266,7 +266,13 @@ class Response(wz.wrappers.Response):
         if cdisp:
             return wz.http.parse_options_header(cdisp)
         return cdisp, None
-        
+    
+    def redirect(self, location, code=303):
+        self.status_code = code
+        self.location = location
+        self.response = ()
+        return self
+    
     @property
     def filename(self):
         cdisp, opts = self._content_disposition
