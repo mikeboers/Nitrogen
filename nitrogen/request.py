@@ -78,8 +78,11 @@ class Request(wz.wrappers.Request):
         def _wrapped(*args):
             environ = args[-2]
             request = cls(environ)
+            request.response = Response()
             
             response = func(*(args[:-2] + (request, )))
+            if response is None:
+                response = request.response
             
             if response.status_code == 200:
                 if add_etag or add_etag is None and response.is_sequence:
