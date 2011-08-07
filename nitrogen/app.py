@@ -9,10 +9,10 @@ import webstar
 
 from . import cookies
 from . import request
+from . import status
 from .event import instance_event
 from .serve.fcgi import reloader
 from .static import StaticRouter
-
 
 log = logging.getLogger(__name__)
 
@@ -83,6 +83,7 @@ class Core(object):
         # list.
         self.router = webstar.Router()
         self.router.register(None, StaticRouter(**self.config.filter_prefix('static_')))
+        self.router.not_found_app = self.not_found_app
         
         # Setup middleware stack. This is a list of tuples; the second is a
         # function to call that takes a WSGI app, and returns one. The first
@@ -104,7 +105,9 @@ class Core(object):
         
         self._local = self.local()
         
+        Core.RequestMixin.app = self
         Core.RequestMixin.cookie_factory = self.cookie_factory
+        Core.ResponseMixin.app = self
         Core.ResponseMixin.cookie_factory = self.cookie_factory
         
         
@@ -121,6 +124,11 @@ class Core(object):
         self.config.setdefault('static_path', []).append(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/static'
         )
+    
+        
+    
+    def not_found_app(self, environ, start):
+        raise status.NotFound('could not route')
     
     # These are stubs for us to add on to in the __init__ method.
     class RequestMixin(object): pass
