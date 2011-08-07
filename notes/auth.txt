@@ -45,3 +45,22 @@ could end up messing with URL generation.
 
 How can we go about adding to the ACL so that we deny users access to other
 user's pages? If the route pattern is "/user/{user}/edit_profile",
+
+
+
+---
+
+predicates operate on the environ
+environ['nitrogen.auth.principals'] exist
+    non-false principals is used to test for anonymousness
+strings converted to principal lookup
+tuples/lists converted to and_
+leading '!' on string means not
+
+
+permission strings are split on commas, otherwise assumed to be a set that we
+test with 'in'
+
+
+
+

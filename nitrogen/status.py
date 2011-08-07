@@ -92,6 +92,7 @@ class PaymentRequired(HTTPException):
     description = ('<p>Access was denied for financial reasons.</p>')
 
 NotFound.description = '<p>The requested URL was not found on the server.</p>'
+Forbidden.description = "<p>You don't have the permission to access the requested resource.</p>"
 
 class ProxyAuthenticationRequired(HTTPException):
     code = 407
