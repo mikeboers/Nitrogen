@@ -55,12 +55,18 @@ class Request(wz.wrappers.Request):
     def auto_application(cls, func=None, **kwargs):
         if func is None:
             return functools.partial(cls.auto_application, **kwargs)
+        input_func = func
+        if hasattr(func, '__Request_auto_application__'):
+            return func.__Request_auto_application__
         try:
             if func.__code__.co_argcount == 1:
-                return cls.application(func, **kwargs)
+                func = cls.application(func, **kwargs)
         except AttributeError as e:
             # methods and callable classes don't have __code__
             pass
+        # Using the __dict__ method because instance methods don't let us set
+        # attributes directly.
+        input_func.__dict__['__Request_auto_application__'] = func
         return func
     
     @classmethod

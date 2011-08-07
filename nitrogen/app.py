@@ -85,7 +85,6 @@ class Core(object):
         self.router = webstar.Router()
         self.router.register(None, StaticRouter(**self.config.filter_prefix('static_')))
         self.router.not_found_app = self.not_found_app
-        self.router.predicates.append(self.auto_request_app_route_predicate)
         
         # Setup middleware stack. This is a list of tuples; the second is a
         # function to call that takes a WSGI app, and returns one. The first
@@ -127,16 +126,8 @@ class Core(object):
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/static'
         )
     
-        
-    
     def not_found_app(self, environ, start):
         raise status.NotFound('could not route')
-    
-    def auto_request_app_route_predicate(self, route):
-        wrapped = self.Request.auto_application(route.app)
-        if route.app is not wrapped:
-            route.step(wrapped, router=self)
-        return True
     
     # These are stubs for us to add on to in the __init__ method.
     class RequestMixin(object): pass
@@ -168,8 +159,13 @@ class Core(object):
             raise TypeError('priority must be a tuple; got %s %r' % (type(priority), priority))
         self.middleware.append((priority, func, args or (), kwargs or {}))    
     
+    # So we can overload it to check for permissions and predicates.
+    def _get_wsgi_app(self, environ):
+        return self.router.wsgi_route(environ)
+    
     def _call_wsgi_app(self, environ, start):
-        return self.router(environ, start)
+        app = self._get_wsgi_app(environ)
+        return self.Request.auto_application(app)(environ, start)
     
     def flatten_middleware(self):
         if self._flattened_wsgi_app is None:

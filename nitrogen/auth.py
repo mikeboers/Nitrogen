@@ -17,15 +17,15 @@ log = logging.getLogger(__name__)
 # Decorator to attach ACLs to functions.
 def ACL(*acl):
     def _ACL(func):
-        func.__dict__.setdefault('__acl__', []).extend(acl)
+        func.__dict__.setdefault('__acl__', []).extend(parse_ace(x) for x in acl)
         return func
     return _ACL
 
-def require(*predicates):
-    def _require(func):
+def requires(*predicates):
+    def _requires(func):
         func.__dict__.setdefault('__auth_predicates__', []).extend(parse_predicate(x) for x in predicates)
         return func
-    return _require
+    return _requires
 
 
 def get_route_prop_list(route, name):
@@ -43,12 +43,12 @@ get_route_acl = lambda route: get_route_prop_list(route, '__acl__')
 get_route_predicates = lambda route: get_route_prop_list(route, '__auth_predicates__')
 
 
-def acl_has_permission(request, acl, permission):
+def check_acl_for_permission(request, acl, permission):
     for state, predicate, permissions in acl:
         predicate = parse_predicate(predicate)
         if predicate(request):
             if permission in parse_permissions(permissions):
-                log.info('ACE matched: %s%r via %r' % ('' if state else 'not ', permission, predicate))
+                log.debug('ACE matched: %s%r via %r' % ('' if state else 'not ', permission, predicate))
                 return state
     return False
 
@@ -59,11 +59,14 @@ class AuthAppMixin(object):
     
     def __init__(self, *args, **kwargs):
         super(AuthAppMixin, self).__init__(*args, **kwargs)
-        self.router.predicates.append(self.route_acl_predicate)
+        
+        # Default ACL list that will be checked by an auth_predicate.
         self.router.__acl__ = [
             (True , '__any__', 'route'),
             (False, '__any__', '__all__'),
         ]
+        
+        # Here is the auth predicate that actually checks ACLs
         self.router.__auth_predicates__ = [HasPermission('route')]
     
     def setup_config(self):
@@ -73,21 +76,21 @@ class AuthAppMixin(object):
             auth_cookie_name='user_id',
         )
         
-    def route_acl_predicate(self, route):
-        
-        # We need to remember the route we are testing because it is not in
-        # the environment yet, and HasPermission needs to test for it later.
-        self._local.route = route
-        
-        request = self.local_request()
-        for predicate in get_route_predicates(route):
-            if not predicate(request):
-                if self._local.request.user_id is None:
-                    route.step(self.authn_required_app, router=self)
-                else:
-                    route.step(self.authz_denied_app, router=self)
-                break
-        return True
+    def _get_wsgi_app(self, environ):
+        app = super(AuthAppMixin, self)._get_wsgi_app(environ)
+        request = self.Request(environ)
+        route = request.route_steps
+        # We always have a route at this point if the route was successful.
+        # We may not have one if it is doing a normalization redirection or
+        # if a route was not found
+        if route:
+            for predicate in get_route_predicates(request.route_steps):
+                if not predicate(request):
+                    if request.user_id is None:
+                        return self.authn_required_app
+                    else:
+                        return self.authz_denied_app
+        return app
     
     @Request.application
     def authn_required_app(self, request):
@@ -113,7 +116,7 @@ class AuthAppMixin(object):
             return principals
         
         def has_permission(self, permission):
-            return acl_has_permission(self, get_route_acl(self.route_steps), permission)
+            return check_acl_for_permission(self, get_route_acl(self.route_steps), permission)
             
     
     class ResponseMixin(object):
@@ -175,7 +178,7 @@ NotAnonymous = Authenticated
 Anonymous = lambda: Not(Authenticated())
 
 class Local(object):
-    def is_met(self, request):
+    def __call__(self, request):
         return request.remote_addr in ('127.0.0.1', '::0')
     def __repr__(self):
         return 'auth.Local()'
@@ -214,9 +217,7 @@ class HasPermission(object):
     def __init__(self, permission):
         self.permission = permission
     def __call__(self, request):
-        # I would love to use request.route_steps, but since the routers have
-        # not finished running at this point it doesn't exist yet.
-        return acl_has_permission(request, get_route_acl(request.app._local.route), self.permission)
+        return request.has_permission(self.permission)
         
 
 # Permissions
@@ -235,5 +236,9 @@ def parse_permissions(input):
             return string_permissions[input]
         return set([input])
     return input
+
+def parse_ace(ace):
+    state, predicate, permissions = ace
+    return state, parse_predicate(predicate), parse_permissions(permissions)
 
 
