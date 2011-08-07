@@ -13,6 +13,8 @@ from . import status
 from .event import instance_event
 from .serve.fcgi import reloader
 from .static import StaticRouter
+from .request import Request
+
 
 log = logging.getLogger(__name__)
 
@@ -84,6 +86,7 @@ class Core(object):
         self.router = webstar.Router()
         self.router.register(None, StaticRouter(**self.config.filter_prefix('static_')))
         self.router.not_found_app = self.not_found_app
+        self.router.predicates.append(self.auto_request_app_route_predicate)
         
         # Setup middleware stack. This is a list of tuples; the second is a
         # function to call that takes a WSGI app, and returns one. The first
@@ -129,6 +132,11 @@ class Core(object):
     
     def not_found_app(self, environ, start):
         raise status.NotFound('could not route')
+    
+    def auto_request_app_route_predicate(self, route):
+        if route.app.__code__.co_argcount == 1:
+            route.step(Request.application(route.app), router=self)
+        return True
     
     # These are stubs for us to add on to in the __init__ method.
     class RequestMixin(object): pass
