@@ -63,6 +63,7 @@ class ViewAppMixin(object):
         super(ViewAppMixin, self).export_to(map)
         map.update(
             render=self.render,
+            render_string=self.render_string,
             get_template=self.get_template,
         )
     
@@ -102,6 +103,11 @@ class ViewAppMixin(object):
         """
         if isinstance(template, basestring):
             template = self.lookup.get_template(template)
+        data = self._prep_data(data)
+        return template.render_unicode(**data)
+    
+    def render_string(self, template, **data):
+        template = Template(template, lookup=self.lookup, **self.lookup.template_args)
         data = self._prep_data(data)
         return template.render_unicode(**data)
     

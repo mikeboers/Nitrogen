@@ -1,4 +1,5 @@
 
+import sys
 import werkzeug as wz
 
 from wtforms import *
@@ -10,6 +11,9 @@ from nitrogen import recaptcha
 
 from . import app
 
+
+# So you can `import fields` from this.
+fields = sys.modules[__name__]
 
 
 class MarkdownField(TextAreaField):

@@ -1,4 +1,13 @@
 
+- wtforms date and datetime should use input type="date"
+  - same with email
+- wtforms should be able to have placeholders
+
+
+
+
+
+
 - asset specification -> "package.name:file_name.txt"
 
 - remove serve extensions (just write your own...)
