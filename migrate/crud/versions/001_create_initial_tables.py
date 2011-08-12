@@ -8,7 +8,7 @@ table = Table('crud_versions', metadata,
     Column('object_type', Text, nullable=False),
     Column('object_id', Integer, nullable=False),
     Column('commit_time', DateTime, nullable=False),
-    Column('data', Blob, nullable=False),
+    Column('data', LargeBinary, nullable=False),
     Column('blame', Text, nullable=False),
     Column('comment', Text, nullable=False),
 )
