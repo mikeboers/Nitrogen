@@ -85,19 +85,6 @@ which marks something as a mixin.
 		pass
 
 
-- consider using venusian
-- remove all the packages that were there for b/c
-    - record them as we go so we can have something to rewrite it
-- replace as much of werkzeug as we can with paste/webob
-    - go back to the monkey patched cgi.FieldStorage
-        - perhaps make this it's own project?
-        - parse_(query|form|files) caches the NON decoded version in the environ
-            parse_query(environ, charset=None) -> non decoded
-            parse_query(environ, charset='utf8') -> decoded
-    - OR strip werkzeugs out
-
-- pyramid.decorator.reify is pretty awesome
-
 - replace webhelpers with lxml
 
 - Authnz package could provide a router object which tests ACLs
@@ -115,10 +102,6 @@ which marks something as a mixin.
 - AppPlugin instead of AppMixin
 	- use c3linearize to determine proper ordering of plugins
 
-    
-- perhaps absolute uri.path.Path should have an empty first element, or a '/'
-  first element. It seems more sensible that it be an empty first element
-
 
 - Pyramid renderers are rather nice.
     @Request.application # or @Request.wrap
@@ -129,13 +112,6 @@ which marks something as a mixin.
 - asset specification is nice: http://docs.pylonsproject.org/projects/pyramid/1.0/narr/assets.html#asset-specifications
 
 - consider moving to an events-like notification system for the before_request and after_request sort of callbacks.
-
-- my authorization system should use the __acl__ instance and class properties (building the full ACL from the entire mro of the object).
-    - principals could be "mikeboers", "role:admin" and "group:users"
-    - OR "username" and "@group" and "+role"
-        - these ones mean there is nothing actually special about the principals; they are all handled the same
-    - we calculate the full ACL as the merge of the __acl__ parameters along the MRO of the object.
-        - we can provide an __acl_bases__ which is used instead of __class__.__bases__ in the C3 (ie. mro) algo.
 
 - use this new linearizer for the building of classes out of mixins on the AppMixins
 
@@ -160,12 +136,7 @@ which marks something as a mixin.
 - transform query into a general map serializer
 - turn uri.path into a simpler string?
 
-- remove all the werkzeug locals
 
-
-
-
-- remove all of the wsgi wrappers; they are unnessesary
 
 - consider swapping from Werkzeug request/response to webob
     - make_body_seekable is nice

@@ -1,17 +1,20 @@
 <%page args="form" />
-<%
+<%!
     import os
+    
+
+%><%
     nonce = os.urandom(4).encode('hex')
     form_id = 'form-%s' % nonce
-%>
+%>\
 <ol id="${form_id}" class="form-fields">
   % for field in form:
     <li class="state-${"error" if field.errors else "ok"}">
-      <div class="label">
+      ## <div class="label">
           % if field.type == 'BooleanField':
             ${field()}
           % endif
-        ${field.label()}
+        ${field.label(class_='type-' + field.type)}
         % if field.flags.optional:
           <span class="optional">(optional)</span>
         % elif field.flags.required:
@@ -22,12 +25,18 @@
             ${'\n'.join('<li>[ %s ]</li>' % error for error in field.errors)}
           </ol>
         % endif
-      </div>
-    % if field.type != 'BooleanField':
-      <div class="field type-${field.type}">
-        ${field()}
-      </div>
-    % endif
+      ## </div>
+      % if field.type == 'FormField':
+        <div class="field type-FormField form-type-${field.form_class.__name__}">
+          ${field.render()}
+        </div>
+      % elif field.type == 'FieldList':
+        <%include file="_wtform.html" args="form=field" />
+      % elif field.type != 'BooleanField':
+        <div class="field type-${field.type}">
+          ${field()}
+        </div>
+      % endif
       % if field.type == 'MarkdownField':
         <script>jQuery(function($) {
           if ($.markdownEditor)

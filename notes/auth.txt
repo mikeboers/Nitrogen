@@ -70,4 +70,5 @@ instead? why would we want this?
 
 @auth.require(predicate)
 
-
+- should the ACL decorator be upper or lower case?
+    - should it take a list, or *args?
