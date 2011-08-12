@@ -26,7 +26,7 @@ ol.form-fields
     list-style-type: none
     padding: 0
     margin: 0
-    
+
     li
         margin-bottom: .5em
     
@@ -50,24 +50,13 @@ ol.form-fields
     .field
         position: relative
 
-        &.type-TextField, &.type-DateField, &.type-DateTimeField
-            padding: 0 4px
+        input[type=text], textarea
+            padding: 4px
             background-color: #fff
             border: 1px solid $border_color
             margin: 0
-
-            input
-                border: none
-                padding: 1px 0 2px
-                width: 100%
-                margin: 0
-        
-        &.type-TextAreaField textarea
             width: 100%
-            border: 1px solid $border_color
             font: .8em "Lucida Grande", Lucida, Verdana, sans-serif
-            padding: 0
-            padding: 3px 4px
 
 
 
