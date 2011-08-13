@@ -57,7 +57,12 @@ class ViewAppMixin(object):
             input_encoding='utf-8',
         )
         
-        self.view_globals['url_for'] = lambda *args, **kwargs: self._local.request.url_for(*args, **kwargs)
+        self.view_globals.update(
+            get_template=self.get_template,
+            render=self.render,
+            render_string=self.render_string,
+            url_for= lambda *args, **kwargs: self._local.request.url_for(*args, **kwargs),
+        )
         
     def export_to(self, map):
         super(ViewAppMixin, self).export_to(map)
