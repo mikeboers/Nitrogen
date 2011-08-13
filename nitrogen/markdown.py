@@ -30,6 +30,11 @@ import re
 
 from markdown import markdown as _markdown
 
+try:
+    import pygments
+    has_pygments = True
+except ImportError:
+    has_pygments = False
 
 log = logging.getLogger(__name__)
 
@@ -74,10 +79,11 @@ def github_markdown(text):
     return text
 
 
-def markdown(text, github=True):
+def markdown(text, github=True, codehilight=has_pygments):
+    ext = ['codehilite'] if has_pygments else []
     if github:
-        return _markdown(github_markdown(text))
-    return _markdown(text)
+        text = github_markdown(text)
+    return _markdown(text, ext)
 
 
 

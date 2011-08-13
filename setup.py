@@ -31,6 +31,8 @@ setup(
         paste
         pil
         
+        pygments
+        
     ''',
     
     extras_require=dict(
