@@ -24,21 +24,21 @@ base_format = "%(asctime)s %(levelname)-8s pid:%(process)d req:%(request_index)d
 
 class ThreadLocalFormatter(logging.Formatter):
     
-    @staticmethod
-    def _build_local():
-        return threading.local().__dict__
-    
-    @staticmethod
-    def _build_lock():
+    def _build_lock(self):
         return threading.Lock()
     
     def __init__(self, *args, **kwargs):
         logging.Formatter.__init__(self, *args, **kwargs)
         
-        self.local_extra = self._build_local()
-        self.request_count = 0
-        self.request_count_lock = self._build_lock()
+        self._local = threading.local()
+        self._lock = self._build_lock()
         
+        self.request_count = 0
+    
+    @property
+    def local_extra(self):
+        return self._local.__dict__
+    
     def format(self, record):
         data = {
             'remote_addr': None,
@@ -73,7 +73,7 @@ class ThreadLocalFormatter(logging.Formatter):
         return message
     
     def on_request_started(self, environ):    
-        with self.request_count_lock:
+        with self._lock:
             self.request_count += 1
             self.local_extra['request_index'] = self.request_count
             self.local_extra['remote_addr'] = environ.get('REMOTE_ADDR')
@@ -81,12 +81,7 @@ class ThreadLocalFormatter(logging.Formatter):
 
 class ProcLocalFormatter(ThreadLocalFormatter):
     
-    @staticmethod
-    def _build_local():
-        return dict()
-    
-    @staticmethod
-    def _build_lock():
+    def _build_lock(self):
         return multiprocessing.Lock()
 
 
@@ -135,6 +130,7 @@ class LoggingAppMixin(object):
         
         config.setdefault('log_handlers', [])
         
+        config.setdefault('access_log_on', True)
         config.setdefault('access_log_name', 'http.access')
         config.setdefault('access_log_format', '%(REQUEST_METHOD)s %(PATH)s -> %(STATUS_CODE)s in %(DURATION_MS).1fms')
         
@@ -147,7 +143,7 @@ class LoggingAppMixin(object):
         self.setup_logging()
         
         self.access_log = None
-        if self.config.access_log_name and self.config.access_log_format:
+        if self.config.access_log_on and self.config.access_log_name and self.config.access_log_format:
             self.access_log = logging.getLogger(self.config.access_log_name)
             self.request_started.listen(self.__on_request_started)
             self.wsgi_started.listen(self.__on_wsgi_started)
