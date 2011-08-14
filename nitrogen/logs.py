@@ -172,6 +172,8 @@ class LoggingAppMixin(object):
         if do_on_request_finished:
             self.request_finished.listen(self.__on_request_finished)
             
+    def set_access_log_meta(self, **kwargs):
+        self._local.__dict__.setdefault('access_log_meta', {}).update(kwargs)
     
     def setup_logging(self):
         self.log_formatter = self.config.log_formatter
@@ -207,7 +209,12 @@ class LoggingAppMixin(object):
             params['STATUS_CODE'] = self._local.status_code
             params['DURATION_MS'] = 1000 * (time.time() - self._local.start_time)
             params['PATH'] = Request(environ).full_path
-            self.access_log.info(self.config.access_log_format % params)
+            meta = self._local.__dict__.get('access_log_meta', {})
+            message = self.config.access_log_format % params
+            if meta:
+                meta = ', '.join('%s=%s' % x for x in meta.iteritems())
+                message = message + '; ' + meta
+            self.access_log.info(message)
     
     
     

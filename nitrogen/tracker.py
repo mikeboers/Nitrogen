@@ -40,14 +40,13 @@ class TrackerAppMixin(object):
             def _start(status, headers, *args):
                 request = self.Request(environ)
                 token = request.cookies.get(self.config.cookie_tracker_name)
-                if token:
-                    self.tracker_log.info('old cookie %s', token)
-                else:
+                if not token:
                     token = os.urandom(16).encode('hex')
-                    self.tracker_log.info('new cookie %s -> %s' % (token, request.user_agent))
+                    self.tracker_log.info('new token %s -> %s' % (token, request.user_agent))
                     response = self.Response()
                     response.cookies.set(self.config.cookie_tracker_name, token, path='/')
                     headers.extend(response.cookies.build_headers())
+                self.set_access_log_meta(token=token)
                 return start(status, headers, *args)
             return app(environ, _start)
         return _app
