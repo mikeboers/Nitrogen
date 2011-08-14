@@ -198,7 +198,7 @@ class Request(wz.wrappers.Request):
     route = wz.utils.environ_property('wsgiorg.routing_args', load_func=lambda x: x[1])
     
     # Werkzeug supplies if_none_match, which is likely better.
-    etag = wz.utils.environ_property('HTTP_IF_NOT_MATCH')
+    etag = wz.utils.environ_property('HTTP_IF_NONE_MATCH')
 
     # I prefer these names.
     path_info = wz.wrappers.Request.path
@@ -206,7 +206,7 @@ class Request(wz.wrappers.Request):
     
     @property
     def full_path(self):
-        return '/' + (self.script_name.rstrip('/') + '/' + self.path_info).strip('/')
+        return '/' + (self.script_name.rstrip('/') + '/' + self.path_info.lstrip('/')).strip('/')
 
 
 
