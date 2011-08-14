@@ -46,7 +46,7 @@ class TrackerAppMixin(object):
                     response = self.Response()
                     response.cookies.set(self.config.cookie_tracker_name, token, path='/')
                     headers.extend(response.cookies.build_headers())
-                self.set_access_log_meta(token=token)
+                self.set_access_log_meta(tracking_cookie=token)
                 return start(status, headers, *args)
             return app(environ, _start)
         return _app
