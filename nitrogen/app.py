@@ -100,9 +100,6 @@ class Core(object):
         # Use self.register_middleware to add to this list.
         self.middleware = []
         self._flattened_wsgi_app = None
-                
-        if self.config.reload:
-            self.register_middleware((self.TRANSPORT_LAYER, 10000), reloader, (self.config.reloader_packages, ))
         
         self._local = self.local()
         

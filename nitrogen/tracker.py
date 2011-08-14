@@ -16,51 +16,41 @@ class TrackerAppMixin(object):
     
     def __init__(self, *args, **kwargs):
         super(TrackerAppMixin, self).__init__(*args, **kwargs)
-        self.router.register(self.config.tracker_route, self.handle_tracking_pixel)
+        
         self.tracker_log = logging.getLogger(self.config.tracker_log_name)
-        self.view_globals['tracker_html'] = '<img id="tpixel" src="%s" />' % self.config.tracker_route
+
+        if self.config.cookie_tracker_on:
+            self.register_middleware((self.FRAMEWORK_LAYER, 10000), self.cookie_tracker_middleware)
+        
+        self.router.register(self.config.pixel_tracker_route, self.handle_tracking_pixel)
+        self.view_globals['pixel_tracker_html'] = '<img id="tpixel" src="%s" />' % self.config.pixel_tracker_route
+        
     
     def setup_config(self):
         super(TrackerAppMixin, self).setup_config()
         self.config.setdefaults(
+            cookie_tracker_on=True,
+            cookie_tracker_name='tracker',
+            pixel_tracker_route='/tpixel.gif',
             tracker_log_name='http.tracker',
-            tracker_route='/tpixel.gif',
         )
     
-    @Request.application
-    def handle_tracking_pixel_with_meta(self, request):
-        
-        if request.if_none_match:
-            
-            token = list(request.if_none_match)[0]
-            
-            if '?' in token:
-                id, raw_query = token.split('?')
-            else:
-                id = token
-                raw_query = ''
-            query = dict(urldecode(raw_query))
-            query['n'] = int(query.get('n', 0)) + 1
-            
-            new_token = id + '?' + urlencode(query)
-            
-            self.tracker_log.info('old token %s' % new_token)
-            
-            response = Response()
-            response.status_code = status.NotModified.code
-            response.set_etag(new_token)
-            response.private = True
-            return response
-        
-        token = '%s?n=1' % os.urandom(16).encode('hex')
-        self.tracker_log.info('new token %s -> %s' % (token, request.user_agent))
-            
-        response = Response(PIXEL, mimetype=PIXEL_MIMETYPE)
-        response.set_etag(token)
-        response.private = True
-        
-        return response
-    
+    def cookie_tracker_middleware(self, app):
+        def _app(environ, start):
+            def _start(status, headers, *args):
+                request = self.Request(environ)
+                token = request.cookies.get(self.config.cookie_tracker_name)
+                if token:
+                    self.tracker_log.info('old cookie %s', token)
+                else:
+                    token = os.urandom(16).encode('hex')
+                    self.tracker_log.info('new cookie %s -> %s' % (token, request.user_agent))
+                    response = self.Response()
+                    response.cookies.set(self.config.cookie_tracker_name, token, path='/')
+                    headers.extend(response.cookies.build_headers())
+                return start(status, headers, *args)
+            return app(environ, _start)
+        return _app
     
     @Request.application
     def handle_tracking_pixel(self, request):
@@ -68,11 +58,11 @@ class TrackerAppMixin(object):
         if request.if_none_match:
             
             token = list(request.if_none_match)[0]
-            self.tracker_log.info('old token %s' % token)
+            self.tracker_log.info('old etag %s' % token)
             return status.NotModified()
         
         token = os.urandom(16).encode('hex')
-        self.tracker_log.info('new token %s -> %s' % (token, request.user_agent))
+        self.tracker_log.info('new etag %s -> %s' % (token, request.user_agent))
             
         response = Response(PIXEL, mimetype=PIXEL_MIMETYPE)
         response.set_etag(token)

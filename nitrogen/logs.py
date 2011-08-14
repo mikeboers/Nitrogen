@@ -134,6 +134,10 @@ class LoggingAppMixin(object):
         config.setdefault('access_log_name', 'http.access')
         config.setdefault('access_log_format', '%(REQUEST_METHOD)s %(PATH)s -> %(STATUS_CODE)s in %(DURATION_MS).1fms')
         
+        config.setdefault('referrer_log_on', True)
+        config.setdefault('referrer_log_name', 'http.referrer')
+        
+        
             
     def __init__(self, *args, **kwargs):
         super(LoggingAppMixin, self).__init__(*args, **kwargs)
@@ -142,14 +146,32 @@ class LoggingAppMixin(object):
             self.config['log_formatter'] = ThreadLocalFormatter()
         self.setup_logging()
         
-        self.access_log = None
-        if self.config.access_log_on and self.config.access_log_name and self.config.access_log_format:
-            self.access_log = logging.getLogger(self.config.access_log_name)
-            self.request_started.listen(self.__on_request_started)
-            self.wsgi_started.listen(self.__on_wsgi_started)
-            self.request_finished.listen(self.__on_request_finished)
+        do_on_request_start = False
+        do_on_wsgi_started = False
+        do_on_request_finished = False
         
+        self.access_log = None
+        if self.config.access_log_on:
+            self.access_log = logging.getLogger(self.config.access_log_name)
+            do_on_request_start = True
+            do_on_wsgi_started = True
+            do_on_request_finished = True
+        
+        self.referrer_log = None
+        if self.config.referrer_log_on:
+            self.referrer_log = logging.getLogger(self.config.referrer_log_name)
+            do_on_request_start = True
+        
+        # Before self handlers so we have the IP
         self.request_started.listen(self.log_formatter.on_request_started)
+        
+        if do_on_request_start:
+            self.request_started.listen(self.__on_request_started)
+        if do_on_wsgi_started:
+            self.wsgi_started.listen(self.__on_wsgi_started)
+        if do_on_request_finished:
+            self.request_finished.listen(self.__on_request_finished)
+            
     
     def setup_logging(self):
         self.log_formatter = self.config.log_formatter
@@ -171,16 +193,21 @@ class LoggingAppMixin(object):
     def __on_request_started(self, environ):
         self._local.status_code = None
         self._local.start_time = time.time()
+        if self.referrer_log:
+            request = self.Request(environ)
+            if request.referrer:
+                self.referrer_log.info(request.referrer)
     
     def __on_wsgi_started(self, status, *args):
         self._local.status_code = status
     
     def __on_request_finished(self, environ):
-        params = environ.copy()
-        params['STATUS_CODE'] = self._local.status_code
-        params['DURATION_MS'] = 1000 * (time.time() - self._local.start_time)
-        params['PATH'] = Request(environ).full_path
-        self.access_log.info(self.config.access_log_format % params)
+        if self.access_log:
+            params = environ.copy()
+            params['STATUS_CODE'] = self._local.status_code
+            params['DURATION_MS'] = 1000 * (time.time() - self._local.start_time)
+            params['PATH'] = Request(environ).full_path
+            self.access_log.info(self.config.access_log_format % params)
     
     
     
