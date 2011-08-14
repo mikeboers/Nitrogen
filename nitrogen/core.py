@@ -10,6 +10,7 @@ from .textblobs import TextBlobAppMixin
 from .view.app import ViewAppMixin
 from .crud import CRUDAppMixin
 from .auth import AuthAppMixin
+from .tracker import TrackerAppMixin
 
 __all__ = ['App']
 
@@ -19,6 +20,7 @@ class App(
     TextBlobAppMixin, # Needs Form and CRUD.
     FormAppMixin, # Needs View
     CRUDAppMixin, # Needs View and SQLAlchemy
+    TrackerAppMixin, # Needs View (and maybe session)
     SessionAppMixin, # Needs View (for view_globals)
     ViewAppMixin,
     SQLAlchemyAppMixin,
