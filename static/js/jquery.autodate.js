@@ -2,7 +2,8 @@
 (function($) {
 
 var iso_format = 'yyyy-MM-dd HH:mm:ss';
-var timezone_abbr = new Date().toString().split("(")[1].split(")")[0]
+var timezone_abbr = new Date().toString().split("(")[1].split(")")[0];
+var timezone_offset = new Date().getTimezoneOffset() * 60 * 1000;
 
 var defaults = {
     'displayFormat': 'dddd, MMMM d, yyyy, hh:mm:ss tt',
@@ -26,6 +27,12 @@ $.autodate = function(elem, opts) {
 		.attr('name', $local_input.attr('name'))
 		.insertAfter($local_input);
 	
+    // Convert the UTC from server into actual local time with timezone abbr.
+    var local_time = Date.parseHuman($local_input.val() + 'UTC');
+    var local_str = local_time.toString(iso_format);
+    $local_input.val(local_str + ' ' + timezone_abbr);
+    
+    
 	var raw_name = 'autodate-raw-' + $local_input.attr('name');
 	$local_input.attr('name', raw_name).addClass('autodate')
 	
@@ -35,17 +42,14 @@ $.autodate = function(elem, opts) {
 	
 	function _update()
 	{
-	    var now = new Date();
 		var local_time = Date.parseHuman($local_input.val());
-		// Need to use a new Date as parseHuman give non-daylight savings zone.
-		// We need to match the first conversion...
-		var utc_time = local_time ? new Date(local_time.getTime() + now.getTimezoneOffset() * 60 * 1000) : null;
+		var utc_time = local_time ? new Date(local_time.getTime() + timezone_offset) : null;
 		
 		$label.text(local_time ? local_time.toString(opts.displayFormat) + ' ' + timezone_abbr : 'INVALID DATE');
 		$utc_input.val(utc_time ? utc_time.toString(opts.postFormat) : 'YYYY-MM-DD HH-MM-SS');
 		
-		console.log($local_input.val(), ' -> ', $utc_input.val())
-		console.log(local_time, ' -> ', utc_time)
+		// console.log($local_input.val(), ' -> ', $utc_input.val())
+		// console.log(local_time, ' -> ', utc_time)
 	}
 	
 	// Setup the date picker.
@@ -61,15 +65,6 @@ $.autodate = function(elem, opts) {
 		showAnim: 'fadeIn',
 		currentText: 'Goto Today'
 	});
-	
-	// Parse the time and deal with the timezone offset as the parse method
-	// assumes local time.
-	var offset = new Date().getTimezoneOffset() * 60;
-	var utc_ms = Date.parse($local_input.val());
-	var local_ms = utc_ms - offset * 1000;
-	var local_time = new Date(local_ms);
-    var local_str = local_time.toString(iso_format);
-    $local_input.val(local_str + ' ' + timezone_abbr);
     
     _update()
 	$local_input.keyup(_update);
