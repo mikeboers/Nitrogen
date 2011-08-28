@@ -72,11 +72,26 @@ class Nl2BrExtension(_markdown.Extension):
             return text.splitlines()
     
     def extendMarkdown(self, md, md_globals):
-        md.preprocessors.add('nl2br', self.Preprocessor(), '<html_block')
+        md.preprocessors.add('nl2br', self.Preprocessor(md), '<html_block')
 
 
 
 
+class MathJaxExtension(_markdown.Extension):
+    
+    class Preprocessor(_markdown.preprocessors.Preprocessor):
+         
+        _pattern = re.compile(r'\\\[(.+?)\\\]|\\\((.+?)\\\)', re.MULTILINE | re.DOTALL)
+
+        def _callback(self, m):
+            return self.markdown.htmlStash.store(cgi.escape(m.group(0)), safe=True)
+        
+        def run(self, lines):
+            """Parses the actual page"""
+            return self._pattern.sub(self._callback, '\n'.join(lines)).splitlines()
+        
+    def extendMarkdown(self, md, md_globals):
+        md.preprocessors.add('mathjax', self.Preprocessor(md), '<html_block')
 
         
 
@@ -93,10 +108,12 @@ CodeHilite._getLang = new_get_lang
 
 extensions = dict(
     nl2br=Nl2BrExtension,
+    mathjax=MathJaxExtension,
 )
 extension_defaults = dict(
     nl2br=True,
     codehilite=True,
+    mathjax=True,
 )
 
 def markdown(text, **custom_exts):

@@ -119,7 +119,6 @@ class ViewAppMixin(object):
     def markdown(self, x, **custom_exts):
         exts = self.config.markdown_extensions.copy()
         exts.update(custom_exts)
-        print "HERE", exts
         return markdown.markdown(x, **exts)
         
     
