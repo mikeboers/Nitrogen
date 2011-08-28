@@ -163,8 +163,8 @@ $.widget('nitrogen.crud', {
 		
 		
 		// Get the form.
-		var data = $.extend({}, this.options, {
-			id: this.options.id ? this.options.id : 0,
+		var data = $.extend({}, {
+			id: this.options.id || 0,
 			version: version || 0
 		});
 	
@@ -340,7 +340,8 @@ $.widget('nitrogen.crud', {
 		$.ajax({
 			type: "POST",
 			url: this.options.url + '/' + (isPreview ? 'preview' : 'save'),
-			data: $.extend({}, this.options, this._getFormData(), {
+			data: $.extend({}, this._getFormData(), {
+				id: this.options.id || 0,
 				__do_commit_version : do_commit_version ? 'yes' : undefined,
 				__version_comment: version_comment || undefined
 			}),
@@ -370,10 +371,14 @@ $.widget('nitrogen.crud', {
 			var options = $.extend(this.options, res)
 			
 			var $$ = this.widget()
-			$(res.html)
+			var new_obj = $(res.html)
 				.insertAfter($$)
 				.crud(options)
 			$$.remove()
+			
+			if (this.options.save) {
+				this.options.save.call(new_obj);
+			}
 		}
 	},
 	
@@ -390,9 +395,14 @@ $.widget('nitrogen.crud', {
 		{			
 			$$ = this.widget()
 			$$.unblock({fadeOut: 0})
-			this.preview = $(res.html)
+			this.preview = $('<div class="cred-preview" />')
+				.html(res.html)
 				.insertAfter($$)
-			$$.hide()	
+			$$.hide()
+			
+			if (this.options.preview) {
+				this.options.preview.call(this.preview);
+			}
 			
 			this._setState('preview')
 			this._setState('preview', this.preview)
