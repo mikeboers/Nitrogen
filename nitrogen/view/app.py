@@ -6,6 +6,7 @@ import threading
 import logging
 
 from . import mako
+from . import markdown
 
 log = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ class ViewAppMixin(object):
         super(ViewAppMixin, self).setup_config()
         self.config.setdefault('template_path', [])
         self.config.setdefault('template_cache_dir', None)
+        self.config.setdefault('markdown_extensions', {})
     
     def __init__(self, *args, **kwargs):
         """Constructor.
@@ -57,6 +59,7 @@ class ViewAppMixin(object):
             get_template=self.get_template,
             render=self.render,
             render_string=self.render_string,
+            markdown=self.markdown,
             url_for= lambda *args, **kwargs: self._local.request.url_for(*args, **kwargs),
         )
         
@@ -66,6 +69,7 @@ class ViewAppMixin(object):
             render=self.render,
             render_string=self.render_string,
             get_template=self.get_template,
+            markdown=self.markdown,
         )
     
     @property
@@ -112,6 +116,11 @@ class ViewAppMixin(object):
         data = self._prep_data(data)
         return template.render_unicode(**data)
     
-    
+    def markdown(self, x, **custom_exts):
+        exts = self.config.markdown_extensions.copy()
+        exts.update(custom_exts)
+        print "HERE", exts
+        return markdown.markdown(x, **exts)
+        
     
 

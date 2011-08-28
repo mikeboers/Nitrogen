@@ -27,6 +27,7 @@ from __future__ import absolute_import
 import os
 import logging
 import re
+import cgi
 
 import markdown as _markdown
 from markdown import Markdown, load_extension
@@ -43,9 +44,6 @@ class Nl2BrExtension(_markdown.Extension):
         newline_re = re.compile(r'^[\w\<][^\n]*(\n+)', re.MULTILINE)
         pre_insert_re = re.compile(r'{nl2br-([0-9a-f]{32})\}')
         
-        def _replace(self, m):
-            print m.groups()
-            return '[[math]]'
         def run(self, lines):
             
             text = '\n'.join(lines)
@@ -78,6 +76,10 @@ class Nl2BrExtension(_markdown.Extension):
 
 
 
+
+
+        
+
 # Monkey patch CodeHilight to have no default language
 old_get_lang = CodeHilite._getLang
 def new_get_lang(self):
@@ -86,44 +88,32 @@ def new_get_lang(self):
 CodeHilite._getLang = new_get_lang
 
 
+
+
+
 extensions = dict(
     nl2br=Nl2BrExtension,
 )
-default_extensions = dict(
+extension_defaults = dict(
     nl2br=True,
     codehilite=True,
-    mathjax=True,
 )
-
 
 def markdown(text, **custom_exts):
     
-    final_exts = []
-    exts = default_extensions.copy()
-    exts.update(custom_exts)
-    print exts
-    for name, include in exts.iteritems():
+    loaded_extensions = []
+    ext_prefs = extension_defaults.copy()
+    ext_prefs.update(custom_exts)
+    for name, include in ext_prefs.iteritems():
         if include:
             ext = extensions.get(name)
             ext = ext() if ext else load_extension(name)
             if ext:
-                final_exts.append(ext)
-            else:
-                log.warning('could not find extension %r' % name)
+                loaded_extensions.append(ext)
         
-    md = Markdown(extensions=final_exts,
+    md = Markdown(extensions=loaded_extensions,
                   safe_mode=False, 
                   output_format='xhtml')
     return md.convert(text)
     
 
-
-
-if __name__ == '__main__':
-    print repr(github_markdown('''hi\nthere
-![Link text here](http://farm1.static.flickr.com/159/345009210_1f826cd5a1_m.jpg)
-
-<pre>Spaces
-shouldnt
-change</pre>
-'''))
