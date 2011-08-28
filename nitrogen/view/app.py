@@ -1,16 +1,11 @@
 """nitrogen.view.environ"""
-
+from __future__ import absolute_import
 
 import os
 import threading
 import logging
 
-import mako.lookup
-from mako.exceptions import TopLevelLookupException as MakoLookupError
-from mako.template import Template
-
-from .defaults import context
-from . import util
+from . import mako
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +37,7 @@ class ViewAppMixin(object):
         
         # Need to set these up before calling the super so that other things
         # have access to them.
-        self.view_globals = context.copy()
+        self.view_globals = mako.defaults.copy()
         self._view_locals = self.local()
         
         
@@ -51,10 +46,11 @@ class ViewAppMixin(object):
         template_path = list(self.config.template_path)
         template_path.append(os.path.abspath(os.path.dirname(__file__) + '/../../templates'))
         
-        self.lookup = mako.lookup.TemplateLookup(
+        self.lookup = mako.TemplateLookup(
             directories=template_path,
             module_directory=self.config.template_cache_dir,
             input_encoding='utf-8',
+            preprocessor=lambda x: mako.inline_control_statements(mako.whitespace_control(x))
         )
         
         self.view_globals.update(
@@ -97,7 +93,7 @@ class ViewAppMixin(object):
         try:
             template = self.lookup.get_template(template)
             template.preprocessor = lambda x: util.inline_control_statements(util.whitespace_control(x))
-        except MakoLookupError as e:
+        except mako.TopLevelLookupException as e:
             return None
     
     def render(self, template, **data):
@@ -112,7 +108,7 @@ class ViewAppMixin(object):
         return template.render_unicode(**data)
     
     def render_string(self, template, **data):
-        template = Template(template, lookup=self.lookup, **self.lookup.template_args)
+        template = mako.Template(template, lookup=self.lookup, **self.lookup.template_args)
         data = self._prep_data(data)
         return template.render_unicode(**data)
     
