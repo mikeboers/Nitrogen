@@ -50,5 +50,4 @@ def tiny_mako(source):
     parts = _tiny_mako_re.split(source)
     for i in range(0, len(parts), 2):
         parts[i] = parts[i] and ('<%%text>%s</%%text>' % parts[i])
-    print parts
     return ''.join(parts)
