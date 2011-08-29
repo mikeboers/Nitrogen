@@ -32,7 +32,7 @@ setup(
         pil
         
         pygments
-        
+        jsmin
     ''',
     
     extras_require=dict(

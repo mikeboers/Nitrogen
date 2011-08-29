@@ -1,16 +1,17 @@
 
 from .app import Core
-from .sqlalchemy.app import SQLAlchemyAppMixin
+from .auth import AuthAppMixin
+from .crud import CRUDAppMixin
 from .exception import ExceptionAppMixin
 from .forms import FormAppMixin
 from .imgsizer import ImgSizerAppMixin
+# from .js import JavaScriptAppMixin
 from .logs import LoggingAppMixin
 from .session import SessionAppMixin
+from .sqlalchemy.app import SQLAlchemyAppMixin
 from .textblobs import TextBlobAppMixin
-from .view.app import ViewAppMixin
-from .crud import CRUDAppMixin
-from .auth import AuthAppMixin
 from .tracker import TrackerAppMixin
+from .view.app import ViewAppMixin
 
 __all__ = ['App']
 
@@ -25,6 +26,7 @@ class App(
     ViewAppMixin,
     SQLAlchemyAppMixin,
     AuthAppMixin,
+    # JavaScriptAppMixin,
     LoggingAppMixin,
     ExceptionAppMixin, # Must be after anything that may throw exceptions.
     Core
