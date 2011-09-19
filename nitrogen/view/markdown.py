@@ -93,6 +93,23 @@ class MathJaxExtension(_markdown.Extension):
     def extendMarkdown(self, md, md_globals):
         md.preprocessors.add('mathjax', self.Preprocessor(md), '<html_block')
 
+
+
+class MarkdownEscapeExtension(_markdown.Extension):
+    
+    class Preprocessor(_markdown.preprocessors.Preprocessor):
+         
+        _pattern = re.compile(r'<nomarkdown>(.+?)</nomarkdown>', re.MULTILINE | re.DOTALL)
+
+        def _callback(self, m):
+            return self.markdown.htmlStash.store(m.group(1), safe=True)
+        
+        def run(self, lines):
+            """Parses the actual page"""
+            return self._pattern.sub(self._callback, '\n'.join(lines)).splitlines()
+        
+    def extendMarkdown(self, md, md_globals):
+        md.preprocessors.add('markdown_escape', self.Preprocessor(md), '<html_block')
         
 
 # Monkey patch CodeHilight to have no default language
@@ -109,11 +126,13 @@ CodeHilite._getLang = new_get_lang
 extensions = dict(
     nl2br=Nl2BrExtension,
     mathjax=MathJaxExtension,
+    markdown_escape=MarkdownEscapeExtension,
 )
 extension_defaults = dict(
     nl2br=True,
     codehilite=True,
     mathjax=True,
+    markdown_escape=False,
 )
 
 def markdown(text, **custom_exts):
