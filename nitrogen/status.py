@@ -46,7 +46,7 @@ class HTTPRedirection(HTTPException):
         self.headers = headers or []
 
     def get_response(self, environ):
-        response = redirect(self.location, 301)
+        response = redirect(self.location, self.code)
         response.headers.extend(self.headers)
         return response
     
