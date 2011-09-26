@@ -12,6 +12,12 @@ from mako.template import Template
 from mako.filters import  xml_escape, html_escape, url_escape
 from .markdown import markdown
 from .util import urlify_name, fuzzy_time, nl2br, query_encode
+from markupsafe import Markup, escape
+
+
+class ReverseDefaultFilters(list):
+    def __add__(self, other):
+        return other + list(self)
 
 
 defaults = {}

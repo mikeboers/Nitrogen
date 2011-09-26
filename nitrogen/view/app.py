@@ -52,7 +52,8 @@ class ViewAppMixin(object):
             directories=template_path,
             module_directory=self.config.template_cache_dir,
             input_encoding='utf-8',
-            preprocessor=lambda x: mako.inline_control_statements(mako.whitespace_control(x))
+            preprocessor=lambda x: mako.inline_control_statements(mako.whitespace_control(x)),
+            default_filters=mako.ReverseDefaultFilters(['unicode']),
         )
         
         self.view_globals.update(
