@@ -5,19 +5,42 @@ import pprint
 import random
 import re
 import datetime
+import collections
 
 from mako.lookup import TemplateLookup
 from mako.exceptions import TopLevelLookupException
 from mako.template import Template
 from mako.filters import  xml_escape, html_escape, url_escape
+from mako.runtime import Context as BaseContext
 from .markdown import markdown
 from .util import urlify_name, fuzzy_time, nl2br, query_encode
 from markupsafe import Markup, escape
 
 
-class ReverseDefaultFilters(list):
-    def __add__(self, other):
-        return other + list(self)
+class Buffer(object):
+ 
+    def __init__(self):
+        self.data = collections.deque()
+ 
+    def truncate(self):
+        self.data = collections.deque()
+        
+    def write(self, x):
+        self.data.append(unicode(x))
+ 
+    def getvalue(self):
+        return u''.join(self.data)
+
+
+class Context(BaseContext):
+    
+    def _push_writer(self):
+        """push a capturing buffer onto this Context and return
+        the new writer function."""
+ 
+        buf = Buffer()
+        self._buffer_stack.append(buf)
+        return buf.write
 
 
 defaults = {}
@@ -45,11 +68,13 @@ def _inline_callback(m):
 def inline_control_statements(source):
     return _inline_control_re.sub(_inline_callback, source)
 
+
 _post_white_re = re.compile(r'([$%]){(.*?)-}\s*')
 _pre_white_re = re.compile(r'\s*([$%]){-(.*?)}')
 def whitespace_control(source):
     source = _post_white_re.sub(r'\1{\2}', source)
     return _pre_white_re.sub(r'\1{\2}', source)
+
 
 _tiny_mako_re = re.compile(r'([$%]{.*?}|<%1? .*?%>)')
 def tiny_mako(source):
@@ -57,3 +82,4 @@ def tiny_mako(source):
     for i in range(0, len(parts), 2):
         parts[i] = parts[i] and ('<%%text>%s</%%text>' % parts[i])
     return ''.join(parts)
+

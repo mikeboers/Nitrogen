@@ -5,6 +5,7 @@ import os
 import threading
 import logging
 
+
 from . import mako
 from . import markdown
 
@@ -53,7 +54,10 @@ class ViewAppMixin(object):
             module_directory=self.config.template_cache_dir,
             input_encoding='utf-8',
             preprocessor=lambda x: mako.inline_control_statements(mako.whitespace_control(x)),
-            default_filters=mako.ReverseDefaultFilters(['unicode']),
+            
+            # The default unicode filter will be provided by our custom buffer
+            # and context.
+            default_filters=[],
         )
         
         self.view_globals.update(
@@ -101,6 +105,17 @@ class ViewAppMixin(object):
         except mako.TopLevelLookupException as e:
             return None
     
+    def render_template(self, template, **data):
+        data = self._prep_data(data)
+        
+        # We must use our own custom buffer and context so that a default
+        # unicode filter is applied AFTER all locally specified filters.
+        buf = mako.Buffer()
+        context = mako.Context(buf, **data)
+        context._outputting_as_unicode = True
+        template.render_context(context)
+        return context._pop_buffer().getvalue()
+    
     def render(self, template, **data):
         """Find a template file and render it with the given keyword args.
         
@@ -109,13 +124,11 @@ class ViewAppMixin(object):
         """
         if isinstance(template, basestring):
             template = self.lookup.get_template(template)
-        data = self._prep_data(data)
-        return template.render_unicode(**data)
+        return self.render_template(template, **data)
     
     def render_string(self, template, **data):
         template = mako.Template(template, lookup=self.lookup, **self.lookup.template_args)
-        data = self._prep_data(data)
-        return template.render_unicode(**data)
+        return self.render_template(template, **data)
     
     def markdown(self, x, **custom_exts):
         exts = self.config.markdown_extensions.copy()
