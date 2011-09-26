@@ -110,10 +110,9 @@ class ViewAppMixin(object):
         
         # We must use our own custom buffer and context so that a default
         # unicode filter is applied AFTER all locally specified filters.
-        buf = mako.Buffer()
-        context = mako.Context(buf, **data)
+        context = mako.Context(mako.Buffer(), **data)
         context._outputting_as_unicode = True
-        template.render_context(context)
+        template.render_context(context, **data)
         return context._pop_buffer().getvalue()
     
     def render(self, template, **data):
