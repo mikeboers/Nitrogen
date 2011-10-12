@@ -8,7 +8,10 @@ var timezone_offset = new Date().getTimezoneOffset() * 60 * 1000;
 var defaults = {
     'displayFormat': 'dddd, MMMM d, yyyy, hh:mm:ss tt',
     'postFormat': iso_format
-}
+};
+
+Date.CultureInfo.dateElementOrder = 'ymd';
+
 $.autodate = function(elem, opts) {
     
     opts = $.extend({}, defaults, opts);
@@ -27,12 +30,16 @@ $.autodate = function(elem, opts) {
 		.attr('name', $local_input.attr('name'))
 		.insertAfter($local_input);
 	
+    // console.log('from server', $local_input.val());
+
     // Convert the UTC from server into actual local time with timezone abbr.
     var local_time = Date.parseHuman($local_input.val() + 'UTC');
     var local_str = local_time.toString(iso_format);
     $local_input.val(local_str + ' ' + timezone_abbr);
-    
-    
+
+    // console.log('local time', local_time);
+    // console.log('local str', local_str);
+
 	var raw_name = 'autodate-raw-' + $local_input.attr('name');
 	$local_input.attr('name', raw_name).addClass('autodate')
 	
