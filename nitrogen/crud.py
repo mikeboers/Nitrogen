@@ -27,7 +27,7 @@ class CRUD(object):
     model_template=None
     model_view_kwargs={}
     model_view_key=None
-    form_template='/form.html'
+    form_template='/_wtform.html'
     form_view_kwargs={}
     form_view_key='form'
     render=None
