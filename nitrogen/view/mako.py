@@ -6,15 +6,44 @@ import random
 import re
 import datetime
 import collections
+import threading
 
-from mako.lookup import TemplateLookup
+from mako.lookup import TemplateLookup as BaseTemplateLookup
 from mako.exceptions import TopLevelLookupException
 from mako.template import Template
 from mako.filters import  xml_escape, html_escape, url_escape
 from mako.runtime import Context as BaseContext
+from markupsafe import Markup, escape
+
+import haml
+
 from .markdown import markdown
 from .util import urlify_name, fuzzy_time, nl2br, query_encode
-from markupsafe import Markup, escape
+
+
+class TemplateLookup(BaseTemplateLookup):
+
+    def __init__(self, *args, **kwargs):
+        super(TemplateLookup, self).__init__(*args, **kwargs)
+        self._mutex = threading.RLock()
+
+    def _load(self, filename, uri):
+        if filename.endswith('.haml'):
+            self._mutex.acquire()
+            existing = self.template_args['preprocessor']
+            if existing:
+                self.template_args['preprocessor'] = lambda x: existing(haml.preprocessor(x))
+            else:
+                self.template_args['preprocessor'] = haml.preprocessor
+            try:
+                template = super(TemplateLookup, self)._load(filename, uri)
+            finally:
+                self._mutex.release()
+                self.template_args['preprocessor'] = existing
+            return template
+        
+        return super(TemplateLookup, self)._load(filename, uri)
+ 
 
 
 class Buffer(object):
