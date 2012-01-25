@@ -21,27 +21,39 @@ from .markdown import markdown
 from .util import urlify_name, fuzzy_time, nl2br, query_encode
 
 
+# We need to create our own version of the mako.TemplateLookup so that we can
+# have different preprocessors for each file extension. If we have different
+# lookups for each file extension then those preprocessors will apply to the
+# entire inheritance chain, which is not acceptable as we are currently using a
+# mix of HAML and plain mako.
 class TemplateLookup(BaseTemplateLookup):
 
     def __init__(self, *args, **kwargs):
+        self.preprocessors_by_ext = kwargs.pop('preprocessors_by_ext', [])
         super(TemplateLookup, self).__init__(*args, **kwargs)
-        self._mutex = threading.RLock()
+        self.__mutex = threading.RLock()
 
     def _load(self, filename, uri):
-        if filename.endswith('.haml'):
-            self._mutex.acquire()
+
+        # Apply the preprocessors for this specific filetype.
+        for file_ext, preprocessor in self.preprocessors_by_ext:
+            if not filename.endswith(file_ext):
+                continue
+
+            # Need to work inside of a recursive lock so that threads don't
+            # trample what we are doing to the lookup state.
+            self.__mutex.acquire()
             existing = self.template_args['preprocessor']
-            if existing:
-                self.template_args['preprocessor'] = lambda x: existing(haml.preprocessor(x))
-            else:
-                self.template_args['preprocessor'] = haml.preprocessor
+            self.template_args['preprocessor'] = preprocessor
             try:
                 template = super(TemplateLookup, self)._load(filename, uri)
             finally:
-                self._mutex.release()
+                # Make sure to set the original setting back.
+                self.__mutex.release()
                 self.template_args['preprocessor'] = existing
             return template
         
+        # Fall back onto the default.
         return super(TemplateLookup, self)._load(filename, uri)
  
 

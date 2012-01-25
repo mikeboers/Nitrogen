@@ -5,6 +5,7 @@ import os
 import threading
 import logging
 
+import haml
 
 from . import mako
 from . import markdown
@@ -53,15 +54,18 @@ class ViewAppMixin(object):
             directories=template_path,
             module_directory=self.config.template_cache_dir,
             input_encoding='utf-8',
-            preprocessor=lambda x: mako.inline_control_statements(mako.whitespace_control(x)),
-            
+            # Default in case no extensions match.
+            preprocessor=[mako.whitespace_control, mako.inline_control_statements],
+            # Provided by out extension to the TemplateLookup.
+            preprocessors_by_ext=[
+                ('.haml', [haml.preprocessor]),
+            ],
             # The default unicode filter will be provided by our custom buffer
             # and context.
             default_filters=[],
         )
         
         self.view_globals.update(
-            get_template=self.get_template,
             render=self.render,
             render_string=self.render_string,
             markdown=self.markdown,
@@ -73,7 +77,6 @@ class ViewAppMixin(object):
         map.update(
             render=self.render,
             render_string=self.render_string,
-            get_template=self.get_template,
             markdown=self.markdown,
         )
     
@@ -97,13 +100,6 @@ class ViewAppMixin(object):
         data.update(self.view_locals)
         data.update(user_data)
         return data
-    
-    def get_template(self, template):
-        try:
-            template = self.lookup.get_template(template)
-            template.preprocessor = lambda x: util.inline_control_statements(util.whitespace_control(x))
-        except mako.TopLevelLookupException as e:
-            return None
     
     def render_template(self, template, **data):
         data = self._prep_data(data)
