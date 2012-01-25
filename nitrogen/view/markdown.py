@@ -30,7 +30,7 @@ import re
 import cgi
 
 import markdown as _markdown
-from markdown import Markdown, load_extension
+from markdown import Markdown
 from markdown.extensions.codehilite import CodeHilite
 
 log = logging.getLogger(__name__)
@@ -143,9 +143,8 @@ def markdown(text, **custom_exts):
     for name, include in ext_prefs.iteritems():
         if include:
             ext = extensions.get(name)
-            ext = ext() if ext else load_extension(name)
-            if ext:
-                loaded_extensions.append(ext)
+            ext = ext() if ext else name
+            loaded_extensions.append(ext)
         
     md = Markdown(extensions=loaded_extensions,
                   safe_mode=False, 
