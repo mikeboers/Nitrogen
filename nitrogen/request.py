@@ -24,7 +24,6 @@ import werkzeug.http
 import werkzeug.wsgi
 import werkzeug.datastructures
 
-from multimap import MultiMap
 from webstar.core import Route, get_route_data
 
 from . import body
@@ -120,11 +119,7 @@ class Request(wz.wrappers.Request):
     # See http://werkzeug.pocoo.org/documentation/0.6/http.html#werkzeug.parse_form_data
     # for more info.
     stream_factory = body.reject_factory
-    
-    # Using my multiple-value-per-key mapping, as it retains more ordering
-    # information.
-    parameter_storage_class = MultiMap
-    
+        
     def _get_file_stream(self, total_content_length, content_type, filename=None,
         content_length=None):
         """Called to get a stream for the file upload.
@@ -149,14 +144,12 @@ class Request(wz.wrappers.Request):
             content_length,
         )
     
-    # I prefer this name.
+    # I prefer these names.
+    query = wz.wrappers.Request.args
     post = wz.wrappers.Request.form
-    
-    @wz.utils.cached_property
-    def query(self):
-        return query.FrozenQuery.from_environ(self.environ, charset=self.charset, decode_errors=self.encoding_errors)
-    args = query # Werkzeug's name.
-    
+    path_info = wz.wrappers.Request.path
+    script_name = wz.wrappers.Request.script_root
+
     # My cookies are much nicer. 
     cookie_string = wz.utils.environ_property('HTTP_COOKIE')
     cookie_factory = cookies.Container
@@ -167,7 +160,7 @@ class Request(wz.wrappers.Request):
             decode_errors=self.encoding_errors
         )
         # Throw it into an immutable container.
-        return MultiMap((k, c.value) for k, c in raw.iterallitems())
+        return self.dict_storage_class((k, c.value) for k, c in raw.iterallitems())
     
     session = wz.utils.environ_property('beaker.session')
     
@@ -180,8 +173,7 @@ class Request(wz.wrappers.Request):
     
     def make_body_seekable(self):
         stdin = self.environ['wsgi.input']
-        # The OutputType here is just me being paranoid. Likely not nessesary.
-        if not isinstance(stdin, (cstringio.InputType, io.StringIO, stringio.StringIO, cstringio.OutputType)):
+        if not isinstance(stdin, (cstringio.InputType, io.StringIO, stringio.StringIO)):
             self.body = self.environ['wsgi.input'] = StringIO(self.body.read())
             self.body.seek(0)
         
@@ -200,10 +192,6 @@ class Request(wz.wrappers.Request):
     # Werkzeug supplies if_none_match, which is likely better.
     etag = wz.utils.environ_property('HTTP_IF_NONE_MATCH')
 
-    # I prefer these names.
-    path_info = wz.wrappers.Request.path
-    script_name = wz.wrappers.Request.script_root
-    
     @property
     def full_path(self):
         return '/' + (self.script_name.rstrip('/') + '/' + self.path_info.lstrip('/')).strip('/')
