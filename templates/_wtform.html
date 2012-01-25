@@ -9,7 +9,7 @@
 %>\
 <ol id="${form_id}" class="form-fields">
   % for field in form:
-    <li class="state-${"error" if field.errors else "ok"}">
+    <li class="state-${"error" if field.errors else "ok"} field-${field.name}">
       ## <div class="label">
           % if field.type == 'BooleanField':
             ${field()}
