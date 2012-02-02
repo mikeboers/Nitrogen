@@ -23,6 +23,14 @@ class StaticRouter(core.RouterInterface):
             self.use_x_sendfile = use_x_sendfile
         self.cache_max_age = cache_max_age
         super(StaticRouter, self).__init__()
+
+    def get_mtime(self, path):
+        path = path.lstrip('/')
+        for base in self.path:
+            fullpath = os.path.join(base, path)
+            if os.path.exists(fullpath) and os.path.isfile(fullpath):
+                return os.path.getmtime(fullpath)
+        return None
     
     def route_step(self, path):
         path = path[1:]

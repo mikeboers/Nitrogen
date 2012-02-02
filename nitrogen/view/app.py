@@ -69,6 +69,7 @@ class ViewAppMixin(object):
             render=self.render,
             render_string=self.render_string,
             markdown=self.markdown,
+            versioned_static=self.versioned_static,
             url_for= lambda *args, **kwargs: self._local.request.url_for(*args, **kwargs),
         )
         
@@ -129,6 +130,13 @@ class ViewAppMixin(object):
         exts = self.config.markdown_extensions.copy()
         exts.update(custom_exts)
         return markdown.markdown(x, **exts)
+
+    def versioned_static(self, path):
+        path = '/' + path.lstrip('/')
+        mtime = self.static_router.get_mtime(path)
+        if mtime:
+            return '%s?v=%d' % (path, mtime)
+        return path
         
     
 

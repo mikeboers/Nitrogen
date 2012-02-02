@@ -83,7 +83,8 @@ class Core(object):
         # method) for simple apps, or append your own router to the routers
         # list.
         self.router = webstar.Router()
-        self.router.register(None, StaticRouter(**self.config.filter_prefix('static_')))
+        self.static_router = StaticRouter(**self.config.filter_prefix('static_'))
+        self.router.register(None, self.static_router)
         self.router.not_found_app = self.not_found_app
         
         # Setup middleware stack. This is a list of tuples; the second is a
