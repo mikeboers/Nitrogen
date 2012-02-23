@@ -3,7 +3,7 @@ import re
 
 from markupsafe import Markup as Literal
 
-from ..uri.query import encode as _qe
+from ..sign import encode_query as _qe
 
 
 def query_encode(x='', **kwargs):

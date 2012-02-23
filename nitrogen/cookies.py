@@ -39,11 +39,11 @@ class _ResponseMixin(object):
     def set_raw_cookie(self, *args, **kwargs):
         super(_ResponseMixin, self).set_cookie(*args, **kwargs)
     
-    def set_cookie(self, key, value='', max_age=None, *args, **kwargs):
+    def set_cookie(self, key, value='', max_age=None, **kwargs):
         if self.app.config.private_key:
             sig = sign.sign(self.app.config.private_key, key + '=' + value, max_age=max_age)
             value = value + '?' + sign.encode_query(sig)
-        self.set_raw_cookie(key, value, max_age, *args, **kwargs)
+        self.set_raw_cookie(key, value, max_age, **kwargs)
 
 
 class CookieAppMixin(object):

@@ -4,7 +4,6 @@ import hmac
 import os
 import time
 
-from ..uri.query import Query
 
 
 class PasswordHash(object):

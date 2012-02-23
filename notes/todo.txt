@@ -4,10 +4,6 @@
 - wtforms should be able to have placeholders
 
 
-
-
-
-
 - asset specification -> "package.name:file_name.txt"
 
 - remove serve extensions (just write your own...)
@@ -16,14 +12,9 @@
 	- rewrite CRUD
 - remove pager
 - rename forms to wtforms
-- remove uri
-	- move signing to nitrogen.sign
-	- keep encode/decode
-	- keep parse/format
-	- keep remove_dot_segments
-	- keep resolve_relative
-	- keep query_encode/decode
+
 - remove most of crypto (replaced by pytomcrypt)
+
 - move mako stuff into nitrogen.templates.mako.helpers
 
 
@@ -138,40 +129,9 @@ which marks something as a mixin.
 
 - take a look at how pyramid tests itself
 
-
 - API error handler is not printing out the environment of the request. Can we possibly extend logging to add this to the exception method, or perhaps add a wsgi_exception method?
 
-- pull sign/verify off of query object and into the crypto module
-- transform query into a general map serializer
-- turn uri.path into a simpler string?
-
-
-
-- consider swapping from Werkzeug request/response to webob
-    - make_body_seekable is nice
-    - the MultiDict works like mine does (and there are interesting variations)
-    - urlargs/urlvars are interesting
-    - pathinfo_pop/peek are interesting
-    - aceept classes look cleaner
-    - cookies are cleaner, but mine is more functional (ie. signed cookies)
-    - post is NOT nice because cgi.FieldStorage does not have a maximum
-		(surely it does though...)
-
-- go back to a patched cgi.FieldStorage for the parsing instead of wz
-    - need to provide max_memory, max_file_size, etc
-	- theoretically Content-Length is the max around the cgi.fieldstorage
-	  would read anyways, so we can simply reject based on that number
-
-
 - pull the mixin class builder into a package of its own?
-
-
-- add getone (and others) from webob.multidict to MultiMap
-
-
-
-      
-- send a 413 Request Entity Too Large for when limits are exceeded
 
 - pkgutil: figure out how to split up the project
     1) namespaced_packages=[...] (i think) in setup.py. this may only be nessesary
@@ -186,65 +146,5 @@ which marks something as a mixin.
 - instead of using submodules I could have a pip requirements file that is
   only going off of the "editing" modules. `make freeze-subs` could
 
-
-- seperate uri package into it's own project
-
-    - need to make the path classes make sense; perhaps the path should become
-      immutable. you could slice it, and slicing off the front results in you
-      loosing the absoluteness. a uri.path.join could be used to join stuff
-      together with the same symantics as the os.path.join (use unixpath.join)
-      
-        >>> from urlparse import urlparse
-        >>> urlparse('http://example.com').path
-        ''
-        >>> urlparse('http://example.com/').path
-        '/'
-        >>> urlparse('/absolute/path').path
-        '/absolute/path'
-        >>> urlparse('relative/path').path
-        'relative/path'
-        
-        - perhaps absolute/relative could be an immutable property of a path
-          object
-        - perhaps the whole thing could be immutable, and we have some extra
-          methods on it for path-related functions
-            - segment(0) for the first segment
-            - slice(...) for slicing up
-            
-            - is_relative if it is relative
-            - is_absolute if it is absolute
-            - pop(0) returns the first segment and then the rest
-            - normalize() returns it with dot segments removed
-    
-    - can use urllib.quote(x, '~') as the encoding engine
-        
-    
-    - query to_string and from_string should take the separator and setter as
-      arguments:
-        Query({a: 1, b:2}).to_string(',', ':', sorted=True) -> 'a:1,b:2'
-    
-    - the path and userinfo are both used so infrequently. perhaps they can both
-      just be strings with some support functions for manipulating them
-	
-	- determine for sure when + is used instead of %20
-		- it seems to be that + is in the query and %20 is in the path. a + in
-		  the path is actually a +. i actually have to deal with this too as
-		  application/www-form-encoded does encode spaces as +
-		- firefox encodes a space as "+" when submitting a form with the GET
-		  method. same for posted app/www-form-encoded (ie. no files)
-		
-	- determine if unicode characters are always encoded as utf8
-		- it seems that application/www-form-encoded implies UTF8 encoding (at
-		least that is what firefox does, even when it's Accept-Encoding does
-		not prefer utf8)
-		- same thing with the query string
-	- write the encoding functions that go to %u#### and %U########
-		- if there is ANY %u or %U in there, then %## is codepoints, not bytes
-		- everything already works just fine with utf8 encoding; don't need
-		  to mess with something that was rejected by the w3c
-	
-	- I should likely just accept that my library is for urls not uris
-	
-	- paste.request.path_info_split could be used
 
       

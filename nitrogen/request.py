@@ -28,7 +28,6 @@ from webstar.core import Route, get_route_data
 
 from . import body
 from . import cookies
-from .uri import query
 
 
 log = logging.getLogger(__name__)

@@ -22,8 +22,8 @@ class TrackerAppMixin(object):
         if self.config.cookie_tracker_on:
             self.register_middleware((self.FRAMEWORK_LAYER, 10000), self.cookie_tracker_middleware)
         
-        self.router.register(self.config.pixel_tracker_route, self.handle_tracking_pixel)
-        self.view_globals['pixel_tracker_html'] = '<img id="tpixel" src="%s" />' % self.config.pixel_tracker_route
+        # self.router.register(self.config.pixel_tracker_route, self.handle_tracking_pixel)
+        # self.view_globals['pixel_tracker_html'] = '<img id="tpixel" src="%s" />' % self.config.pixel_tracker_route
         
     
     def setup_config(self):
@@ -37,9 +37,12 @@ class TrackerAppMixin(object):
     
     def cookie_tracker_middleware(self, app):
         def _app(environ, start):
-            request = self.Request(environ)
-            response = self.Response.from_app(app, environ)
             
+            print 'HERE 1'
+            response = self.Response.from_app(app, environ)
+            print 'HERE 2'
+            
+            request = self.Request(environ)
             token = request.cookies.get(self.config.cookie_tracker_name)
             if not token:
                 token = os.urandom(16).encode('hex')
@@ -47,6 +50,7 @@ class TrackerAppMixin(object):
                 response.set_cookie(self.config.cookie_tracker_name, token, path='/')
                 self.set_access_log_meta(tracking_cookie=token)
             
+            print response.status
             return response(environ, start)
             
         return _app
