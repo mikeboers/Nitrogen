@@ -49,8 +49,11 @@ class Request(wz.wrappers.Request):
     
     @classmethod
     def auto_application(cls, func=None, **kwargs):
+        
+        # Work as a decorator.
         if func is None:
             return functools.partial(cls.auto_application, **kwargs)
+        
         input_func = func
         if hasattr(func, '__Request_auto_application__'):
             return func.__Request_auto_application__
@@ -60,6 +63,7 @@ class Request(wz.wrappers.Request):
         except AttributeError as e:
             # methods and callable classes don't have __code__
             pass
+        
         # Using the __dict__ method because instance methods don't let us set
         # attributes directly.
         input_func.__dict__['__Request_auto_application__'] = func
@@ -110,13 +114,13 @@ class Request(wz.wrappers.Request):
         
         
     # Set a default max request length. This applied to both form data, and
-    # file uploads. See http://werkzeug.pocoo.org/documentation/0.6/http.html#werkzeug.parse_form_data
+    # file uploads. See http://werkzeug.pocoo.org/docs/http/#werkzeug.formparser.parse_form_data
     # for more info.
-    max_content_length = 2 * 1024 * 1028
+    max_form_memory_size = max_content_length = 2 * 1024 * 1028
     
     # Function to use to create file objects at parse time. Defaults to
     # rejecting all files. There are more supplied in nitrogen.body.
-    # See http://werkzeug.pocoo.org/documentation/0.6/http.html#werkzeug.parse_form_data
+    # See http://werkzeug.pocoo.org/docs/http/#werkzeug.formparser.parse_form_data
     # for more info.
     stream_factory = body.reject_factory
         
@@ -127,17 +131,12 @@ class Request(wz.wrappers.Request):
         This must provide a file-like class with `read()`, `readline()`
         and `seek()` methods that is both writeable and readable.
         
-        The default implementation calls self.stream_factory with the given
-        arguments and wraps it in a webio.body.FileWrapper (to track the
-        amount written).
-        
-        The default self.stream_factory raises an exception (ie. does not
-        allow file uploads).
+        This calls self.stream_factory with the given arguments, the default
+        of which raises an exception (ie. does not allow file uploads).
         
         """
         
-        return body.FileWrapper(
-            self.stream_factory, 
+        return self.stream_factory(
             total_content_length,
             content_type,
             filename,
@@ -149,18 +148,6 @@ class Request(wz.wrappers.Request):
     post = wz.wrappers.Request.form
     path_info = wz.wrappers.Request.path
     script_name = wz.wrappers.Request.script_root
-
-    # My cookies are much nicer. 
-    cookie_string = wz.utils.environ_property('HTTP_COOKIE')
-    cookie_factory = cookies.Container
-    @wz.utils.cached_property
-    def cookies(self):
-        raw = self.cookie_factory(self.cookie_string,
-            charset=self.charset,
-            decode_errors=self.encoding_errors
-        )
-        # Throw it into an immutable container.
-        return self.dict_storage_class((k, c.value) for k, c in raw.iterallitems())
     
     session = wz.utils.environ_property('beaker.session')
     
@@ -180,9 +167,7 @@ class Request(wz.wrappers.Request):
     @property
     def route_steps(self):
         return Route.from_environ(self.environ)
-    
-    route_history = route_steps
-    
+        
     @property
     def url_for(self):
         return self.route_steps.url_for
@@ -232,28 +217,12 @@ class Response(wz.wrappers.Response):
             if not hasattr(self, k):
                 raise ValueError('no response attribute %r' % k)
             setattr(self, k, v)
-        
-        
-    cookie_factory = cookies.Container
-    @wz.utils.cached_property
-    def cookies(self):
-        return self.cookie_factory()
-    
-    def set_cookie(self, *args, **kwargs):
-        self.cookies.set(*args, **kwargs)
-    
-    def expire_cookie(self, *args, **kwargs):
-        self.cookies.expire(*args, **kwargs)
-    delete_cookie = expire_cookie
     
     # Depricated. Use set_etag or add_etag instead.
     etag = wz.utils.header_property('etag', read_only=False)
     
     def get_wsgi_headers(self, environ):
         headers = super(Response, self).get_wsgi_headers(environ)
-        
-        # Our cookies are better.
-        headers.extend(self.cookies.build_headers())
         
         # Some servers can't deal with X-Sendfile if not 200.
         if (100 <= self.status_code < 200 or

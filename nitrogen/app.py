@@ -7,7 +7,6 @@ from werkzeug import cached_property
 
 import webstar
 
-from . import cookies
 from . import request
 from . import status
 from .event import instance_event
@@ -105,9 +104,7 @@ class Core(object):
         self._local = self.local()
         
         Core.RequestMixin.app = self
-        Core.RequestMixin.cookie_factory = self.cookie_factory
         Core.ResponseMixin.app = self
-        Core.ResponseMixin.cookie_factory = self.cookie_factory
         
         
         
@@ -176,11 +173,6 @@ class Core(object):
                 app = func(app, *args, **kwargs)
             self._flattened_wsgi_app = app
         return self._flattened_wsgi_app
-    
-    def cookie_factory(self, *args, **kwargs):
-        if self.config.private_key:
-            return cookies.SignedContainer(self.config.private_key, *args, **kwargs)
-        return cookies.Container(*args, **kwargs)
         
     @property
     def route(self):

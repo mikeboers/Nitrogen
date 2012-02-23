@@ -12,6 +12,7 @@ from .sqlalchemy.app import SQLAlchemyAppMixin
 from .textblobs import TextBlobAppMixin
 from .tracker import TrackerAppMixin
 from .view.app import ViewAppMixin
+from .cookies import CookieAppMixin
 
 __all__ = ['App']
 
@@ -26,7 +27,7 @@ class App(
     ViewAppMixin,
     SQLAlchemyAppMixin,
     AuthAppMixin,
-    # JavaScriptAppMixin,
+    CookieAppMixin,
     LoggingAppMixin,
     ExceptionAppMixin, # Must be after anything that may throw exceptions.
     Core
