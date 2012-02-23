@@ -37,22 +37,16 @@ class TrackerAppMixin(object):
     
     def cookie_tracker_middleware(self, app):
         def _app(environ, start):
-            
-            print 'HERE 1'
-            response = self.Response.from_app(app, environ)
-            print 'HERE 2'
-            
-            request = self.Request(environ)
-            token = request.cookies.get(self.config.cookie_tracker_name)
-            if not token:
-                token = os.urandom(16).encode('hex')
-                self.tracker_log.info('new token %s -> %s' % (token, request.user_agent))
-                response.set_cookie(self.config.cookie_tracker_name, token, path='/')
+            def _start(status, headers, *args):
+                request = self.Request(environ)
+                token = request.cookies.get(self.config.cookie_tracker_name)
+                if not token:
+                    token = os.urandom(16).encode('hex')
+                    self.tracker_log.info('new token %s -> %s' % (token, request.user_agent))
+                    headers.extend(('Set-Cookie', self.dump_cookie(self.config.cookie_tracker_name, token, path='/')))
                 self.set_access_log_meta(tracking_cookie=token)
-            
-            print response.status
-            return response(environ, start)
-            
+                return start(status, headers, *args)
+            return app(environ, _start)
         return _app
     
     @Request.application

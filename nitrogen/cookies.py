@@ -37,17 +37,21 @@ class _RequestMixin(object):
 class _ResponseMixin(object):
     
     def set_raw_cookie(self, *args, **kwargs):
-        super(_ResponseMixin, self).set_cookie(*args, **kwargs)
+        self.headers.add('Set-Cookie', wz.utils.dump_cookie(*args, charset=self.charset, **kwargs))
     
-    def set_cookie(self, key, value='', max_age=None, **kwargs):
-        if self.app.config.private_key:
-            sig = sign.sign(self.app.config.private_key, key + '=' + value, max_age=max_age)
-            value = value + '?' + sign.encode_query(sig)
-        self.set_raw_cookie(key, value, max_age, **kwargs)
+    def set_cookie(self, *args, **kwargs):
+        self.headers.add('Set-Cookie', self.app.dump_cookie(*args, charset=self.charset, **kwargs))
+        
 
 
 class CookieAppMixin(object):
     
+    def dump_cookie(self, key, value='', **kwargs):
+        if self.config.private_key:
+            sig = sign.sign(self.config.private_key, key + '=' + value, max_age=max_age)
+            value = value + '?' + sign.encode_query(sig)
+        return wz.utils.dump_cookie(key, value, **kwargs)
+        
     RequestMixin = _RequestMixin
     ResponseMixin = _ResponseMixin
 
