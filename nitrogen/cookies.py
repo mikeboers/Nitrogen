@@ -46,7 +46,7 @@ class _ResponseMixin(object):
 
 class CookieAppMixin(object):
     
-    def dump_cookie(self, key, value='', **kwargs):
+    def dump_cookie(self, key, value='', max_age=None, **kwargs):
         if self.config.private_key:
             sig = sign.sign(self.config.private_key, key + '=' + value, max_age=max_age)
             value = value + '?' + sign.encode_query(sig)

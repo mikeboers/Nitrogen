@@ -4,19 +4,18 @@ import logging
 import re
 import collections
 import datetime
+import json
 
 from multimap import MultiMap
 
 import werkzeug as wz
 
-from .request import Request
-from .api import ApiRequest
+from nitrogen import status
+
+from .request import Request, Response
 from .app import build_inheritance_mixin_class
 
 log = logging.getLogger(__name__)
-
-
-as_api = ApiRequest.application
 
 
 class CRUD(object):
@@ -85,15 +84,16 @@ class CRUD(object):
     del _build_render_generic
     del _build_render
     
-    @as_api
+    @Request.application
     def __call__(self, request):
         method = request.path.strip('/')
         if not method:
-            request.error('no method given')
+            raise status.BadRequest('no method given')
         handler = getattr(self, 'api_%s' % method, None)
         if not handler:
-            request.error('bad method %r' % method)
-        return handler(request)
+            raise status.BadRequest('bad method %r' % method)
+        res = handler(request)
+        return Response(json.dumps(res))
         
     def versions_for(self, obj):
         """Return a list of (version, comment) tuples.
@@ -117,13 +117,13 @@ class CRUD(object):
     
     def api_form(self, request):
         
-        id_ = request.get('id')
+        id_ = request.post.get('id')
         try:
             id_ = int(id_) if id_ else None
         except:
-            request.error("bad id")
+            raise status.BadRequest("bad id")
         
-        version = request.get('version')
+        version = request.query.get('version')
         
         s = self.Session()
         if id_:
@@ -154,18 +154,18 @@ class CRUD(object):
         
         response = {}
         
-        id_ = request.get('id')
+        id_ = request.query.get('id')
         try:
             id_ = int(id_) if id_ else None
         except:
-            request.error("bad id")
+            raise status.BadRequest("bad id")
         
         s = self.Session()
         model = None  
         if id_:
             model = s.query(self.model_class).get(id_)
             if not model:
-                request.error("could not find object %d" % id_)
+                raise status.BadRequest("could not find object %d" % id_)
         else:
             model = self.model_class()
         form = self.form_class(MultiMap(request.form))
@@ -188,8 +188,8 @@ class CRUD(object):
             s.commit()
             response['id'] = model.id
             
-            if self.allow_commit and request.get('__do_commit_version'):
-                commit_message = request.get('__version_comment', '')
+            if self.allow_commit and request.query.get('__do_commit_version'):
+                commit_message = request.query.get('__version_comment', '')
                 self.commit(model, commit_message)
         
         data = {}

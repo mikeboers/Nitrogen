@@ -8,11 +8,11 @@ def cookie_app(environ, start):
     cookies = app.cookie_factory(environ.get('HTTP_COOKIE', ''))
     
     cookies['key'] = 'value'
-    cookies.set('max_age', 'this has a max_age of 5 seconds after creation', max_age=5)
-    cookies.set('escaped', ''.join(unichr(i) for i in range(512)), max_age=10)
-    cookies.set('httponly', 'this is httponly', http_only=True)
-    cookies.set('secure', 'this one is secure', secure=True)
-    cookies.set('no_path', 'this one has no path', path=None)
+    set_cookie('max_age', 'this has a max_age of 5 seconds after creation', max_age=5)
+    set_cookie('escaped', ''.join(unichr(i) for i in range(512)), max_age=10)
+    set_cookie('httponly', 'this is httponly', http_only=True)
+    set_cookie('secure', 'this one is secure', secure=True)
+    set_cookie('no_path', 'this one has no path', path=None)
     
     if 'toggle' in cookies:
         cookies['toggle'].expire()

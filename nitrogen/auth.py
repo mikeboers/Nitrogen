@@ -113,10 +113,10 @@ class AuthAppMixin(object):
     class ResponseMixin(object):
         
         def login(self, user_id):
-            self.cookies[self.app.config.auth_cookie_name] = user_id
+            self.set_cookie(self.app.config.auth_cookie_name, user_id)
         
         def logout(self):
-            self.cookies.expire(self.app.config.auth_cookie_name)
+            self.delete_cookie(self.app.config.auth_cookie_name)
 
 
 
