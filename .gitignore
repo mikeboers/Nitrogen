@@ -20,11 +20,11 @@
 /distribute-*
 
 /pip-log.txt
-/examples/sessions.sqlite
 
-/examples/templates/*.py
-/examples/templates/*/*.py
-/examples/templates/*/*/*.py
+/example/sessions.sqlite
+/example/templates/*.py
+/example/templates/*/*.py
+/example/templates/*/*/*.py
 
 /compass/.sass-cache
 /compass/stylesheets
