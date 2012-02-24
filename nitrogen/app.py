@@ -10,7 +10,6 @@ import webstar
 from . import request
 from . import status
 from .event import instance_event
-from .serve.fcgi import reloader
 from .static import StaticRouter
 
 
