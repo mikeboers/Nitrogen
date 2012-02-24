@@ -1,4 +1,41 @@
 
+- etags should also include headers which affect the agent's interpretation of the content, such as content-type
+
+- instead of naming app mixin classes ResponseMixin, perhaps have a decorator
+which marks something as a mixin.
+	
+	@mixin('Response')
+	class ResponseMixin(object):
+		pass
+
+
+- static_version('/path/to/file.js') should return /path/to/file.js?v=<mtime>
+    - the v could be detected and force an infinite cache time
+
+- WebStar could handle extensions:
+    @route('/something', extensions=True) # wildcard extensions
+    @route('/something', extensions=(None, 'json')) # nothing, or .json
+    - just a string could either force that extension, or allow for no extension
+    - they appear under the key 'extension'
+    - generating a URL with 'extension' will only apply to the last segment
+        - all formatters should ignore 'extension'
+        - the primary generator handles this
+
+- PyMemoize should be able to "expire" a value instead of deleting it
+    - this would allow for returning the old value if an exception was
+      thrown while calculating the new one
+
+- SASS at runtime
+    http://dev.ufsoft.org/projects/sass/repository/revisions/master/entry/flaskext/sass.py
+
+- Javascript compression via uglify.js
+    - similar setup to sass
+    - config file has list of source files to minify/concat in order
+    - `python setup.py js --watch`
+    - `python setup.py css --watch`
+
+
+
 - wtforms date and datetime should use input type="date"
   - same with email
 - wtforms should be able to have placeholders
@@ -6,10 +43,7 @@
 
 - asset specification -> "package.name:file_name.txt"
 
-- remove serve extensions (just write your own...)
-- remove api
-	- add Request.assert_args(*names) -> throws an exception if it doesn't have them
-	- rewrite CRUD
+
 - remove pager
 - rename forms to wtforms
 
@@ -17,21 +51,16 @@
 
 - move mako stuff into nitrogen.templates.mako.helpers
 
-
 - @renderer(html='/path/to/template')
 	- requesting something.json would give us the JSON dump
 	- requesting something.html would give us the rendered page
 	- anything else would default to the rendered page
-
 
 - some way to convert data to json format if requested, otherwise actually
   render everything. Will need to be sure that there aren't any secret things
   being passed to the templates...
 
 - upgrade to Werkzeug 0.7
-
-- werkzeug tracks all of the amounts posted, we dont need to at request.py:143
-	I think we may still need to.
 
 - constructive things to do
 	- plugin architecture and/or namespaces for app plugins
@@ -77,12 +106,7 @@
 
 
 
-- instead of naming app mixin classes ResponseMixin, perhaps have a decorator
-which marks something as a mixin.
-	
-	@mixin('Response')
-	class ResponseMixin(object):
-		pass
+
 
 
 - replace webhelpers with lxml
@@ -110,8 +134,6 @@ which marks something as a mixin.
         return {'key': 'value'}
 
 - asset specification is nice: http://docs.pylonsproject.org/projects/pyramid/1.0/narr/assets.html#asset-specifications
-
-- consider moving to an events-like notification system for the before_request and after_request sort of callbacks.
 
 - use this new linearizer for the building of classes out of mixins on the AppMixins
 

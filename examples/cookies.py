@@ -1,7 +1,6 @@
 
 from .app import app
 
-from nitrogen.cookies import parse_cookies
 
 def cookie_app(environ, start):
     

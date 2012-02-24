@@ -1,7 +1,6 @@
 import os
 
 from nitrogen.core import *
-from nitrogen.files import StaticRouter
 
 root = os.path.dirname(os.path.abspath(__file__))
 

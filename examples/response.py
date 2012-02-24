@@ -1,9 +1,6 @@
 
 from .app import *
 
-from nitrogen.cookies import parse_cookies
-
-response_app = router = ReRouter()
 
 def inner(request):
     yield 'Hello, world!\n'

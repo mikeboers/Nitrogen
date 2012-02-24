@@ -4,23 +4,16 @@ import logging
 import time
 
 from nitrogen.core import *
-from nitrogen.status import abort
-from nitrogen.api import ApiRequest as Api
 from nitrogen.forms import *
+from nitrogen import status
 
 from .app import *
-from .cookies import cookie_app
-from .response import response_app
-from .script import script_app
-from .crud import crud_app
+
 
 log = logging.getLogger(__name__)
 
 
-app.route('/cookies', cookie_app)
-app.route('/response', response_app)
-app.route('/script', script_app)
-app.route('/crud', crud_app)
+
 
 @app.route('/stream')
 def do_stream(environ, start):
@@ -54,31 +47,18 @@ def do_captcha(request):
 @app.route('/abort/{code:\d+}', _parsers=dict(code=int))
 @Request.application
 def do_abort(request):
-    abort(request.route['code'])
+    raise status.exceptions[request.route['code']]
 
 @app.route('/exception', message='Testing')
 @app.route('/exception/{message:.+}')
 @Request.application
 def do_abort(request):
     raise ValueError(request.route['message'])
-
-@app.route('/api/reflect')
-@Api.application
-def do_api_reflect(request):
-    response = dict(request.query)
-    response.update(request.post)
-    return response
-
-@app.route('/api/error')
-@Api.application
-def do_api_error(request):
-    request['id']
-    request.abort(400, 'This is the message.')
     
 @app.route('/')
 @Request.application
 def index(request):
-    return Response('Hello, world!')
+    return Response('Hello, World!', mimetype='text/plain')
 
 @app.route('/env')
 def env(environ, start):
