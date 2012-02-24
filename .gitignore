@@ -21,5 +21,10 @@
 
 /pip-log.txt
 /examples/sessions.sqlite
+
+/examples/templates/*.py
+/examples/templates/*/*.py
+/examples/templates/*/*/*.py
+
 /compass/.sass-cache
 /compass/stylesheets
