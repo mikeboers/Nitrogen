@@ -21,7 +21,8 @@ import time
 
 
 hash_by_size = {}
-for name in hashlib.algorithms:
+algorithms = getattr(hashlib, 'algorithms', 'md5 sha1 sha256'.split())
+for name in algorithms:
     hash_by_size[getattr(hashlib, name)().digest_size] = getattr(hashlib, name)
 
 
