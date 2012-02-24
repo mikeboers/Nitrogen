@@ -3,10 +3,9 @@
 import logging
 
 from werkzeug.exceptions import HTTPException, default_exceptions as _wz_exceptions
-from werkzeug.utils import redirect
 
 
-__all__ = ['HTTPException', 'redirect']
+__all__ = ['HTTPException']
 
 
 log = logging.getLogger(__name__)
