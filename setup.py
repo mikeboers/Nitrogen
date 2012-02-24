@@ -16,8 +16,6 @@ setup(
         
         mako
         markdown
-        lorem-ipsum-generator
-        
         sqlalchemy
         
         # This is only for the pager and some functions in the templates.
@@ -33,10 +31,12 @@ setup(
         
         pygments
         jsmin
+
+        # imgsizer
+        pil
     ''',
     
     extras_require=dict(
-        imgsizer=['pil'],
         testing='''
             nose
             webtest
