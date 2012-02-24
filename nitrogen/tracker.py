@@ -43,7 +43,7 @@ class TrackerAppMixin(object):
                 if not token:
                     token = os.urandom(16).encode('hex')
                     self.tracker_log.info('new token %s -> %s' % (token, request.user_agent))
-                    headers.extend(('Set-Cookie', self.dump_cookie(self.config.cookie_tracker_name, token, path='/')))
+                    headers.append(('Set-Cookie', self.dump_cookie(self.config.cookie_tracker_name, token, path='/')))
                 self.set_access_log_meta(tracking_cookie=token)
                 return start(status, headers, *args)
             return app(environ, _start)
