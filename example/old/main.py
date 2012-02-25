@@ -43,22 +43,8 @@ def do_captcha(request):
     return Response(html, mimetype='text/html')
     
     
-@app.route('/abort', code=400)
-@app.route('/abort/{code:\d+}', _parsers=dict(code=int))
-@Request.application
-def do_abort(request):
-    raise status.exceptions[request.route['code']]
 
-@app.route('/exception', message='Testing')
-@app.route('/exception/{message:.+}')
-@Request.application
-def do_abort(request):
-    raise ValueError(request.route['message'])
-    
-@app.route('/')
-@Request.application
-def index(request):
-    return Response('Hello, World!', mimetype='text/plain')
+
 
 
 
