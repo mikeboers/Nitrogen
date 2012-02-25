@@ -1,6 +1,8 @@
 
-from ..main import *
+from .. import config
+from ..main import Request, Response, render, Form, Session
 
-@route('/')
-def do_index(request):
-    return Response('Hello, world!')
+from webstar import route
+
+
+

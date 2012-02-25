@@ -60,11 +60,7 @@ def do_abort(request):
 def index(request):
     return Response('Hello, World!', mimetype='text/plain')
 
-@app.route('/env')
-def env(environ, start):
-    start('200 OK', [])
-    for x in sorted(environ.items()):
-        yield '%s: %r\n' % x
+
 
 @app.route('/session')
 @Request.application
