@@ -1,9 +1,16 @@
 import os
+import logging
+import sys
 
 root = os.path.dirname(os.path.abspath(__file__))
 
 debug = True
-db_bind = 'sqlite://'
+
+log_handlers = [logging.StreamHandler(sys.stderr)]
+
+sqlalchemy_url = 'sqlite:///' + root + '/database.sqlite'
+sqlalchemy_echo = False
+
 private_key = os.urandom(128)
     
 template_path = [root + '/templates']

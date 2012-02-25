@@ -21,7 +21,7 @@
 
 /pip-log.txt
 
-/example/sessions.sqlite
+/example/*.sqlite
 /example/templates/*.py
 /example/templates/*/*.py
 /example/templates/*/*/*.py

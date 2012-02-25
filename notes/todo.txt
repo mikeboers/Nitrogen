@@ -8,6 +8,11 @@ which marks something as a mixin.
 	class ResponseMixin(object):
 		pass
 
+- AppPlugin instead of AppMixin
+	- use c3linearize to determine proper ordering of plugins
+	- they can be exposed as a namespace on the app object
+	- they can be scanned for decorated Mixins
+	- they can be scanned for decorated event handlers
 
 - static_version('/path/to/file.js') should return /path/to/file.js?v=<mtime>
     - the v could be detected and force an infinite cache time
@@ -62,8 +67,7 @@ which marks something as a mixin.
 
 - upgrade to Werkzeug 0.7
 
-- constructive things to do
-	- plugin architecture and/or namespaces for app plugins
+
 
 - FileMutator
 	- a couple of methods to override to have a file served that is built from
@@ -123,8 +127,7 @@ which marks something as a mixin.
   everything they could export a single object such as "db" with all the DB
   stuff
 
-- AppPlugin instead of AppMixin
-	- use c3linearize to determine proper ordering of plugins
+
 
 
 - Pyramid renderers are rather nice.
