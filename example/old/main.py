@@ -15,12 +15,7 @@ log = logging.getLogger(__name__)
 
 
 
-@app.route('/stream')
-def do_stream(environ, start):
-    start('200 OK', [])
-    for i in range(50):
-        yield '%d ' % i
-        time.sleep(0.1)
+
     
 
 @app.route('/captcha')
