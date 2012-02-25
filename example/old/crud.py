@@ -1,11 +1,12 @@
 import os
 
 from datetime import datetime
-from .app import *
 from sqlalchemy import *
 
 from nitrogen.cookies import parse_cookies
 from nitrogen import forms
+
+from . import *
 
 crud_app = router = ReRouter()
 

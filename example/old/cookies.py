@@ -1,5 +1,5 @@
 
-from .app import app
+# from .app import app
 
 
 def cookie_app(environ, start):
