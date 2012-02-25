@@ -5,6 +5,7 @@ from cgi import escape
 import sys
 import traceback
 import logging
+import os
 
 try:
     from paste.httpexceptions import HTTPException as PasteException
@@ -136,10 +137,14 @@ def get_cleaned_traceback():
     
     type, value, tb = sys.exc_info()
     try:
-        return list(MakoTraceback().traceback)
+        raw = list(MakoTraceback().traceback)
     except:
         log.exception('Error while Mako was cleaning traceback')
-        return traceback.extract_tb(tb)
+        raw = traceback.extract_tb(tb)
+    cleaned = []
+    for filename, lineno, function, line in raw:
+        cleaned.append((os.path.relpath(filename), lineno, function, line))
+    return cleaned
 
 
 def exception_logger(app, level=logging.ERROR, ignore=None):
