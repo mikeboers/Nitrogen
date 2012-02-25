@@ -115,7 +115,7 @@ def dump_cookie(name, value='', **kwargs):
     result.append("%s=%s" % (name, _quote(value)))
     for key in sorted(_ATTRIBUTES):
         name = _ATTRIBUTES[key]
-        value = kwargs.get(name)
+        value = kwargs.get(key)
         if value is not None:
             if key == "expires":
                 result.append("%s=%s" % ('expires', wz.utils.cookie_date(value)))
@@ -305,7 +305,7 @@ class CookieAppMixin(object):
         if self.config.private_key:
             sig = sign.sign(self.config.private_key, key + '=' + (value.encode('utf8') if isinstance(value, unicode) else value), max_age=max_age)
             value = value + '?' + sign.encode_query(sig)
-        return dump_cookie(key, value, **kwargs)
+        return dump_cookie(key, value, max_age=max_age, **kwargs)
         
     RequestMixin = _RequestMixin
     ResponseMixin = _ResponseMixin
