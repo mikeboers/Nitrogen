@@ -148,8 +148,8 @@ def _quote_char(char):
 def _quote_byte(byte):
     if byte in LEGAL_CHARS:
         return byte
-    if char in _quote_map:
-        return _quote_map[char]
+    if byte in _quote_map:
+        return _quote_map[byte]
     return '\\%03o' % ord(byte)
 
 def _quote(value):
