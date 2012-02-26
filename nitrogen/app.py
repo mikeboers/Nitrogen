@@ -23,9 +23,9 @@ log = logging.getLogger(__name__)
 
 class Core(object):
         
-    request_started = instance_event('request_started')
-    wsgi_started = instance_event('wsgi_started')
-    request_finished = instance_event('request_finished')
+    before_request = instance_event('before_request')
+    on_wsgi_start = instance_event('on_wsgi_start')
+    after_request = instance_event('after_request')
     
     
     def __init__(self, *args, **kwargs):
@@ -87,7 +87,6 @@ class Core(object):
     class RequestMixin(object): pass
     class ResponseMixin(object): pass
     
-    
     Request = mixin.builder_property(request.Request)
     Response = mixin.builder_property(request.Response)
 
@@ -116,7 +115,7 @@ class Core(object):
     def _get_wsgi_app(self, environ):
         return self.router.wsgi_route(environ)
     
-    def _call_wsgi_app(self, environ, start):
+    def wsgi_app(self, environ, start):
         app = self._get_wsgi_app(environ)
         return self.Request.auto_application(app)(environ, start)
     
@@ -124,7 +123,7 @@ class Core(object):
         if self._flattened_wsgi_app is None:
             middleware = sorted(self.middleware)
             log.debug('Flattening middleware:')
-            app = self._call_wsgi_app
+            app = self.wsgi_app
             for priority, func, args, kwargs in middleware:
                 log.debug('%12r: %s' % (priority, func))
                 app = func(app, *args, **kwargs)
@@ -163,10 +162,10 @@ class Core(object):
         self._local.environ = environ
         self._local.request = self.local_request()
         
-        self.request_started.trigger(environ)
+        self.before_request.trigger(environ)
         
         def _start(*args):
-            self.wsgi_started.trigger(*args)
+            self.on_wsgi_start.trigger(*args)
             return start(*args)
         
         try:
@@ -174,7 +173,7 @@ class Core(object):
                 yield x
                 
         finally:
-            self.request_finished.trigger(environ)
+            self.after_request.trigger(environ)
             for obj in self.__managed_locals:
                 obj.__dict__.clear()
 

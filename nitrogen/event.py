@@ -1,7 +1,8 @@
 '''Very basic Observer pattern.'''
 
+import werkzeug as wz
+import werkzeug.utils
 
-from werkzeug.utils import cached_property
 
 class Event(object):
     
@@ -14,16 +15,16 @@ class Event(object):
     def remove(self, func):
         self.listeners.remove(func)
     
-    def itrigger(self, *args, **kwargs):
+    def itertrigger(self, *args, **kwargs):
         for func in self.listeners:
             yield func(*args, **kwargs)
             
     def trigger(self, *args, **kwargs):
-        return list(self.itrigger(*args, **kwargs))
+        return list(self.itertrigger(*args, **kwargs))
 
 
 def instance_event(name):
-    return cached_property(lambda x: Event(), name=name)
+    return wz.utils.cached_property(lambda x: Event(), name=name)
     
     
 
