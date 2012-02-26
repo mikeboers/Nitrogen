@@ -10,6 +10,7 @@ import wtforms
 from nitrogen import recaptcha
 
 from . import app
+from . import mixin
 
 
 # So you can `import fields` from this.
@@ -27,9 +28,8 @@ class FormAppMixin(object):
         def render(self):
             return self._app.render('/_wtform.html', form=self)
     
-    build_form_class = lambda self: app.build_inheritance_mixin_class(self.__class__, Form, 'Form')
-    Form = wz.cached_property(build_form_class, name='Form')
-        
+    Form = mixin.builder_property(Form)
+    
     def __init__(self, *args, **kwargs):
         FormAppMixin.FormMixin._app = self
         super(FormAppMixin, self).__init__(*args, **kwargs)

@@ -4,6 +4,32 @@ import re
 import json
 
 
+class Config(dict):
+    
+    def __getattribute__(self, name):
+        try:
+            return self[name]
+        except KeyError:
+            pass
+        try:
+            return object.__getattribute__(self, name)
+        except AttributeError:
+            pass
+    
+    def setdefaults(self, **kwargs):
+        results = {}
+        for name, default in kwargs.iteritems():
+            results[name] = self.setdefault(name, default)
+        return results
+    
+    def filter_prefix(self, prefix):
+        filtered = {}
+        for key, value in self.iteritems():
+            if key.startswith(prefix):
+                filtered[key[len(prefix):]] = value
+        return filtered
+
+
 class ConfigFile(collections.Mapping):
     
     def __init__(self, path, defaults=()):

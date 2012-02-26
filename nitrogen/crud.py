@@ -13,7 +13,8 @@ import werkzeug as wz
 from nitrogen import status
 
 from .request import Request, Response
-from .app import build_inheritance_mixin_class
+from . import app
+from . import mixin
 
 log = logging.getLogger(__name__)
 
@@ -279,9 +280,7 @@ class MemoryRepoMixin(object):
 
 class CRUDAppMixin(object):
     
-    build_crud_class = lambda self: build_inheritance_mixin_class(self.__class__, CRUD)
-    CRUD = wz.cached_property(build_crud_class, name='CRUD')
-    
+    CRUD = mixin.builder_property(CRUD)
     class CRUDMixin(object):
         pass
     

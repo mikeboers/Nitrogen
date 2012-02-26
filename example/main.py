@@ -2,7 +2,6 @@ from nitrogen.core import App
 
 from . import config
 
-
 # Create the app.
 app = App(config.__dict__)
 

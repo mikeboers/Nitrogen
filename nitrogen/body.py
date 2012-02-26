@@ -2,10 +2,12 @@
 from cStringIO import StringIO
 import tempfile
 
+from . import status
+
 
 def reject_factory(total_length, content_type, filename, file_length):
     """Do not accept files."""
-    raise ValueError('not accepting posted files')
+    raise status.RequestEntityTooLarge('not accepting posted files')
 
 def stringio_factory(total_length, content_type, filename, file_length):
     return StringIO()

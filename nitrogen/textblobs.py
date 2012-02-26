@@ -6,7 +6,7 @@ import logging
 from sqlalchemy import *
 from sqlalchemy.exc import NoSuchTableError
 
-from .app import build_inheritance_mixin_class
+from . import mixin
 from .crud import CRUD
 from .forms import *
 
@@ -25,7 +25,7 @@ class TextBlobAppMixin(object):
             class Mixin(self.Base):
                 __table__ = Table('textblobs', self.metadata, autoload=True)
                 _app = self
-            self.TextBlob = build_inheritance_mixin_class(self.__class__, Mixin, 'TextBlob')
+            self.TextBlob = build_from_mro(self.__class__, Mixin, 'TextBlob')
             
         except NoSuchTableError:
             log.warning('Table does not exist. Please upgrade database.')

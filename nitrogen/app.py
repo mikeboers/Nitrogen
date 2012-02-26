@@ -3,67 +3,26 @@ import logging
 import os
 import threading
 
-from werkzeug import cached_property
+import werkzeug as wz
 
 import webstar
 
+from . import config
 from . import request
 from . import status
+from . import mixin
 from .event import instance_event
 from .static import StaticRouter
+
 
 
 log = logging.getLogger(__name__)
 
 
-class Config(dict):
-    
-    def __getattribute__(self, name):
-        try:
-            return self[name]
-        except KeyError:
-            pass
-        try:
-            return object.__getattribute__(self, name)
-        except AttributeError:
-            pass
-    
-    def setdefaults(self, **kwargs):
-        results = {}
-        for name, default in kwargs.iteritems():
-            results[name] = self.setdefault(name, default)
-        return results
-    
-    def filter_prefix(self, prefix):
-        filtered = {}
-        for key, value in self.iteritems():
-            if key.startswith(prefix):
-                filtered[key[len(prefix):]] = value
-        return filtered
-            
-
-
-def build_inheritance_mixin_class(parent_class, base, name=None):
-    """Make a class from mixins in the inheritence chain of a parent class.
-    
-    Works backwards down the MRO of a parent class, collecting unique mixin
-    classes named after the base object. Eg. if extending a Request class, this
-    will look for RequestMixin classes.
-    
-    """
-    name = name or base.__name__
-    bases = []
-    for cls in parent_class.__mro__:
-        mixin = getattr(cls, name + 'Mixin', None)
-        if mixin and mixin not in bases:
-            bases.append(mixin)
-    bases.append(base)
-    cls = type(parent_class.__class__.__name__ + name, tuple(bases), {})
-    return cls
 
 
 class Core(object):
-    
+        
     request_started = instance_event('request_started')
     wsgi_started = instance_event('wsgi_started')
     request_finished = instance_event('request_finished')
@@ -71,7 +30,7 @@ class Core(object):
     
     def __init__(self, *args, **kwargs):
         
-        self.config = Config()
+        self.config = config.Config()
         for arg in args:
             self.config.update(arg)
         self.config.update(kwargs)
@@ -128,11 +87,10 @@ class Core(object):
     class RequestMixin(object): pass
     class ResponseMixin(object): pass
     
-    build_request_class = lambda self: build_inheritance_mixin_class(self.__class__, request.Request)
-    Request = cached_property(build_request_class, name='Request')
     
-    build_response_class = lambda self: build_inheritance_mixin_class(self.__class__, request.Response)
-    Response = cached_property(build_response_class, name='Response')
+    Request = mixin.builder_property(request.Request)
+    Response = mixin.builder_property(request.Response)
+
     
     def export_to(self, map):
         map.update(
@@ -181,7 +139,7 @@ class Core(object):
     def url_for(self):
         return self.router.url_for
     
-    @cached_property
+    @wz.utils.cached_property
     def __managed_locals(self):
         return []
     
