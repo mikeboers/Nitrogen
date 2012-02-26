@@ -12,7 +12,8 @@ from . import status
 log = logging.getLogger(__name__)
 
 
-
+Allow = True
+Deny = False
 
 # Decorator to attach ACLs to functions.
 def ACL(*acl):
@@ -53,12 +54,12 @@ class AuthAppMixin(object):
         
         # Default ACL list that will be checked by an auth_predicate.
         self.router.__acl__ = [
-            (True , '__any__', 'route'),
-            (False, '__any__', '__all__'),
+            (True , '*', 'view'),
+            (False, '*', '*'),
         ]
         
         # Here is the auth predicate that actually checks ACLs
-        self.router.__auth_predicates__ = [HasPermission('route')]
+        self.router.__auth_predicates__ = [HasPermission('view')]
     
     def setup_config(self):
         super(AuthAppMixin, self).setup_config()
@@ -108,7 +109,6 @@ class AuthAppMixin(object):
         
         def has_permission(self, permission):
             return check_acl_for_permission(self, get_route_acl(self.route_steps), permission)
-            
     
     class ResponseMixin(object):
         
@@ -199,10 +199,6 @@ string_predicates = {
     '__authenticated__': Authenticated(),
     '__local__': Local(),
     '__remote__': Remote(),
-    
-    # Likely don't need these many synonyms.
-    '__any__': Any(),
-    '__all__': Any(),
     '*': Any(),
 }
 
@@ -221,8 +217,6 @@ class AllPermissions(object):
         return True
         
 string_permissions = {
-    '__any__': AllPermissions(),
-    '__all__': AllPermissions(),
     '*': AllPermissions(),
 }
 
