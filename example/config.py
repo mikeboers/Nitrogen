@@ -8,6 +8,8 @@ debug = True
 
 log_handlers = [logging.StreamHandler(sys.stderr)]
 
+auth_login_url = '/auth/login'
+
 sqlalchemy_url = 'sqlite:///' + root + '/database.sqlite'
 sqlalchemy_echo = False
 
