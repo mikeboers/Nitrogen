@@ -12,6 +12,8 @@ import hashlib
 import json
 import os
 
+from nitrogen.eventsource import event
+
 from . import *
 
 log = logging.getLogger(__name__)
@@ -57,22 +59,6 @@ def do_index(request):
     
 ''')
     
-
-def event(data=None, event=None, id=None, retry=None):
-    ret = []
-    for name, value in [
-            ('event', event),
-            ('id', id),
-            ('retry', retry),
-            ('data', data)
-        ]:
-        if value:
-            name = '%s: ' % name
-            ret.append(name + str(value).replace('\n', '\n' + name))
-    if ret:
-        return '\n'.join(ret) + '\n\n'
-    return ''
-
 
 counter = 0
 
