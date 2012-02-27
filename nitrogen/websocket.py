@@ -6,21 +6,14 @@ https://bitbucket.org/Jeffrey/gevent-websocket/src/fabf03111c73/geventwebsocket
 
 """
 
+from errno import EINTR
+from hashlib import md5, sha1
+from socket import error as socket_error
+from threading import Semaphore
+from urllib import quote
 import base64
 import re
 import struct
-from hashlib import md5, sha1
-from socket import error as socket_error
-from urllib import quote
-
-from gevent.pywsgi import WSGIHandler
-from geventwebsocket.websocket import WebSocketHybi, WebSocketHixie
-
-
-
-from socket import error as socket_error
-
-
 import sys
 
 
@@ -89,7 +82,6 @@ else:
         return fobj.closed
 
 
-
 class WebSocketError(socket_error):
     pass
 
@@ -98,15 +90,23 @@ class FrameTooLargeException(WebSocketError):
     pass
 
 
-
-class WebSocketHandler(WSGIHandler):
+class WebSocketHandler(object):
     """ Automatically upgrades the connection to websockets. """
 
     GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
     SUPPORTED_VERSIONS = ('13', '8', '7')
 
+    def __init__(self, application, environ, start_response):
+        self.application = application
+        self.environ = environ
+        self.start_response = start_response
+        
+        if 'gunicorn.socket' in environ:
+            self.socket = environ['gunicorn.socket']
+        else:
+            raise ValueError('no socket')
+    
     def handle_one_response(self):
-        self.pre_start()
         environ = self.environ
         upgrade = environ.get('HTTP_UPGRADE', '').lower()
 
@@ -114,10 +114,8 @@ class WebSocketHandler(WSGIHandler):
             connection = environ.get('HTTP_CONNECTION', '').lower()
             if 'upgrade' in connection:
                 return self._handle_websocket()
-        return super(WebSocketHandler, self).handle_one_response()
-
-    def pre_start(self):
-        pass
+        
+        return self.application(environ, self.start_response)
 
     def _handle_websocket(self):
         environ = self.environ
@@ -130,15 +128,17 @@ class WebSocketHandler(WSGIHandler):
                 self.close_connection = True
                 result = self._handle_hixie()
 
-            self.result = []
-            if not result:
-                return
-
-            self.application(environ, None)
+            if result:
+                self.application(environ, None)
             return []
         finally:
             self.log_request()
 
+    def log_request(self):
+        pass
+    def log_error(self, msg):
+        print 'ERROR', msg
+    
     def _handle_hybi(self):
         environ = self.environ
         version = environ.get("HTTP_SEC_WEBSOCKET_VERSION")
@@ -149,11 +149,11 @@ class WebSocketHandler(WSGIHandler):
             self.log_error('400: Unsupported Version: %r', version)
             self.respond(
                 '400 Unsupported Version',
-                [('Sec-WebSocket-Version', '13, 8, 7')]
+                [('Sec-WebSocket-Version', ', '.join(self.SUPPORTED_VERSIONS))]
             )
             return
 
-        protocol, version = self.request_version.split("/")
+        protocol, version = environ['SERVER_PROTOCOL'].split("/")
         key = environ.get("HTTP_SEC_WEBSOCKET_KEY")
 
         # check client handshake for validity
@@ -261,7 +261,7 @@ class WebSocketHandler(WSGIHandler):
         self.status = status
 
         towrite = []
-        towrite.append('%s %s\r\n' % (self.request_version, self.status))
+        towrite.append('%s %s\r\n' % (self.environ['SERVER_PROTOCOL'], self.status))
 
         for header in headers:
             towrite.append("%s: %s\r\n" % header)
@@ -281,7 +281,7 @@ class WebSocketHandler(WSGIHandler):
                 self.socket.close()
             except socket_error:
                 pass
-
+    
     def _get_key_value(self, key_value):
         key_number = int(re.sub("\\D", "", key_value))
         spaces = re.subn(" ", "", key_value)[1]
@@ -321,13 +321,7 @@ def reconstruct_url(environ):
 
 
 
-import struct
 
-from errno import EINTR
-from gevent.coros import Semaphore
-
-from python_fixes import makefile, is_closed
-from exceptions import FrameTooLargeException, WebSocketError
 
 
 class WebSocket(object):
