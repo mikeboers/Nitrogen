@@ -179,6 +179,17 @@ class Request(wz.wrappers.Request):
     @property
     def full_path(self):
         return '/' + (self.script_name.rstrip('/') + '/' + self.path_info.lstrip('/')).strip('/')
+    
+    @property
+    def is_eventstream(self):
+        return self.accept_mimetypes.best == 'text/event-stream'
+    
+    @property
+    def is_websocket(self):
+        return (
+            environ.get('HTTP_UPGRADE', '').strip().lower() == 'websocket' and
+            environ.get('HTTP_CONNECTION', '').strip().lower() == 'upgrade'
+        )
 
 
 

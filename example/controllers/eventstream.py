@@ -12,7 +12,7 @@ import hashlib
 import json
 import os
 
-from nitrogen.eventsource import event
+from nitrogen.eventstream import Event, Response as EventResponse
 
 from . import *
 
@@ -30,9 +30,10 @@ def do_index(request):
         var log = function(x) { $('#log').append($('<li/>').text(x)); }
         log('start of log');
         
-        var source = new EventSource('/eventsource/source')
+        var source = new EventSource('/eventstream/events')
             
         source.addEventListener('message', function(e) {
+            console.log(e);
             log('"' + e.data + '"');
         }, false);
 
@@ -62,18 +63,15 @@ def do_index(request):
 
 counter = 0
 
-@route('/source')
+@route('/events')
 def do_iframe(request):
     def _events():
         global counter
         
-        for name, value in sorted(request.environ.iteritems()):
-            if name.startswith('HTTP'):
-                yield event('%s: %r' % (name, value))
-        yield event('trailing\n')
-        yield event('before\nafter')
-        yield event(' leading\n spaces')
-        yield event(json.dumps(dict(key='value')))
+        yield 'trailing\n'
+        yield 'before\nafter'
+        yield ' leading\n spaces'
+        yield json.dumps(dict(key='value'))
 
         count = counter
         counter += 1
@@ -81,10 +79,13 @@ def do_iframe(request):
         for i in range(10):
             msg = 'ping %d-%d' % (count, i)
             log.debug(msg)
-            yield event(msg, id=i)
+            yield Event(msg, id=i)
             time.sleep(1)
 
-    return Response(_events(), mimetype='text/event-stream')
+    if request.is_eventstream:
+        return EventResponse(_events())
+    else:
+        return Response('not an event stream', mimetype='text/plain')
 
 
 

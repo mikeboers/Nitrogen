@@ -1,4 +1,68 @@
 
+- pick an API for websockets
+
+	1: something on top of raw wsgi
+		def do_socket(environ, start):
+			socket = get_websocket(environ, start)
+			if not socket:
+				request = Request(environ)
+				return Response('something')
+			msg = socket.recv()
+			socket.send('whatever')
+			
+	2: something on top of Request
+		def do_socket(request):
+			socket = request.websocket
+			if socket:
+				msg = socket.recv()
+				socket.send('whatever')
+			else:
+				return Response('not a socket')
+		
+		- Request.application would have to not return anything
+		- there is a magical step where the connection is upgraded
+	
+	3: something on top of Response
+		def do_socket(request):
+			if request.upgrade == 'websocket':
+			OR
+			if request.is_websocket
+				def _do_socket(socket):
+					msg = socket.recv()
+					socket.send('whatever')
+				return WebSocketHandler(_do_socket)
+		
+		- the handler would need:
+			- .status_code != 200
+			- .__call__(self, environ, start)
+				- negotiates the upgrade
+				- creates the WebSocket object with send/recv
+				- somehow hands the websocket to the app
+				- runs the app
+				- interprets the response from the app
+		
+		def do_socket(environ, start):
+			def _do_socket(sock):
+				pass
+			return websocket.Response(_do_socket)(environ, start)
+
+- eventsource API could mimic WebSocket:
+	def do_eventstream(request):
+		if request.is_eventstream:
+			def _events():
+				yield 1
+				yield 'something'
+				yield eventstream.Retry(10)
+				yield eventstream.Event('something', id=12, retry=60, name='whatever')
+			return eventstream.Response(_events())
+		else:
+			pass
+	- replace Response.iter_encoded(self, charset=None):
+		for item in self.response:
+			- format it into an event
+			- yield
+
+
 - etags should also include headers which affect the agent's interpretation of the content, such as content-type
 
 - instead of naming app mixin classes ResponseMixin, perhaps have a decorator
