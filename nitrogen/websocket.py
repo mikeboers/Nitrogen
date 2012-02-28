@@ -17,6 +17,20 @@ import struct
 import sys
 
 
+import gunicorn.util
+gunicorn.util.hop_headers.remove('connection')
+gunicorn.util.hop_headers.remove('upgrade')
+import gunicorn.http.wsgi
+
+old_default_headers = gunicorn.http.wsgi.Response.default_headers
+
+def default_headers(self):
+    return [x for x in old_default_headers(self) if not
+            x.lower().startswith('connection')]
+gunicorn.http.wsgi.Response.default_headers = default_headers
+
+
+
 if sys.version_info[:2] == (2, 7):
     # Python 2.7 has a working BufferedReader but socket.makefile() does not
     # use it.

@@ -10,12 +10,18 @@ import logging
 import struct
 import hashlib
 
+import gevent
+from gunicorn.workers.async import ALREADY_HANDLED
+
 from nitrogen.websocket import WebSocketHandler
 
 from . import *
 
 
 log = logging.getLogger(__name__)
+
+
+
 
 
 @route('/')
@@ -44,7 +50,12 @@ def do_index(request):
         $input = $('input[type=text]');
         $('form').submit(function() {
             log('SEND: ' + $input.val());
-            ws.send($input.val());
+            try {
+                ws.send($input.val());
+            } catch (e) {
+                console.log(e);
+                log('exception while sending');
+            }
             $input.val('');
             return false;
         })
@@ -72,16 +83,26 @@ def do_socket(environ, start):
         socket = environ['wsgi.websocket']
         # socket.send('hello')
         
+        def _ping():
+            while True:
+                time.sleep(1)
+                print 'pre ping'
+                socket.send('ping!')
+        
         while True:
+            log.debug('pre-recv')
             msg = socket.receive()
             if not msg:
                 break
+            log.debug('pre-send')
             socket.send('echo: %s' % msg)
             
         
         return []
     
+    log.debug('pre-handle')
     return WebSocketHandler(_do_socket, environ, start).handle_one_response()
+    return ALREADY_HANDLED
 
 
 

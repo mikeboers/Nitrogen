@@ -67,19 +67,21 @@ def do_iframe(request):
     def _events():
         global counter
         
-        # for name, value in sorted(environ.iteritems()):
-        #     if name.startswith('HTTP'):
-        #         yield event('%s: %r' % (name, value))
-        # yield event('trailing\n')
-        # yield event('before\nafter')
-        # yield event(' leading\n spaces')
-        # yield event(json.dumps(dict(key='value')))
+        for name, value in sorted(request.environ.iteritems()):
+            if name.startswith('HTTP'):
+                yield event('%s: %r' % (name, value))
+        yield event('trailing\n')
+        yield event('before\nafter')
+        yield event(' leading\n spaces')
+        yield event(json.dumps(dict(key='value')))
 
         count = counter
         counter += 1
         
         for i in range(10):
-            yield event('ping %d-%d' % (count, i), id=i)
+            msg = 'ping %d-%d' % (count, i)
+            log.debug(msg)
+            yield event(msg, id=i)
             time.sleep(1)
 
     return Response(_events(), mimetype='text/event-stream')
