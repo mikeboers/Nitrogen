@@ -14,7 +14,7 @@ from socket import error as socket_error
 import gevent
 from gunicorn.workers.async import ALREADY_HANDLED
 
-from nitrogen.websocket import WebSocketHandler, WebSocketError, Response as WebSocketResponse
+from nitrogen import websocket
 from nitrogen import status
 
 from . import *
@@ -92,7 +92,7 @@ def do_socket(request):
                 time.sleep(5)
                 try:
                     socket.send('ping!')
-                except WebSocketError:
+                except websocket.Error:
                     break
         
         def _echo():
@@ -106,7 +106,7 @@ def do_socket(request):
         for task in tasks:
             task.join()
             
-    return WebSocketResponse(_do_socket)
+    return websocket.Response(_do_socket)
 
 
 
