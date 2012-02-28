@@ -17,9 +17,6 @@ import struct
 import sys
 
 
-
-import gunicorn.http.wsgi
-
 def patch(cls):
     def _patcher(func):
         old_func = getattr(cls, func.__name__)
@@ -29,37 +26,50 @@ def patch(cls):
         return _patch
     return _patcher
 
-@patch(gunicorn.http.wsgi.Response)
-def process_headers(old, self, headers):
-    # Check if this is a websocket response.
-    for name, value in headers:
-        if name.strip().lower() == 'upgrade':
-            self.websocket = value.strip().lower() == 'websocket'
-            break
-    else:
-        self.websocket = False
-    old(self, headers)
-    # The old function filters out all hoppish headers, but leaves in
-    # "Connection: Upgrade" for us. We need to manually re-add the "Upgrade"
-    # header for WebSockets.
-    if self.websocket:
-        # The case of "websocket" *may* matter, but I'm not sure.
-        self.headers.append(('Upgrade', 'WebSocket'))
-            
-@patch(gunicorn.http.wsgi.Response)
-def default_headers(old, self):
-    headers = old(self)
-    # If we are a websocket we have our own connection header to send.
-    if self.websocket:
-        headers = [x for x in headers if not x.lower().startswith('connection')]
-    return headers
+try:
+    import gunicorn.http.wsgi
+except ImportError:
+    pass
+else:
+    
+    @patch(gunicorn.http.wsgi.Response)
+    def start_response(old, self, *args):
+        write = old(self, *args)
+        if self.websocket:
+            self.send_headers()
+        return write
 
-@patch(gunicorn.http.wsgi.Response)
-def is_chunked(old, self):
-    # WebSockets are not chunked, but the default logic will treat them as such.
-    if self.websocket:
-        return False
-    return old(self)
+    @patch(gunicorn.http.wsgi.Response)
+    def process_headers(old, self, headers):
+        # Check if this is a websocket response.
+        for name, value in headers:
+            if name.strip().lower() == 'upgrade':
+                self.websocket = value.strip().lower() == 'websocket'
+                break
+        else:
+            self.websocket = False
+        old(self, headers)
+        # The old function filters out all hoppish headers, but leaves in
+        # "Connection: Upgrade" for us. We need to manually re-add the "Upgrade"
+        # header for WebSockets.
+        if self.websocket:
+            # The case of "websocket" *may* matter, but I'm not sure.
+            self.headers.append(('Upgrade', 'WebSocket'))
+            
+    @patch(gunicorn.http.wsgi.Response)
+    def default_headers(old, self):
+        headers = old(self)
+        # If we are a websocket we have our own connection header to send.
+        if self.websocket:
+            headers = [x for x in headers if not x.lower().startswith('connection')]
+        return headers
+
+    @patch(gunicorn.http.wsgi.Response)
+    def is_chunked(old, self):
+        # WebSockets are not chunked, but the default logic will treat them as such.
+        if self.websocket:
+            return False
+        return old(self)
 
 
 if sys.version_info[:2] == (2, 7):
@@ -303,21 +313,7 @@ class WebSocketHandler(object):
             self._send_reply("101 Web Socket Protocol Handshake", headers)
 
     def _send_reply(self, status, headers):
-        write = self.start_response(status, headers)
-        write('') # To send headers.
-        return
-        self.status = status
-
-        towrite = []
-        towrite.append('%s %s\r\n' % (self.environ['SERVER_PROTOCOL'], self.status))
-
-        for header in headers:
-            towrite.append("%s: %s\r\n" % header)
-
-        towrite.append("\r\n")
-        msg = ''.join(towrite)
-        self.socket.sendall(msg)
-        self.headers_sent = True
+        self.start_response(status, headers)
 
     def respond(self, status, headers=[]):
         self.close_connection = True
