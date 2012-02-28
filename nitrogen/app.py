@@ -89,7 +89,6 @@ class Core(object):
     
     Request = mixin.builder_property(request.Request)
     Response = mixin.builder_property(request.Response)
-
     
     def export_to(self, map):
         map.update(

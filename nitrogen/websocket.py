@@ -339,7 +339,7 @@ def reconstruct_url(environ):
     return url
 
 
-class WebSocket(request.Request):
+class WebSocket(object):
     def _encode_text(self, text):
         if isinstance(text, unicode):
             return text.encode('utf-8')
@@ -349,7 +349,7 @@ class WebSocket(request.Request):
 
 class WebSocketHixie(WebSocket):
     def __init__(self, socket, environ):
-        super(WebSocketHixie, self).__init__(environ)
+        self.environ = environ
         self._fobj = socket.makefile()
         self._writelock = Semaphore(1)
         self._write = socket.sendall
@@ -439,7 +439,7 @@ class WebSocketHybi(WebSocket):
     OPCODE_PONG = 0xA
 
     def __init__(self, socket, environ):
-        super(WebSocketHybi, self).__init__(environ)
+        self.environ = environ
         self._chunks = bytearray()
         self._writelock = Semaphore(1)
         self._socket = socket

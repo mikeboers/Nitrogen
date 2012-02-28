@@ -10,15 +10,16 @@ import logging
 import struct
 import hashlib
 from socket import error as socket_error
+import json
 
 import gevent
 from gunicorn.workers.async import ALREADY_HANDLED
 
 from nitrogen import websocket
-from nitrogen import status
 
 from . import *
 
+from nitrogen import status
 
 log = logging.getLogger(__name__)
 
@@ -87,11 +88,21 @@ def do_socket(request):
     def _do_socket(socket):
         socket.send('server started')
         
+        socket.send(json.dumps(dict(request.cookies)))
+        
         def _ping():
             while True:
                 time.sleep(5)
                 try:
                     socket.send('ping!')
+                except websocket.Error:
+                    break
+        
+        def _env():
+            for k, v in sorted(socket.environ.iteritems()):
+                time.sleep(1)
+                try:
+                    socket.send('%s: %r' % (k, v))
                 except websocket.Error:
                     break
         

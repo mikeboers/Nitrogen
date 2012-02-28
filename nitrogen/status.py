@@ -2,7 +2,7 @@
 
 import logging
 
-from werkzeug.exceptions import HTTPException, default_exceptions as _wz_exceptions
+from werkzeug.exceptions import HTTPException, BadRequest, default_exceptions as _wz_exceptions
 from werkzeug.utils import redirect
 
 
