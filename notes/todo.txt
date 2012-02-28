@@ -30,7 +30,7 @@
 				def _do_socket(socket):
 					msg = socket.recv()
 					socket.send('whatever')
-				return WebSocketHandler(_do_socket)
+				return WebSocketApp(_do_socket)
 		
 		- the handler would need:
 			- .status_code != 200
@@ -46,21 +46,7 @@
 				pass
 			return websocket.Response(_do_socket)(environ, start)
 
-- eventsource API could mimic WebSocket:
-	def do_eventstream(request):
-		if request.is_eventstream:
-			def _events():
-				yield 1
-				yield 'something'
-				yield eventstream.Retry(10)
-				yield eventstream.Event('something', id=12, retry=60, name='whatever')
-			return eventstream.Response(_events())
-		else:
-			pass
-	- replace Response.iter_encoded(self, charset=None):
-		for item in self.response:
-			- format it into an event
-			- yield
+
 
 
 - etags should also include headers which affect the agent's interpretation of the content, such as content-type

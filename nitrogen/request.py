@@ -187,8 +187,8 @@ class Request(wz.wrappers.Request):
     @property
     def is_websocket(self):
         return (
-            environ.get('HTTP_UPGRADE', '').strip().lower() == 'websocket' and
-            environ.get('HTTP_CONNECTION', '').strip().lower() == 'upgrade'
+            self.environ.get('HTTP_UPGRADE', '').strip().lower() == 'websocket' and
+            self.environ.get('HTTP_CONNECTION', '').strip().lower() == 'upgrade'
         )
 
 

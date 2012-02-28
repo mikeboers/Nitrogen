@@ -14,7 +14,8 @@ from socket import error as socket_error
 import gevent
 from gunicorn.workers.async import ALREADY_HANDLED
 
-from nitrogen.websocket import WebSocketHandler, WebSocketError
+from nitrogen.websocket import WebSocketHandler, WebSocketError, Response as WebSocketResponse
+from nitrogen import status
 
 from . import *
 
@@ -78,10 +79,12 @@ def do_index(request):
 
 
 @route('/socket')
-def do_socket(environ, start):
+def do_socket(request):
     
-    def _do_socket(environ, start):
-        socket = environ['wsgi.websocket']
+    if not request.is_websocket:
+        raise status.BadRequest('must be websocket')
+    
+    def _do_socket(socket):
         socket.send('server started')
         
         def _ping():
@@ -103,8 +106,7 @@ def do_socket(environ, start):
         
         return []
     
-    return WebSocketHandler(_do_socket, environ, start).handle_one_response()
-    # return ALREADY_HANDLED
+    return WebSocketResponse(_do_socket)
 
 
 

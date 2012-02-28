@@ -15,6 +15,14 @@ import base64
 import re
 import struct
 import sys
+import logging
+import itertools
+
+from . import request
+from . import status
+
+
+log = logging.getLogger(__name__)
 
 
 def patch(cls):
@@ -174,7 +182,6 @@ class WebSocketHandler(object):
 
     def _handle_websocket(self):
         environ = self.environ
-
         try:
             if environ.get("HTTP_SEC_WEBSOCKET_VERSION"):
                 self.close_connection = True
@@ -731,3 +738,189 @@ class WebSocketHybi(WebSocket):
                 # self.fobj.close()
 
             self.fobj = None
+
+
+
+
+
+
+
+"""
+
+		def do_socket(request):
+			if request.upgrade == 'websocket':
+			OR
+			if request.is_websocket
+				def _do_socket(socket):
+					msg = socket.recv()
+					socket.send('whatever')
+				return WebSocketApp(_do_socket)
+		
+		- the handler would need:
+			- .status_code != 200
+			- .__call__(self, environ, start)
+				- negotiates the upgrade
+				- creates the WebSocket object with send/recv
+				- somehow hands the websocket to the app
+				- runs the app
+				- interprets the response from the app
+		
+		def do_socket(environ, start):
+			def _do_socket(sock):
+				pass
+			return websocket.Response(_do_socket)(environ, start)
+
+
+
+"""
+
+class Response(request.Response):
+    """A WebSocket response.
+    
+    Not reuseable!
+    
+    """
+    
+    GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+    SUPPORTED_VERSIONS = ('13', '8', '7')
+    
+    def __init__(self, app):
+        self.application = app
+        super(Response, self).__init__(direct_passthrough=True)
+    
+    def __call__(self, environ, start_response):
+        
+        self.environ = environ
+        self.start_response = start_response
+        
+        # Make sure it is a websocket.
+        upgrade = environ.get('HTTP_UPGRADE', '').strip().lower()
+        connection = environ.get('HTTP_CONNECTION', '').strip().lower()
+        if connection != 'upgrade' or upgrade != 'websocket':
+            raise ValueError('request not for websocket')
+        
+        # Get the raw socket: this depends on the server.
+        if 'gunicorn.socket' in environ:
+            self.socket = environ['gunicorn.socket']
+        else:
+            raise ValueError('no socket')
+        
+        # Dispatch to the right version.
+        if environ.get("HTTP_SEC_WEBSOCKET_VERSION"):
+            do_run_app = self._handle_hybi()
+        elif environ.get("HTTP_ORIGIN"):
+            do_run_app = self._handle_hixie()
+        else:
+            self.client_error('could not determine websocket version')
+            do_run_app = False
+            
+        if do_run_app:
+            self.headers.pop('Content-Length', None)
+            self.start_response(self.status, list(self.headers))
+            return itertools.chain(self.response, self.application(self.websocket))
+        else:
+            return []
+
+    def client_error(self, msg, status='400 Bad Request', headers=[]):
+        self.status = status
+        self.headers = headers
+        log.info(msg)
+    
+    def _handle_hybi(self):
+        environ = self.environ
+        version = environ.get("HTTP_SEC_WEBSOCKET_VERSION")
+
+        self.version = environ['wsgi.websocket_version'] = 'hybi-%s' % version
+
+        if version not in self.SUPPORTED_VERSIONS:
+            self.client_error(
+                'unsupported version: %r' % version,
+                '400 Unsupported Version',
+                [('Sec-WebSocket-Version', ', '.join(self.SUPPORTED_VERSIONS))]
+            )
+            return
+
+        protocol, version = environ['SERVER_PROTOCOL'].split("/")
+        key = environ.get("HTTP_SEC_WEBSOCKET_KEY")
+
+        # check client handshake for validity
+        if not environ.get("REQUEST_METHOD") == "GET": # 5.2.1 (1)
+            self.client_error('must be GET')
+            return
+        elif not protocol == "HTTP": # 5.2.1 (1)
+            self.client_error('must be HTTP')
+            return
+        elif float(version) < 1.1: # 5.2.1 (1)
+            self.client_error('must be HTTP/1.1')
+            return
+        elif not key: # 5.2.1 (3)
+            self.client_error('Sec-WebSocket-Key is missing')
+            return
+        elif len(base64.b64decode(key)) != 16: # 5.2.1 (3)
+            self.client_error('invalid Sec-WebSocket-Key')
+            return
+
+        self.websocket = WebSocketHybi(self.socket, environ)
+                
+        self.status = "101 Switching Protocols"
+        self.headers.extend([
+            ("Upgrade", "websocket"),
+            ("Connection", "Upgrade"),
+            ("Sec-WebSocket-Accept", base64.b64encode(sha1(key + self.GUID).digest())),
+        ])
+        
+        return True
+
+    def _handle_hixie(self):
+
+        key1 = self.environ.get('HTTP_SEC_WEBSOCKET_KEY1')
+        key2 = self.environ.get('HTTP_SEC_WEBSOCKET_KEY2')
+
+        if key1 is not None:
+            self.version = environ['wsgi.websocket_version'] = 'hixie-76'
+            if not key1:
+                self.client_error('Sec-WebSocket-Key1 is missing')
+                return
+            if not key2:
+                self.client_error('Sec-WebSocket-Key2 is missing')
+                return
+
+            part1 = self._get_hixie_key_value(key1)
+            part2 = self._get_hixie_key_value(key2)
+            if part1 is None or part2 is None:
+                self.client_error('invalid websocket keys')
+                return
+
+        self.websocket = WebSocketHixie(self.socket, environ)
+        self.status = "101 Web Socket Protocol Handshake"
+        self.headers.extend([
+            ("Upgrade", "WebSocket"),
+            ("Connection", "Upgrade"),
+            ("Sec-WebSocket-Location", reconstruct_url(environ)),
+        ])
+        if self.websocket.protocol is not None:
+            self.headers.append(("Sec-WebSocket-Protocol", self.websocket.protocol))
+        if self.websocket.origin:
+            self.headers.append(("Sec-WebSocket-Origin", self.websocket.origin))
+
+        if key1 is not None:
+            
+            # This request should have 8 bytes of data in the body
+            key3 = self.rfile.read(8)
+            challenge = md5(struct.pack("!II", part1, part2) + key3).digest()
+            
+            # TODO this must be delayed, or it will fail.
+            self.response = [self.socket.sendall(challenge)]
+            
+        return True
+    
+    def _get_hixie_key_value(self, key_value):
+        key_number = int(re.sub("\\D", "", key_value))
+        spaces = re.subn(" ", "", key_value)[1]
+
+        if key_number % spaces != 0:
+            self.log_error("key_number %d is not an intergral multiple of spaces %d", key_number, spaces)
+        else:
+            return key_number / spaces
+
+        
