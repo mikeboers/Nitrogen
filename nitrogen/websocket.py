@@ -41,6 +41,11 @@ except ImportError:
 else:
     
     @patch(gunicorn.http.wsgi.Response)
+    def __init__(old, self, *args, **kwargs):
+        old(self, *args, **kwargs)
+        self.websocket = False
+    
+    @patch(gunicorn.http.wsgi.Response)
     def start_response(old, self, *args):
         write = old(self, *args)
         if self.websocket:
@@ -51,11 +56,9 @@ else:
     def process_headers(old, self, headers):
         # Check if this is a websocket response.
         for name, value in headers:
-            if name.strip().lower() == 'upgrade':
-                self.websocket = value.strip().lower() == 'websocket'
+            if name.strip().lower() == 'upgrade' and value.strip().lower() == 'websocket':
+                self.websocket = True
                 break
-        else:
-            self.websocket = False
         old(self, headers)
         # The old function filters out all hoppish headers, but leaves in
         # "Connection: Upgrade" for us. We need to manually re-add the "Upgrade"
@@ -151,198 +154,6 @@ class WebSocketError(socket_error):
 
 class FrameTooLargeException(WebSocketError):
     pass
-
-
-class WebSocketHandler(object):
-    """ Automatically upgrades the connection to websockets. """
-
-    GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-    SUPPORTED_VERSIONS = ('13', '8', '7')
-
-    def __init__(self, application, environ, start_response):
-        self.application = application
-        self.environ = environ
-        self.start_response = start_response
-        
-        if 'gunicorn.socket' in environ:
-            self.socket = environ['gunicorn.socket']
-        else:
-            raise ValueError('no socket')
-    
-    def handle_one_response(self):
-        environ = self.environ
-        upgrade = environ.get('HTTP_UPGRADE', '').lower()
-
-        if upgrade == 'websocket':
-            connection = environ.get('HTTP_CONNECTION', '').lower()
-            if 'upgrade' in connection:
-                return self._handle_websocket()
-        
-        return self.application(environ, self.start_response)
-
-    def _handle_websocket(self):
-        environ = self.environ
-        try:
-            if environ.get("HTTP_SEC_WEBSOCKET_VERSION"):
-                self.close_connection = True
-                result = self._handle_hybi()
-            elif environ.get("HTTP_ORIGIN"):
-                self.close_connection = True
-                result = self._handle_hixie()
-
-            if result:
-                self.application(environ, None)
-            return []
-        finally:
-            self.log_request()
-
-    def log_request(self):
-        pass
-    def log_error(self, msg):
-        print 'ERROR', msg
-    
-    def _handle_hybi(self):
-        environ = self.environ
-        version = environ.get("HTTP_SEC_WEBSOCKET_VERSION")
-
-        environ['wsgi.websocket_version'] = 'hybi-%s' % version
-
-        if version not in self.SUPPORTED_VERSIONS:
-            self.log_error('400: Unsupported Version: %r', version)
-            self.respond(
-                '400 Unsupported Version',
-                [('Sec-WebSocket-Version', ', '.join(self.SUPPORTED_VERSIONS))]
-            )
-            return
-
-        protocol, version = environ['SERVER_PROTOCOL'].split("/")
-        key = environ.get("HTTP_SEC_WEBSOCKET_KEY")
-
-        # check client handshake for validity
-        if not environ.get("REQUEST_METHOD") == "GET":
-            # 5.2.1 (1)
-            self.respond('400 Bad Request')
-            return
-        elif not protocol == "HTTP":
-            # 5.2.1 (1)
-            self.respond('400 Bad Request')
-            return
-        elif float(version) < 1.1:
-            # 5.2.1 (1)
-            self.respond('400 Bad Request')
-            return
-        # XXX: nobody seems to set SERVER_NAME correctly. check the spec
-        #elif not environ.get("HTTP_HOST") == environ.get("SERVER_NAME"):
-            # 5.2.1 (2)
-            #self.respond('400 Bad Request')
-            #return
-        elif not key:
-            # 5.2.1 (3)
-            self.log_error('400: HTTP_SEC_WEBSOCKET_KEY is missing from request')
-            self.respond('400 Bad Request')
-            return
-        elif len(base64.b64decode(key)) != 16:
-            # 5.2.1 (3)
-            self.log_error('400: Invalid key: %r', key)
-            self.respond('400 Bad Request')
-            return
-
-        self.websocket = WebSocketHybi(self.socket, environ)
-        environ['wsgi.websocket'] = self.websocket
-
-        headers = [
-            ("Upgrade", "websocket"),
-            ("Connection", "Upgrade"),
-            ("Sec-WebSocket-Accept", base64.b64encode(sha1(key + self.GUID).digest())),
-        ]
-        self._send_reply("101 Switching Protocols", headers)
-        return True
-
-    def _handle_hixie(self):
-        environ = self.environ
-        assert "upgrade" in self.environ.get("HTTP_CONNECTION", "").lower()
-
-        self.websocket = WebSocketHixie(self.socket, environ)
-        environ['wsgi.websocket'] = self.websocket
-
-        key1 = self.environ.get('HTTP_SEC_WEBSOCKET_KEY1')
-        key2 = self.environ.get('HTTP_SEC_WEBSOCKET_KEY2')
-
-        if key1 is not None:
-            environ['wsgi.websocket_version'] = 'hixie-76'
-            if not key1:
-                self.log_error("400: SEC-WEBSOCKET-KEY1 header is empty")
-                self.respond('400 Bad Request')
-                return
-            if not key2:
-                self.log_error("400: SEC-WEBSOCKET-KEY2 header is missing or empty")
-                self.respond('400 Bad Request')
-                return
-
-            part1 = self._get_key_value(key1)
-            part2 = self._get_key_value(key2)
-            if part1 is None or part2 is None:
-                self.respond('400 Bad Request')
-                return
-
-            headers = [
-                ("Upgrade", "WebSocket"),
-                ("Connection", "Upgrade"),
-                ("Sec-WebSocket-Location", reconstruct_url(environ)),
-            ]
-            if self.websocket.protocol is not None:
-                headers.append(("Sec-WebSocket-Protocol", self.websocket.protocol))
-            if self.websocket.origin:
-                headers.append(("Sec-WebSocket-Origin", self.websocket.origin))
-
-            self._send_reply("101 Web Socket Protocol Handshake", headers)
-
-            # This request should have 8 bytes of data in the body
-            key3 = self.rfile.read(8)
-
-            challenge = md5(struct.pack("!II", part1, part2) + key3).digest()
-
-            self.socket.sendall(challenge)
-            return True
-        else:
-            environ['wsgi.websocket_version'] = 'hixie-75'
-            headers = [
-                ("Upgrade", "WebSocket"),
-                ("Connection", "Upgrade"),
-                ("WebSocket-Location", reconstruct_url(environ)),
-            ]
-
-            if self.websocket.protocol is not None:
-                headers.append(("WebSocket-Protocol", self.websocket.protocol))
-            if self.websocket.origin:
-                headers.append(("WebSocket-Origin", self.websocket.origin))
-
-            self._send_reply("101 Web Socket Protocol Handshake", headers)
-
-    def _send_reply(self, status, headers):
-        self.start_response(status, headers)
-
-    def respond(self, status, headers=[]):
-        self.close_connection = True
-        self._send_reply(status, headers)
-
-        return
-        # don't actually close it
-        if self.socket is not None:
-            try:
-                self.socket._sock.close()
-                self.socket.close()
-            except socket_error:
-                pass
-    
-    def _get_key_value(self, key_value):
-        key_number = int(re.sub("\\D", "", key_value))
-        spaces = re.subn(" ", "", key_value)[1]
-
-        if key_number % spaces != 0:
-            self.log_error("key_number %d is not an intergral multiple of spaces %d", key_number, spaces)
-        else:
-            return key_number / spaces
 
 
 def reconstruct_url(environ):
@@ -445,7 +256,7 @@ class WebSocketHixie(WebSocket):
 
         return ''.join(bytes)
 
-    def receive(self):
+    def recv(self):
         read = self.fobj.read
 
         while self.fobj is not None:
@@ -529,7 +340,7 @@ class WebSocketHybi(WebSocket):
 
         return fin, opcode, has_mask, length
 
-    def receive_frame(self):
+    def recv_frame(self):
         """Return the next frame from the socket."""
         fobj = self.fobj
 
@@ -605,14 +416,14 @@ class WebSocketHybi(WebSocket):
             if self.fobj is None:
                 fobj.close()
 
-    def _receive(self):
+    def _recv(self):
         """Return the next text or binary message from the socket."""
 
         opcode = None
         result = bytearray()
 
         while True:
-            frame = self.receive_frame()
+            frame = self.recv_frame()
             if frame is None:
                 if result:
                     raise WebSocketError('Peer closed connection unexpectedly')
@@ -663,8 +474,8 @@ class WebSocketHybi(WebSocket):
         else:
             raise AssertionError('internal serror in gevent-websocket: opcode=%r' % (opcode, ))
 
-    def receive(self):
-        result = self._receive()
+    def recv(self):
+        result = self._recv()
         if not result:
             return result
 
@@ -813,18 +624,19 @@ class Response(request.Response):
         else:
             self.client_error('could not determine websocket version')
             do_run_app = False
-            
+        
+        headers = [(n, v) for n, v in self.headers if n.lower() != 'content-length']
+        write = self.start_response(self.status, headers)
+        
         if do_run_app:
-            self.headers.pop('Content-Length', None)
-            self.start_response(self.status, list(self.headers))
-            return itertools.chain(self.response, self.application(self.websocket))
+            return itertools.chain(self.response, self.application(self.websocket) or [])
         else:
-            return []
+            return self.response
 
     def client_error(self, msg, status='400 Bad Request', headers=[]):
         self.status = status
-        self.headers = headers
-        log.info(msg)
+        self.headers.extend(headers)
+        log.warning(msg)
     
     def _handle_hybi(self):
         environ = self.environ

@@ -89,23 +89,23 @@ def do_socket(request):
         
         def _ping():
             while True:
-                time.sleep(1)
-                socket.send('ping!')
-        # gevent.spawn(_ping)
+                time.sleep(5)
+                try:
+                    socket.send('ping!')
+                except WebSocketError:
+                    break
         
-        while True:
-            try:
-                msg = socket.receive()
-            except Exception as e:
-                print e
-                break
-            if not msg:
-                break
-            socket.send('echo: %s' % msg)
+        def _echo():
+            while True:
+                msg = socket.recv()
+                if not msg:
+                    break
+                socket.send(msg[::-1])
+        
+        tasks = [gevent.spawn(_ping), gevent.spawn(_echo)]
+        for task in tasks:
+            task.join()
             
-        
-        return []
-    
     return WebSocketResponse(_do_socket)
 
 
