@@ -11,7 +11,7 @@ def do_stream(request):
         yield ' ' * 1024
         yield '-->\n'
         
-        for i in range(50):
+        for i in range(10):
             yield '%d\n' % i
             time.sleep(0.1)
     

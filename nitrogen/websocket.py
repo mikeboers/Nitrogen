@@ -17,18 +17,49 @@ import struct
 import sys
 
 
-import gunicorn.util
-gunicorn.util.hop_headers.remove('connection')
-gunicorn.util.hop_headers.remove('upgrade')
+
 import gunicorn.http.wsgi
 
-old_default_headers = gunicorn.http.wsgi.Response.default_headers
+def patch(cls):
+    def _patcher(func):
+        old_func = getattr(cls, func.__name__)
+        def _patch(*args, **kwargs):
+            return func(old_func, *args, **kwargs)
+        setattr(cls, func.__name__, _patch)
+        return _patch
+    return _patcher
 
-def default_headers(self):
-    return [x for x in old_default_headers(self) if not
-            x.lower().startswith('connection')]
-gunicorn.http.wsgi.Response.default_headers = default_headers
+@patch(gunicorn.http.wsgi.Response)
+def process_headers(old, self, headers):
+    # Check if this is a websocket response.
+    for name, value in headers:
+        if name.strip().lower() == 'upgrade':
+            self.websocket = value.strip().lower() == 'websocket'
+            break
+    else:
+        self.websocket = False
+    old(self, headers)
+    # The old function filters out all hoppish headers, but leaves in
+    # "Connection: Upgrade" for us. We need to manually re-add the "Upgrade"
+    # header for WebSockets.
+    if self.websocket:
+        # The case of "websocket" *may* matter, but I'm not sure.
+        self.headers.append(('Upgrade', 'WebSocket'))
+            
+@patch(gunicorn.http.wsgi.Response)
+def default_headers(old, self):
+    headers = old(self)
+    # If we are a websocket we have our own connection header to send.
+    if self.websocket:
+        headers = [x for x in headers if not x.lower().startswith('connection')]
+    return headers
 
+@patch(gunicorn.http.wsgi.Response)
+def is_chunked(old, self):
+    # WebSockets are not chunked, but the default logic will treat them as such.
+    if self.websocket:
+        return False
+    return old(self)
 
 
 if sys.version_info[:2] == (2, 7):
@@ -272,6 +303,9 @@ class WebSocketHandler(object):
             self._send_reply("101 Web Socket Protocol Handshake", headers)
 
     def _send_reply(self, status, headers):
+        write = self.start_response(status, headers)
+        write('') # To send headers.
+        return
         self.status = status
 
         towrite = []
@@ -289,6 +323,8 @@ class WebSocketHandler(object):
         self.close_connection = True
         self._send_reply(status, headers)
 
+        return
+        # don't actually close it
         if self.socket is not None:
             try:
                 self.socket._sock.close()
@@ -363,7 +399,8 @@ class WebSocketHixie(WebSocket):
 
     def close(self):
         if self.fobj is not None:
-            self.fobj.close()
+            # dono't actually close it
+            # self.fobj.close()
             self.fobj = None
             self._write = None
 
@@ -693,6 +730,8 @@ class WebSocketHybi(WebSocket):
             self._write = None
 
             if not self._reading:
-                self.fobj.close()
+                pass
+                # don't actually close
+                # self.fobj.close()
 
             self.fobj = None

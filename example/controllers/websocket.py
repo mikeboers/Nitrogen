@@ -9,11 +9,12 @@ import datetime
 import logging
 import struct
 import hashlib
+from socket import error as socket_error
 
 import gevent
 from gunicorn.workers.async import ALREADY_HANDLED
 
-from nitrogen.websocket import WebSocketHandler
+from nitrogen.websocket import WebSocketHandler, WebSocketError
 
 from . import *
 
@@ -81,28 +82,29 @@ def do_socket(environ, start):
     
     def _do_socket(environ, start):
         socket = environ['wsgi.websocket']
-        # socket.send('hello')
+        socket.send('server started')
         
         def _ping():
             while True:
                 time.sleep(1)
-                print 'pre ping'
                 socket.send('ping!')
+        # gevent.spawn(_ping)
         
         while True:
-            log.debug('pre-recv')
-            msg = socket.receive()
+            try:
+                msg = socket.receive()
+            except Exception as e:
+                print e
+                break
             if not msg:
                 break
-            log.debug('pre-send')
             socket.send('echo: %s' % msg)
             
         
         return []
     
-    log.debug('pre-handle')
     return WebSocketHandler(_do_socket, environ, start).handle_one_response()
-    return ALREADY_HANDLED
+    # return ALREADY_HANDLED
 
 
 
