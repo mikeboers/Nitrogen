@@ -7,6 +7,9 @@ root = os.path.dirname(os.path.abspath(__file__))
 debug = True
 
 log_handlers = [logging.StreamHandler(sys.stderr)]
+log_levels = {
+    'nitrogen': logging.DEBUG,
+}
 
 auth_login_url = '/auth/login'
 

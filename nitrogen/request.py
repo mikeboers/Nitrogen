@@ -104,7 +104,7 @@ class Request(wz.wrappers.Request):
             if response.status_code == 200:
                 if add_etag or add_etag is None and response.is_sequence:
                     response.add_etag()
-                if conditional:
+                if conditional and response.is_sequence:
                     response.make_conditional(environ)
             
             return response(*args[-2:])
