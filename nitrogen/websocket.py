@@ -170,6 +170,9 @@ class Response(request.Response):
     GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
     SUPPORTED_VERSIONS = ('13', '8', '7')
     
+    def run(self):
+        return self.application(self.websocket)
+    
     def __init__(self, app):
         self.application = app
         super(Response, self).__init__(direct_passthrough=True)
@@ -204,7 +207,7 @@ class Response(request.Response):
         write = self.start_response(self.status, headers)
         
         if do_run_app:
-            return itertools.chain(self.response, self.application(self.websocket) or [])
+            return itertools.chain(self.response, self.run() or [])
         else:
             return self.response
 

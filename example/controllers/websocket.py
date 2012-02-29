@@ -92,7 +92,7 @@ def do_socket(request):
         
         def _ping():
             while True:
-                time.sleep(5)
+                time.sleep(60)
                 try:
                     socket.send('ping!')
                 except websocket.Error:
