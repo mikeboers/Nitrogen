@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+OWNER=$(stat -c %U run)
+
+. ../../bin/activate
+
+echo starting
+
+exec 2>&1
+exec setuidgid $OWNER gunicorn -k gevent -b 0.0.0.0:8001 example.main:app
