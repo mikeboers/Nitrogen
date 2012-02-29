@@ -25,7 +25,7 @@ class TextBlobAppMixin(object):
             class Mixin(self.Base):
                 __table__ = Table('textblobs', self.metadata, autoload=True)
                 _app = self
-            self.TextBlob = build_from_mro(self.__class__, Mixin, 'TextBlob')
+            self.TextBlob = mixin.build_from_mro(self.__class__, Mixin, 'TextBlob')
             
         except NoSuchTableError:
             log.warning('Table does not exist. Please upgrade database.')
