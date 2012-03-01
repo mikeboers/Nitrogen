@@ -64,6 +64,6 @@ class _StaticApp(object):
         
         return Response().send_file(self.path,
             use_x_sendfile=self.router.use_x_sendfile,
-            cache_max_age=self.router.cache_max_age,
+            cache_max_age=31536000 if 'v' in request.query else self.router.cache_max_age,
         ).make_conditional(request)
 
