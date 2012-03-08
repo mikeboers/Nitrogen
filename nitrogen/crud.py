@@ -124,7 +124,7 @@ class CRUD(object):
         except:
             raise status.BadRequest("bad id")
         
-        version = request.query.get('version')
+        version = request.post.get('version')
         
         s = self.Session()
         if id_:
@@ -155,7 +155,7 @@ class CRUD(object):
         
         response = {}
         
-        id_ = request.query.get('id')
+        id_ = request.post.get('id')
         try:
             id_ = int(id_) if id_ else None
         except:
@@ -189,8 +189,8 @@ class CRUD(object):
             s.commit()
             response['id'] = model.id
             
-            if self.allow_commit and request.query.get('__do_commit_version'):
-                commit_message = request.query.get('__version_comment', '')
+            if self.allow_commit and request.post.get('__do_commit_version'):
+                commit_message = request.post.get('__version_comment', '')
                 self.commit(model, commit_message)
         
         data = {}
@@ -212,11 +212,16 @@ class CRUD(object):
         return self.api_save(request, commit=False)
 
     def api_delete(self, request):
-        id_ = request['id']
+        try:
+            id_ = int(request.post.get('id', 'not a number'))
+        except ValueError:
+            raise status.BadRequest("bad id")
+        
         s = self.Session()
         obj = s.query(self.model_class).get(id_)
         if not obj:
             raise ApiError("could not find object %d" % id_)
+        
         obj.delete()
         s.commit()
     # 
