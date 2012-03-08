@@ -47,6 +47,7 @@ def urlify_name(name):
     This is designed to only be for one way usage (ie. we can't use the
     urlified names to figure out what photo or photoset we are talking about).
     """
+    name = name.replace("'", '')
     return re.sub(r'\W+', '-', name).strip('-')
 
 
