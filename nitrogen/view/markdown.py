@@ -31,7 +31,7 @@ import cgi
 
 import markdown as _markdown
 from markdown import Markdown
-from markdown.extensions.codehilite import CodeHilite
+from markdown.extensions.codehilite import CodeHilite, CodeHiliteExtension
 
 log = logging.getLogger(__name__)
 
@@ -112,37 +112,30 @@ class MarkdownEscapeExtension(_markdown.Extension):
         md.preprocessors.add('markdown_escape', self.Preprocessor(md), '<html_block')
         
 
-# Monkey patch CodeHilight to have no default language
-old_get_lang = CodeHilite._getLang
-def new_get_lang(self):
-    old_get_lang(self)
-    self.lang = self.lang or 'text'
-CodeHilite._getLang = new_get_lang
-
-
-
-
-
-extensions = dict(
+extension_constructors = dict(
     nl2br=Nl2BrExtension,
     mathjax=MathJaxExtension,
     markdown_escape=MarkdownEscapeExtension,
+    codehilite=lambda: CodeHiliteExtension([('guess_lang', False)])
 )
-extension_defaults = dict(
+
+
+extension_usage_defaults = dict(
     nl2br=True,
     codehilite=True,
     mathjax=True,
     markdown_escape=False,
 )
 
+
 def markdown(text, **custom_exts):
     
     loaded_extensions = []
-    ext_prefs = extension_defaults.copy()
+    ext_prefs = extension_usage_defaults.copy()
     ext_prefs.update(custom_exts)
     for name, include in ext_prefs.iteritems():
         if include:
-            ext = extensions.get(name)
+            ext = extension_constructors.get(name)
             ext = ext() if ext else name
             loaded_extensions.append(ext)
         
