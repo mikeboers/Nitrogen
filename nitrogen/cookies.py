@@ -66,12 +66,14 @@ import werkzeug.utils
 
 from . import sign
 
+
 log = logging.getLogger(__name__)
 
 
 CHARSET = 'utf-8'
 ENCODE_ERRORS = 'strict'
 DECODE_ERRORS = 'replace'
+
 
 # The set of characters that do not require quoting according to RFC 2109 and
 # RFC 2068.
@@ -133,6 +135,7 @@ _quote_map = {
     '"': '\\"'
 }
 
+
 def _quote_char(char):
     if char in LEGAL_CHARS:
         return char
@@ -144,13 +147,15 @@ def _quote_char(char):
     if codepoint > 0xFFFF:
         return '\\U%08x' % codepoint
     return '\\u%04x' % codepoint
-    
+
+
 def _quote_byte(byte):
     if byte in LEGAL_CHARS:
         return byte
     if byte in _quote_map:
         return _quote_map[byte]
     return '\\%03o' % ord(byte)
+
 
 def _quote(value):
     """Quote the given string so that it is safe for transport.
@@ -165,8 +170,6 @@ def _quote(value):
     if isinstance(value, unicode):
         return str('"' + ''.join(_quote_char(x) for x in value) + '"')
     return str('"' + ''.join(_quote_byte(x) for x in value) + '"')
-
-
 
 
 _unquote_re = re.compile(r"\\(?:(x[0-9a-f]{2}|u[0-9a-f]{4}|U[0-9a-f]{8})|([0-3][0-7][0-7])|(.))", re.I)
@@ -185,7 +188,8 @@ def _unquote_cb(m):
     if octal:
         return chr(int(octal, 8))
     return single
-            
+
+
 def _unquote(value):
     """Remove transport encoding.
         
@@ -204,8 +208,6 @@ def _unquote(value):
     return _unquote_re.sub(_unquote_cb, value)
 
 
-
-
 #
 # Pattern for finding cookie
 #
@@ -214,7 +216,6 @@ def _unquote(value):
 # follow the character rules outlined in those specs.  As a
 # result, the parsing rules here are less strict.
 #
-
 _safe_charsPatt  = r"[\w\d!#%&'~_`><@,:/\$\*\+\-\.\^\|\)\(\?\}\{\=]"
 _cookie_re = re.compile(
     r"(?x)"                       # This is a Verbose pattern
@@ -230,7 +231,7 @@ _cookie_re = re.compile(
     r"\s*;?"                      # Probably ending in a semi-colon
     )
 
-      
+
 def parse_cookies(input_string):
     """Load cookies from a string (presumably HTTP_COOKIE)."""
     
@@ -248,7 +249,7 @@ def parse_cookies(input_string):
         match = _cookie_re.search(input_string, i)
         if not match:
             # No more cookies
-            return
+            break
         key, value = match.group("key"), match.group("val")
         i = match.end(0)
         # Parse the key, value in case it's metainfo
@@ -261,8 +262,6 @@ def parse_cookies(input_string):
             cookies[key] = _unquote(value)
     
     return cookies
-
-
 
 
 class _RequestMixin(object):
@@ -296,7 +295,6 @@ class _ResponseMixin(object):
     
     def set_cookie(self, *args, **kwargs):
         self.headers.add('Set-Cookie', self.app.dump_cookie(*args, **kwargs))
-        
 
 
 class CookieAppMixin(object):
