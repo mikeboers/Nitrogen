@@ -9,14 +9,16 @@ setup(
     
     install_requires='''
         # core
-        flup
         webob
-        werkzeug
+        werkzeug>=0.8.3
         beaker
+        paste
         
-        mako
-        markdown
         sqlalchemy
+        
+        mako>=0.4.2
+        markdown>=2.1.1
+        pygments>=1.4
         
         # This is only for the pager and some functions in the templates.
         webhelpers
@@ -26,10 +28,7 @@ setup(
         pytomcrypt
         
         wtforms
-        paste
-        pil
         
-        pygments
         jsmin
 
         # imgsizer
@@ -40,7 +39,6 @@ setup(
         testing='''
             nose
             webtest
-            # minimock
             ''',
         
     ),
