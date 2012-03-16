@@ -20,7 +20,7 @@ $.autodate = function(elem, opts) {
 	// actually be sent back to the server. The visible input (whose
 	// name is prefixed with "raw") is parsed on every change by the
 	// date.js library, and sets the hidden input to something that
-	// formalchemy is expecting on the backend.
+	// WTForms is expecting on the backend.
 	
 	// Wrap the visible input (which will be used for local time).
 	var $local_input = $(elem);
@@ -30,15 +30,12 @@ $.autodate = function(elem, opts) {
 		.attr('name', $local_input.attr('name'))
 		.insertAfter($local_input);
 	
-    // console.log('from server', $local_input.val());
-
     // Convert the UTC from server into actual local time with timezone abbr.
     var local_time = Date.parseHuman($local_input.val() + 'UTC');
-    var local_str = local_time.toString(iso_format);
-    $local_input.val(local_str + ' ' + timezone_abbr);
-
-    // console.log('local time', local_time);
-    // console.log('local str', local_str);
+    if (local_time !== null) {
+		var local_str = local_time.toString(iso_format);
+    	$local_input.val(local_str + ' ' + timezone_abbr);
+	}
 
 	var raw_name = 'autodate-raw-' + $local_input.attr('name');
 	$local_input.attr('name', raw_name).addClass('autodate')
@@ -54,9 +51,6 @@ $.autodate = function(elem, opts) {
 		
 		$label.text(local_time ? local_time.toString(opts.displayFormat) + ' ' + timezone_abbr : 'INVALID DATE');
 		$utc_input.val(utc_time ? utc_time.toString(opts.postFormat) : 'YYYY-MM-DD HH-MM-SS');
-		
-		// console.log($local_input.val(), ' -> ', $utc_input.val())
-		// console.log(local_time, ' -> ', utc_time)
 	}
 	
 	// Setup the date picker.
