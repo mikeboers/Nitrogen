@@ -23,16 +23,7 @@ TODO:
 (function($, undefined) {
 
 
-var assertHoverClass = function($$) {
-	if (!$$.data().crudHoverSetup) {
-		$$.hover(function() {
-			$$.addClass('crud-hover')
-		}, function() {
-			$$.removeClass('crud-hover')
-		})
-		$$.data().crudHoverSetup = true
-	}
-}
+
 
 
 $.widget('nitrogen.crud', {
@@ -89,25 +80,8 @@ $.widget('nitrogen.crud', {
 		this.state = state
 		$$.addClass('crud')
 		$$.addClass('crud-state-' + state)
-		assertHoverClass($$)
 		
 		return oldState
-	},
-	
-	_pulse: function(name, duration, callback) {
-		var $$ = this.widget()
-		var data = $$.data()
-		if (data.crud_pulsing) {
-			return false
-		}
-		data.crud_pulsing = true
-		name = 'crud-pulse' + (name ? '-' + name : '')
-		$$.addClass(name)
-		$$.removeClass(name, duration || 1000, function() {
-			data.crud_pulsing = false
-		})
-		return true
-		
 	},
 	
 	_getFormData: function() {
@@ -196,7 +170,6 @@ $.widget('nitrogen.crud', {
 		// and it being invalid.
 		if (res.valid !== undefined && !res.valid) {
 			$$.addClass('crud-invalid')
-			this._pulse()
 		} else {	
 			$$.removeClass('crud-invalid')
 		}
@@ -260,14 +233,17 @@ $.widget('nitrogen.crud', {
 
 		var buttons = $('<div class="crud-buttons" />')
 			.appendTo(this.form);
+		
 		$('<a class="preview-button">Preview</a>')
 			.button({icons: {primary: 'silk-icon silk-icon-eye'}})
 			.click(this._bound('preview'))
 			.appendTo(buttons)
+		
 		$('<a class="save-button">Save</a>')	
 			.button({icons: {primary: 'silk-icon silk-icon-tick'}})
 			.click(this._bound('save'))
 			.appendTo(buttons)
+		
 		$('<a class="cancel-button">Cancel</a>')	
 			.button({icons: {primary: 'silk-icon silk-icon-cross'}})
 			.click(this._bound('cancel'))
@@ -395,7 +371,7 @@ $.widget('nitrogen.crud', {
 		{			
 			$$ = this.widget()
 			$$.unblock({fadeOut: 0})
-			this.preview = $('<div class="cred-preview" />')
+			this.preview = $('<div class="crud-preview" />')
 				.html(res.html)
 				.insertAfter($$)
 			$$.hide()

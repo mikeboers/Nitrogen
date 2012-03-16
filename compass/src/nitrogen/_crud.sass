@@ -1,31 +1,49 @@
 
+$crud-idle-bg: rgba(255, 247, 184, 0.25)
+$crud-edit-bg: #C2DAFC
+
+@-webkit-keyframes crud-preview
+    from
+        background-color: $crud-edit-bg
+    50%
+        background-color: lighten($crud-edit-bg, 10%)
+    to
+        background-color: $crud-edit-bg
+  
+@-webkit-keyframes crud-error
+    from
+        background-color: #FED3C7
+    to
+        background-color: $crud-idle-bg
+        
+@-webkit-keyframes crud-edit
+    from
+        background-color: #D9FFB5
+    to
+        background-color: $crud-idle-bg
+        
 
 .crud
     
-    // Base yellow.
-    background-color: rgba(255, 247, 184, 0.5)
+    background-color: $crud-idle-bg
     
-    // Darken yello while hover on idle.
-    &.crud-state-idle.crud-hover
-        background-color: rgba(255, 219, 168, 0.7000)
+    &.crud-state-idle:hover
+        background-color: darken($crud-idle-bg, 15%)
     
-    // Add a dashed line while editing or in preview.
     &.crud-state-edit, &.crud-state-preview
         outline: 1px dashed #92907B
     
     &.crud-state-edit
-        &.crud-pulse
-            background-color: #D9FFB5
-            &.crud-invalid
-                // background-color: #FC9294
-                background-color: #FED3C7
+        -webkit-animation: crud-edit 2s
         & > form
             padding: 5px !important
     
+    &.crud-invalid        
+        -webkit-animation: crud-error 2s
+    
     &.crud-state-preview
-        background-color: #C2DAFC
-        &.crud-hover, &.crud-pulse
-            background-color: #ABCFFC
+        background-color: $crud-edit-bg // fallback incase it doesn't animate
+        -webkit-animation: crud-preview 2s infinite
     
     .silk-icon + .ui-button-text
         padding-left: 2.5em
@@ -53,7 +71,7 @@
         opacity: .5
         top: -3em
     
-    &.crud-hover > .crud-buttons
+    &:hover > .crud-buttons
         opacity: 1
                 
     .required, .optional
