@@ -4,6 +4,31 @@ This module contains a number of functions for signing text/objects, and later
 verifying those signatures. Signatures contain timestamps for their creation,
 and expiry times.
 
+TODO:
+- build up standard packing functions that will sign/encapsulate data.
+- devise general name for them
+    - pack/bundle/wrap
+    - notarize
+    - seal
+    - encase
+    - sign_and_seal
+    - encrypt_and_seal_json
+- specific names
+    - serialize_query
+    - seal_query
+    - seal_json(obj) -> converted to json and then signed
+    - encrypt(key, text, **kw)
+    - encrypt_json(key, text, **kw) -> encrypt then sign
+- take a look at https://github.com/mitsuhiko/itsdangerous and consider using it
+    - we need the older one for backwards compatibility
+- consider adding `exclude_from_query` to sign_query
+    - this allows us to have some data that the signature depends upon, but isn't serialized into the final string
+    - OR have an `extra` kwarg that is pulled into the
+- consider renaming the module to `seal`
+- document that creation time is public
+- add encryption
+    - add the creation/expiry time to the inner blob
+    - don't need a salt for the signature as the IV will be random
 
 """
 
@@ -92,7 +117,7 @@ def sign(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.sha1, si
         sig['n'] = encode_binary(os.urandom(nonce))
     sig['s'] = encode_binary(hmac.new(
         key,
-        data + encode_query(sig),
+        data + '?' + encode_query(sig),
         hash
     ).digest())
     return sig
@@ -133,7 +158,7 @@ def _verify(key, data, sig, **kwargs):
     try:
         new_mac = hmac.new(
             key,
-            data + encode_query(sig),
+            data + '?' + encode_query(sig),
             hash_by_size[len(mac)]
         ).digest()
     except KeyError:
