@@ -4,31 +4,81 @@ This module contains a number of functions for signing text/objects, and later
 verifying those signatures. Signatures contain timestamps for their creation,
 and expiry times.
 
+The signature of a string of data is the HMAC-SHA1 (by default) of:
+
+    data + '?' + query_encode(meta)
+
+This format asserts that if the HMACs match then the data and every component of
+metadata (both keys and values) have the same length and same content.
+
+
+
 TODO:
 - build up standard packing functions that will sign/encapsulate data.
 - devise general name for them
+
     - pack/bundle/wrap
     - notarize
     - seal
     - encase
-    - sign_and_seal
-    - encrypt_and_seal_json
+    - sign_and_seal_dumps
+    - encrypt_and_seal_dumps_json
+
 - specific names
     - serialize_query
-    - seal_query
+    - seal_query / unseal_query
     - seal_json(obj) -> converted to json and then signed
     - encrypt(key, text, **kw)
     - encrypt_json(key, text, **kw) -> encrypt then sign
+
 - take a look at https://github.com/mitsuhiko/itsdangerous and consider using it
     - we need the older one for backwards compatibility
+
 - consider adding `exclude_from_query` to sign_query
     - this allows us to have some data that the signature depends upon, but isn't serialized into the final string
     - OR have an `extra` kwarg that is pulled into the
+
 - consider renaming the module to `seal`
-- document that creation time is public
+
+- document that creation time is public for signatures
+
 - add encryption
     - add the creation/expiry time to the inner blob
     - don't need a salt for the signature as the IV will be random
+
+- userinfo/path/query safe characters:
+    
+    - !!! see what characters are cookie safe
+     
+    3.4: query = *( pchar / "/" / "?" )
+    3.3: (path) segment       = *pchar
+         pchar = unreserved / pct-encoded / sub-delims / ":" / "@"
+    2.3: unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
+    2.2: sub-delims  = "!" / "$" / "&" / "'" / "(" / ")"
+                  / "*" / "+" / "," / ";" / "="
+    
+    a-zA-Z0-9_- are taken by base64
+    &= are taken by standard queries
+    ; is often interpreted same as & in queries
+    + is interpreted as a space
+    
+    leaves: !$'()*+,;.~
+    
+    data ";" key "." value *("," key2 "." value2)
+    
+    data;(iv)012345(x)012345
+    data;iv.012345,x.012345
+    data;iv$012345,x$012345
+    data.iv,012345;x,012345
+    data$iv,012345;x,012345
+    data!iv,012345;x,012345 (this often doesnt work)
+    data.iv:012345,x:012345 <<<
+    
+    dollar-encode the rest
+    
+    
+    
+    
 
 """
 
@@ -43,14 +93,137 @@ import urlparse
 import urllib
 import base64
 import time
+import string
+import re
 
 
+# Build up the map we will use to determine which hash was used by the size of
+# its digest.
 hash_by_size = {}
 algorithms = getattr(hashlib, 'algorithms', 'md5 sha1 sha256'.split())
 for name in algorithms:
     hash_by_size[getattr(hashlib, name)().digest_size] = getattr(hashlib, name)
 
 
+# Build up the map we will use to encode transport-unsafe characters.
+_dollar_encode_map = {}
+for i in xrange(256):
+    _dollar_encode_map[chr(i)] = '$%02x' % i
+for c in (string.letters + string.digits + '_-'):
+    _dollar_encode_map[c] = c
+
+
+def _dollar_encode(input, safe=''):
+    """Encode all characters that are not URL/cookie safe.
+    
+    This is similar to percent-encoding, but we use a dollar sign to avoid
+    collisions with it.
+    
+    >>> _dollar_encode('hello')
+    'hello'
+    
+    >>> _dollar_encode('before.after')
+    'before$2eafter'
+    
+    >>> _dollar_encode('before.after', '.')
+    'before.after'
+    
+    >>> _dollar_encode(''.join(chr(i) for i in range(10)))
+    '$00$01$02$03$04$05$06$07$08$09'
+    
+    """
+    if safe:
+        char_map = _dollar_encode_map.copy()
+        for c in safe:
+            char_map[c] = c
+    else:
+        char_map = _dollar_encode_map
+    return ''.join(char_map[c] for c in input)
+
+
+def _dollar_decode(input):
+    """Decode a dollar-encoded string.
+    
+    This is more accepting than _dollar_encode; it will decode any characters that
+    have been encoded, not just unsafe ones.
+    
+    >>> _dollar_decode('hello')
+    'hello'
+    
+    >>> _dollar_decode('$00$01$02$03$04$05$06$07$08$09')
+    '\\x00\\x01\\x02\\x03\\x04\\x05\\x06\\x07\\x08\\t'
+    
+    >>> all_bytes = ''.join(chr(i) for i in range(256))
+    >>> _dollar_decode(_dollar_encode(all_bytes)) == all_bytes
+    True
+    
+    """
+    return re.sub(r'\$([a-fA-F0-9]{2})', lambda m: chr(int(m.group(1), 16)), input)
+
+
+def _seal_dumps(data, meta):
+    """Serialized a data string with associated meta data.
+    
+    The data, and all keys and values of the meta dict MUST be byte strings.
+    
+    The output data is formatted like:
+    
+        data.key1:value1,key2:value2 [...]
+    
+    All characters that are not letters, digits, underscore or hyphen will be
+    dollar-encoded.
+    
+    >>> _seal_dumps('data', dict(key='value', key2='value2'))
+    'data.key:value,key2:value2'
+    
+    >>> _seal_dumps(u'data', {})
+    Traceback (most recent call last):
+    ...
+    TypeError: data must be str; not <type 'unicode'>
+    
+    >>> _seal_dumps('a.b', {'!@#': '$%^'})
+    'a.b.$21$40$23:$24$25$5e'
+    
+    """
+    if not isinstance(data, str):
+        raise TypeError('data must be str; not %r' % type(data))
+    meta_parts = []
+    for k, v in sorted(meta.iteritems()):
+        if not isinstance(k, str):
+            raise TypeError('meta key %r must be str; not %r' % (k, type(k)))
+        if not isinstance(v, str):
+            raise TypeError('meta %r value %r must be str; not %r' % (k, v, type(v)))
+        meta_parts.append((_dollar_encode(k), _dollar_encode(v)))
+    return '%s.%s' % (_dollar_encode(data, '.,;'), ','.join('%s:%s' % x for x in meta_parts))
+
+
+def _seal_loads(data):
+    """Unserialize data from _seal_dumps; returns a tuple of original data and meta.
+    
+    >>> _seal_loads('data.key:value')
+    ('data', {'key': 'value'})
+    
+    >>> _seal_loads('a.b.$21$40$23:$24$25$5e')
+    ('a.b', {'!@#': '$%^'})
+    
+    >>> all_bytes = ''.join(chr(i) for i in range(256))
+    >>> meta = {}
+    >>> for i in range(0, 256, 16):
+    ...     key = ''.join(chr(c) for c in range(i, i + 8))
+    ...     val = ''.join(chr(c) for c in range(i + 8, i + 16))
+    ...     meta[key] = val
+    >>> out_data, out_meta = _seal_loads(_seal_dumps(all_bytes, meta))
+    >>> out_data == all_bytes
+    True
+    >>> out_meta == meta
+    True
+    
+    """
+    data, meta = data.rsplit('.', 1)
+    meta = dict(map(_dollar_decode, x.split(':')) for x in meta.split(','))
+    return _dollar_decode(data), meta
+
+    
 def encode_query(data):
     if isinstance(data, dict):
         data = data.items()
@@ -117,7 +290,7 @@ def sign(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.sha1, si
         sig['n'] = encode_binary(os.urandom(nonce))
     sig['s'] = encode_binary(hmac.new(
         key,
-        data + '?' + encode_query(sig),
+        _seal_dumps(data, sig),
         hash
     ).digest())
     return sig
@@ -158,7 +331,7 @@ def _verify(key, data, sig, **kwargs):
     try:
         new_mac = hmac.new(
             key,
-            data + '?' + encode_query(sig),
+            _seal_dumps(data, sig),
             hash_by_size[len(mac)]
         ).digest()
     except KeyError:
@@ -274,15 +447,8 @@ def _assert_times(sig, max_age=None):
             raise ValueError('signature has expired')
 
 
-if __name__ == '__main__':
 
-
-    import pickle
-    import json
-    import tomcrypt.cipher
-    
-
-    print 'legacy'
+def test_legacy():
     legacy = '''
         a=1&t=TtMnGA&n=hzxEMy09cWsRdLb2-Fzoyh&s=mtiThguCFBPrcgXXdJu2iA
         a=1&t=TtMniw&n=yZWCfKD_mtp8hiA-dcNbcw&s=NRO7hJcnX-tcP9TXyqoH7Q
@@ -296,9 +462,9 @@ if __name__ == '__main__':
         assert not verify_query('notthekey', query)
         assert not verify_query('key', query + 'extra')
         assert not verify_query('key', query, max_age=-1)
-    
-    
-    print 'query'
+
+
+def test_query():
     key = 'key'
     data = dict(key='value')
     print '\tdata:', data
@@ -310,9 +476,11 @@ if __name__ == '__main__':
     assert not verify_query('notthekey', pack)
     assert not verify_query('key', pack + 'extra')
     assert not verify_query('key', pack, max_age=-1)
+
+
+def test_manual_json():
+    import json
     
-    
-    print 'json'
     key = '0123456789abcdef'
     data = {'values': [1, 4, 8]}
     data = json.dumps(data, separators=(',', ':'), sort_keys=True)
@@ -327,7 +495,11 @@ if __name__ == '__main__':
     assert not verify('notthekey', data, sig)
     assert not verify('key', data + 'extra', sig)
     assert not verify('key', data, sig, max_age=-1)
-    
+
+
+def test_manual_encrypted_pickle():
+    import pickle
+    import tomcrypt.cipher
     
     print 'encrypted pickle'
     key = '0123456789abcdef'
@@ -342,9 +514,4 @@ if __name__ == '__main__':
     enc = encode_binary(tomcrypt.cipher.aes(key, iv=iv, mode='ctr').encrypt(pack)) + '?' + encode_binary(iv)
     print '\tencd:', enc
 
-    
-    print 'single bool'
-    print '\t1?' + encode_query(sign('key', '1'))
-    print '\t0?' + encode_query(sign('key', '0'))
-    
         
