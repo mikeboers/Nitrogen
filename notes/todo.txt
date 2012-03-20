@@ -1,4 +1,8 @@
 
+- seal/sign should take some `extra` parameter which is added to the signature
+  to make the signatures dependant on outside data. The key of a cookie, for instance.
+  Or the path of a URL.
+
 - use http://dotdotdot.frebsite.nl/#.T2GwjcK16KI.reddit
 
 - javascript compiler should watch inside dependencies

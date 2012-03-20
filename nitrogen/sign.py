@@ -1,52 +1,13 @@
-"""Signatures and their verification.
+"""
 
-This module contains a number of functions for signing text/objects, and later
-verifying those signatures. Signatures contain timestamps for their creation,
-and expiry times.
-
-The signature of a string of data is the HMAC-SHA1 (by default) of:
-
-    data + '?' + query_encode(meta)
-
-This format asserts that if the HMACs match then the data and every component of
-metadata (both keys and values) have the same length and same content.
-
-
-
-TODO:
-- build up standard packing functions that will sign/encapsulate data.
-- devise general name for them
-
-    - pack/bundle/wrap
-    - notarize
-    - dumps
-    - encase
-    - sign_and_encode_seal
-    - encrypt_and_encode_seal_json
-
-- specific names
-    - serialize_query
-    - seal_query / unseal_query
-    - seal_json(obj) -> converted to json and then signed
-    - encrypt(key, text, **kw)
-    - encrypt_json(key, text, **kw) -> encrypt then sign
-
-- take a look at https://github.com/mitsuhiko/itsdangerous and consider using it
-    - we need the older one for backwards compatibility
+TODO
+=====
 
 - consider adding `exclude_from_query` to dumps_query
     - this allows us to have some data that the signature depends upon, but isn't serialized into the final string
     - OR have an `extra` kwarg that is pulled into the
-
-- consider renaming the module to `dumps`
-
 - document that creation time is public for signatures
-
-- add encryption
-    - add the creation/expiry time to the inner blob
-    - don't need a salt for the signature as the IV will be random
-
-- userinfo/path/query safe characters:
+- document userinfo/path/query safe characters:
     
     - !!! see what characters are cookie safe
      
@@ -75,10 +36,7 @@ TODO:
     data.iv:012345,x:012345 <<<
     
     dollar-encode the rest
-    
-    
-    
-    
+
 
 """
 
@@ -227,7 +185,7 @@ def _decode_seal(data):
     meta = dict(map(_decode_seal_data, x.split(':')) for x in meta.split(','))
     return _decode_seal_data(data), meta
 
-    
+
 def _encode_query(data):
     if isinstance(data, dict):
         data = data.items()
@@ -259,6 +217,7 @@ def _encode_int(value):
 def _decode_int(value):
     value = 'A' * (6 - len(value)) + str(value) + '=='
     return struct.unpack('>I', base64.urlsafe_b64decode(value))[0]
+
 
 
 def sign(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.sha1, sig={}):
@@ -300,7 +259,7 @@ def sign(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.sha1, si
     return sig
 
 
-def verify(key, data, sig, strict=False, **kwargs):
+def verify(key, data, sig, strict=False, hash=None, max_age=None):
     """Verify a signature for the given data.
     
     This will verify that the MAC contained within the signature is valid,
@@ -321,32 +280,30 @@ def verify(key, data, sig, strict=False, **kwargs):
     # Copy sig OR coerce to a dict.
     sig = dict(sig)
     try:
-        return _verify(key, data, sig, **kwargs)
+        
+        # Extract the old mac, and calculate the new one.
+        mac = _decode_binary(sig.pop('s', ''))
+        try:
+            new_mac = hmac.new(
+                key,
+                _encode_seal(data, sig),
+                hash or hash_by_size[len(mac)]
+            ).digest()
+        except KeyError:
+            raise ValueError('unknown hash algo with length %d' % len(mac))
+
+        _assert_str_eq(mac, new_mac)
+        _assert_times(sig, max_age=max_age)
+        return True
+    
+    
     except ValueError:
         if strict:
             raise
     return False
 
 
-def _verify(key, data, sig, hash=None, max_age=None):
-        
-    # Extract the old mac, and calculate the new one.
-    mac = _decode_binary(sig.pop('s', ''))
-    try:
-        new_mac = hmac.new(
-            key,
-            _encode_seal(data, sig),
-            hash or hash_by_size[len(mac)]
-        ).digest()
-    except KeyError:
-        raise ValueError('unknown hash algo with length %d' % len(mac))
-
-    _assert_str_eq(mac, new_mac)
-    _assert_times(sig, max_age=max_age)
-    return True
-
-
-def dumps_query(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.md5):
+def sign_query(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.md5):
     """Signs and encapsulates the given data.
     
     The returned value is a valid URL query.
@@ -368,12 +325,16 @@ def dumps_query(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.m
     if nonce:
         sig['n'] = _encode_binary(os.urandom(nonce))
     sig['s'] = _encode_binary(hmac.new(key, _encode_query(sig), hash).digest())
-    return _encode_query(sig)
+    return sig
+
+
+def dumps_query(key, data, **kwargs):
+    return _encode_query(sign_query(key, data, **kwargs))
 
 
 
-def loads_query(key, encoded, strict=False, **kwargs):
-    """Verify a query-based signature, and return its contained data.
+def verify_query(key, data, strict=False, max_age=None):
+    """Verify a query-based signature, and return if it is valid.
     
     This will verify that the MAC contained within the signature is valid,
     and verify all timing information (if present).
@@ -390,35 +351,39 @@ def loads_query(key, encoded, strict=False, **kwargs):
         
     """
     try:
-        return _loads_query(key, encoded, **kwargs)
+        
+        # Copy or adapt query.
+        data = dict(data)
+        
+        # Extract the old mac, and calculate the new one.
+        mac = _decode_binary(data.pop('s', ''))
+        try:
+            new_mac = hmac.new(
+                key,
+                _encode_query(data),
+                hash_by_size[len(mac)]
+            ).digest()
+        except KeyError:
+            raise ValueError('unknown hash algo with length %d' % len(mac))
+
+        _assert_str_eq(mac, new_mac)
+        _assert_times(data, max_age=max_age)
+    
+        return True
+        
     except ValueError:
         if strict:
             raise
+        return False
 
 
-def _loads_query(key, encoded, max_age=None):
-    
-    sig = _decode_query(encoded)
-    
-    # Extract the old mac, and calculate the new one.
-    mac = _decode_binary(sig.pop('s', ''))
-    try:
-        new_mac = hmac.new(
-            key,
-            _encode_query(sig),
-            hash_by_size[len(mac)]
-        ).digest()
-    except KeyError:
-        raise ValueError('unknown hash algo with length %d' % len(mac))
+def loads_query(key, data, **kwargs):
+    data = _decode_query(data)
+    if verify_query(key, data, **kwargs):
+        for key in 's', 'n', 't', 'x':
+            data.pop(key, None)
+        return data
 
-    _assert_str_eq(mac, new_mac)
-    _assert_times(sig, max_age=max_age)
-
-    # Remove the rest of the signature metadata.
-    for key in 'n', 't', 'x':
-        sig.pop(key, None)
-    
-    return sig
 
 
 def _assert_str_eq(mac_a, mac_b):
@@ -594,11 +559,6 @@ def _loads(key, data, decrypt=None, max_age=None):
 
 
 
-# B/C
-sign_query = dumps_query
-verify_query = loads_query
-encode_query = _encode_query
-decode_query = _decode_query
 
 
 
