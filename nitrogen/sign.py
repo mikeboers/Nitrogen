@@ -68,82 +68,85 @@ for name in algorithms:
 
 
 # Build up the map we will use to encode transport-unsafe characters.
-_encode_seal_map = {}
+encode_seal_map = {}
 for i in xrange(256):
-    _encode_seal_map[chr(i)] = '$%02x' % i
+    encode_seal_map[chr(i)] = '$%02x' % i
 for c in (string.letters + string.digits + '_-'):
-    _encode_seal_map[c] = c
+    encode_seal_map[c] = c
 
 
-def _encode_seal_data(input, safe=''):
+def dollar_encode(input, safe=''):
     """Encode all characters that are not URL/cookie safe.
     
     This is similar to percent-encoding, but we use a dollar sign to avoid
     collisions with it.
     
-    >>> _encode_seal_data('hello')
+    >>> dollar_encode('hello')
     'hello'
     
-    >>> _encode_seal_data('before.after')
+    >>> dollar_encode('before.after')
     'before$2eafter'
     
-    >>> _encode_seal_data('before.after', '.')
+    >>> dollar_encode('before.after', '.')
     'before.after'
     
-    >>> _encode_seal_data(''.join(chr(i) for i in range(10)))
+    >>> dollar_encode(''.join(chr(i) for i in range(10)))
     '$00$01$02$03$04$05$06$07$08$09'
     
     """
     if safe:
-        char_map = _encode_seal_map.copy()
+        char_map = encode_seal_map.copy()
         for c in safe:
             char_map[c] = c
     else:
-        char_map = _encode_seal_map
+        char_map = encode_seal_map
     return ''.join(char_map[c] for c in input)
 
 
-def _decode_seal_data(input):
+def dollar_decode(input):
     """Decode a dollar-encoded string.
     
-    This is more accepting than _encode_seal_data; it will decode any characters that
+    This is more accepting than dollar_encode; it will decode any characters that
     have been encoded, not just unsafe ones.
     
-    >>> _decode_seal_data('hello')
+    >>> dollar_decode('hello')
     'hello'
     
-    >>> _decode_seal_data('$00$01$02$03$04$05$06$07$08$09')
+    >>> dollar_decode('$00$01$02$03$04$05$06$07$08$09')
     '\\x00\\x01\\x02\\x03\\x04\\x05\\x06\\x07\\x08\\t'
     
     >>> all_bytes = ''.join(chr(i) for i in range(256))
-    >>> _decode_seal_data(_encode_seal_data(all_bytes)) == all_bytes
+    >>> dollar_decode(dollar_encode(all_bytes)) == all_bytes
     True
     
     """
     return re.sub(r'\$([a-fA-F0-9]{2})', lambda m: chr(int(m.group(1), 16)), input)
 
 
-def _encode_seal(data, meta):
+def encode_seal(data, meta):
     """Serialized a data string with associated meta data.
-    
-    The data, and all keys and values of the meta dict MUST be byte strings.
     
     The output data is formatted like:
     
         data.key1:value1,key2:value2 [...]
     
     All characters that are not letters, digits, underscore or hyphen will be
-    dollar-encoded.
+    dollar-encoded. The characters ".:,$" are used since they are all safe for
+    use in URL queries, URL paths, and cookie values (with quoting), and in this
+    usage they look roughly appropriate. Ergo, the results of this function are
+    safe to include in URLs and cookies without escaping.
     
-    >>> _encode_seal('data', dict(key='value', key2='value2'))
+    The data, and all keys and values of the meta dict MUST be byte strings.
+    
+    >>> encode_seal('data', dict(key='value', key2='value2'))
     'data.key:value,key2:value2'
     
-    >>> _encode_seal(u'data', {})
+    >>> encode_seal(u'data', {})
     Traceback (most recent call last):
     ...
     TypeError: data must be str; not <type 'unicode'>
     
-    >>> _encode_seal('a.b', {'!@#': '$%^'})
+    >>> encode_seal('a.b', {'!@#': '$%^'})
     'a.b.$21$40$23:$24$25$5e'
     
     """
@@ -155,17 +158,17 @@ def _encode_seal(data, meta):
             raise TypeError('meta key %r must be str; not %r' % (k, type(k)))
         if not isinstance(v, str):
             raise TypeError('meta %r value %r must be str; not %r' % (k, v, type(v)))
-        meta_parts.append((_encode_seal_data(k), _encode_seal_data(v)))
-    return '%s.%s' % (_encode_seal_data(data, '.,;'), ','.join('%s:%s' % x for x in meta_parts))
+        meta_parts.append((dollar_encode(k), dollar_encode(v)))
+    return '%s.%s' % (dollar_encode(data, '.,;'), ','.join('%s:%s' % x for x in meta_parts))
 
 
-def _decode_seal(data):
-    """Unserialize data from _encode_seal; returns a tuple of original data and meta.
+def decode_seal(data):
+    """Unserialize data from encode_seal; returns a tuple of original data and meta.
     
-    >>> _decode_seal('data.key:value')
+    >>> decode_seal('data.key:value')
     ('data', {'key': 'value'})
     
-    >>> _decode_seal('a.b.$21$40$23:$24$25$5e')
+    >>> decode_seal('a.b.$21$40$23:$24$25$5e')
     ('a.b', {'!@#': '$%^'})
     
     >>> all_bytes = ''.join(chr(i) for i in range(256))
@@ -174,7 +177,7 @@ def _decode_seal(data):
     ...     key = ''.join(chr(c) for c in range(i, i + 8))
     ...     val = ''.join(chr(c) for c in range(i + 8, i + 16))
     ...     meta[key] = val
-    >>> out_data, out_meta = _decode_seal(_encode_seal(all_bytes, meta))
+    >>> out_data, out_meta = decode_seal(encode_seal(all_bytes, meta))
     >>> out_data == all_bytes
     True
     >>> out_meta == meta
@@ -182,26 +185,70 @@ def _decode_seal(data):
     
     """
     data, meta = data.rsplit('.', 1)
-    meta = dict(map(_decode_seal_data, x.split(':')) for x in meta.split(','))
-    return _decode_seal_data(data), meta
+    meta = dict(map(dollar_decode, x.split(':')) for x in meta.split(','))
+    return dollar_decode(data), meta
 
 
-def _encode_query(data):
+def encode_query(data):
+    """Encode a dictionary of strings for use as a query string.
+    
+    Key-value pairs will be serialized in sorted order in order for the results
+    from this function to be deterministic.
+    
+    >>> encode_query(dict(a="one", b="two"))
+    'a=one&b=two'
+    
+    """
     if isinstance(data, dict):
         data = data.items()
     return urllib.urlencode(sorted(data))
 
 
-def _decode_query(data):
+def decode_query(data):
+    """Decode a URL query into a dictionary.
+    
+    >>> decode_query('a=one&b=two')
+    {'a': 'one', 'b': 'two'}
+    
+    """
     return dict(urlparse.parse_qsl(data))
 
 
-def _encode_binary(data):
-    """Encode binary data into a transport safe form."""
+def encode_binary(data):
+    """Encode binary data into a URL/cookie safe form (base64).
+    
+    We remove trailing padding characters to reduce space. Since this is no
+    longer valid base64 we must use `decode_binary` to recover the original
+    data.
+    
+    >>> encode_binary('hello')
+    'aGVsbG8'
+    
+    >>> encode_binary('<=>?+@')
+    'PD0-PytA'
+    
+    >>> encode_binary(''.join(chr(i) for i in range(10)))
+    'AAECAwQFBgcICQ'
+    
+    """
     return base64.urlsafe_b64encode(data).rstrip('=')
 
 
-def _decode_binary(data):
+def decode_binary(data):
+    """Decode binary data from base64.
+    
+    This function will automatically restore stripped base64 padding.
+    
+    >>> decode_binary('aGVsbG8')
+    'hello'
+    
+    >>> decode_binary('PD0-PytA')
+    '<=>?+@'
+    
+    >>> decode_binary('AAECAwQFBgcICQ')
+    '\\x00\\x01\\x02\\x03\\x04\\x05\\x06\\x07\\x08\\t'
+    
+    """
     # Fix base64 padding.
     pad_size = len(data) % 4
     if pad_size:
@@ -210,16 +257,73 @@ def _decode_binary(data):
     return base64.urlsafe_b64decode(str(data))
 
 
-def _encode_int(value):
-    return base64.urlsafe_b64encode(struct.pack('>I', int(value))).rstrip('=').lstrip('A')
+def encode_legacy_int(value):
+    """Encode a positive integer into a base64 string.
+    
+    This implementation is limited to 64 bit integers, and is not as space
+    efficient as it could be, but we are keeping it this way for backwards
+    compatibility (for query signing).
+    
+    >>> [encode_legacy_int(x) for x in range(10)]
+    ['', 'Q', 'g', 'w', 'BA', 'BQ', 'Bg', 'Bw', 'CA', 'CQ']
+    
+    >>> [encode_legacy_int(x) for x in (0, 1, 10, 256, 1024, 1332279638, 2**60-1)]
+    ['', 'Q', 'Cg', 'BAA', 'EAA', 'T2j5Vg', 'P_________w']
+    
+    
+    """
+    return base64.urlsafe_b64encode('\0\0' + struct.pack('>Q', int(value))).rstrip('=').lstrip('A')
 
 
-def _decode_int(value):
-    value = 'A' * (6 - len(value)) + str(value) + '=='
-    return struct.unpack('>I', base64.urlsafe_b64decode(value))[0]
+def decode_legacy_int(value):
+    """
+    
+    >>> [decode_legacy_int(x) for x in ['', 'Q', 'g', 'w', 'BA', 'BQ', 'Bg', 'Bw', 'CA', 'CQ']]
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    
+    >>> [decode_legacy_int(x) for x in ['', 'Q', 'Cg', 'BAA', 'EAA', 'T2j5Vg', 'P_________w']]
+    [0, 1, 10, 256, 1024, 1332279638, 1152921504606846975]
+    
+    """
+    value = 'A' * (14 - len(value)) + str(value) + '=='
+    return struct.unpack('>Q', base64.urlsafe_b64decode(value)[-8:])[0]
 
 
+# Use the base64 alphabet, but reorganize it so it is more like hex.
+_int_alphabet = string.digits + string.ascii_lowercase + string.ascii_uppercase + '-_'
+_int_alphabet_inversed = dict((c, i) for (i, c) in enumerate(_int_alphabet))
 
+def encode_int(value):
+    """
+    
+    >>> map(encode_int, [0, 1, 10, 256, 1000, 1332279638, 2**60 - 1])
+    ['0', '1', 'a', '40', 'fE', '1fqfBm', '__________']
+    
+    """
+    value = int(value)
+    if value < 0:
+        raise ValueError('can only encode positive ints')
+    ret = []
+    while True:
+        value, mod = divmod(value, 64)
+        ret.append(_int_alphabet[mod])
+        if not value:
+            break
+    return ''.join(reversed(ret))
+
+def decode_int(encoded):
+    """
+        
+    >>> map(decode_int, ['0', '1', 'a', '40', 'fE', '1fqfBm', '__________'])
+    [0, 1, 10, 256, 1000, 1332279638, 1152921504606846975]
+    
+    """
+    value = 0
+    for char in encoded:
+        value = value * 64 + _int_alphabet_inversed[char]
+    return value
+    
+    
 def sign(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.sha1, sig={}):
     """Calculate a signature for the given data.
     
@@ -232,7 +336,7 @@ def sign(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.sha1, si
     Only the signature will always be there, with the reset depending upon other
     arguments to this function. All keys and values are guarunteed to be URL
     safe. Times are represented as the number of seconds since the epoch,
-    encoded with base64 via _encode_int.
+    encoded with base64 via encode_legacy_int.
     
     Parameters:
         str key: The key to MAC with.
@@ -246,14 +350,14 @@ def sign(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.sha1, si
     """
     sig = sig.copy()
     if add_time:
-        sig['t'] = _encode_int(time.time())
+        sig['t'] = encode_int(time.time())
     if max_age:
-        sig['x'] = _encode_int(time.time() + max_age)
+        sig['x'] = encode_int(max(0, max_age))
     if nonce:
-        sig['n'] = _encode_binary(os.urandom(nonce))
-    sig['s'] = _encode_binary(hmac.new(
+        sig['n'] = encode_binary(os.urandom(nonce))
+    sig['s'] = encode_binary(hmac.new(
         key,
-        _encode_seal(data, sig),
+        encode_seal(data, sig),
         hash
     ).digest())
     return sig
@@ -282,11 +386,11 @@ def verify(key, data, sig, strict=False, hash=None, max_age=None):
     try:
         
         # Extract the old mac, and calculate the new one.
-        mac = _decode_binary(sig.pop('s', ''))
+        mac = decode_binary(sig.pop('s', ''))
         try:
             new_mac = hmac.new(
                 key,
-                _encode_seal(data, sig),
+                encode_seal(data, sig),
                 hash or hash_by_size[len(mac)]
             ).digest()
         except KeyError:
@@ -319,17 +423,17 @@ def sign_query(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.md
     """
     sig = dict(data)
     if add_time:
-        sig['t'] = _encode_int(time.time())
+        sig['t'] = encode_legacy_int(time.time())
     if max_age:
-        sig['x'] = _encode_int(time.time() + max_age)
+        sig['x'] = encode_legacy_int(time.time() + max(0, max_age))
     if nonce:
-        sig['n'] = _encode_binary(os.urandom(nonce))
-    sig['s'] = _encode_binary(hmac.new(key, _encode_query(sig), hash).digest())
+        sig['n'] = encode_binary(os.urandom(nonce))
+    sig['s'] = encode_binary(hmac.new(key, encode_query(sig), hash).digest())
     return sig
 
 
 def dumps_query(key, data, **kwargs):
-    return _encode_query(sign_query(key, data, **kwargs))
+    return encode_query(sign_query(key, data, **kwargs))
 
 
 
@@ -356,18 +460,18 @@ def verify_query(key, data, strict=False, max_age=None):
         data = dict(data)
         
         # Extract the old mac, and calculate the new one.
-        mac = _decode_binary(data.pop('s', ''))
+        mac = decode_binary(data.pop('s', ''))
         try:
             new_mac = hmac.new(
                 key,
-                _encode_query(data),
+                encode_query(data),
                 hash_by_size[len(mac)]
             ).digest()
         except KeyError:
             raise ValueError('unknown hash algo with length %d' % len(mac))
 
         _assert_str_eq(mac, new_mac)
-        _assert_times(data, max_age=max_age)
+        _assert_times(data, max_age=max_age, legacy=True)
     
         return True
         
@@ -378,7 +482,7 @@ def verify_query(key, data, strict=False, max_age=None):
 
 
 def loads_query(key, data, **kwargs):
-    data = _decode_query(data)
+    data = decode_query(data)
     if verify_query(key, data, **kwargs):
         for key in 's', 'n', 't', 'x':
             data.pop(key, None)
@@ -392,29 +496,40 @@ def _assert_str_eq(mac_a, mac_b):
         raise ValueError('invalid signature')
     
     # This takes the same amount of time no matter how similar they are.
-    if sum(a != b for a, b in zip(mac_a, mac_b)):
+    result = 0
+    for a, b in zip(mac_a, mac_b):
+        result |= ord(a) ^ ord(b)
+    if result:
         raise ValueError('invalid signature')
 
 
-def _assert_times(sig, max_age=None):
+def _assert_times(sig, max_age=None, legacy=False):
+    
+    if 't' in sig:
+        try:
+            creation_time = decode_legacy_int(sig['t']) if legacy else decode_int(sig['t'])
+        except struct.error:
+            raise ValueError('malformed creation time')
+    else:
+        creation_time = 0
+    
+    # Check new max_age.
+    if max_age and creation_time + max_age < time.time():
+        raise ValueError('signature has expired')
     
     # Check expiry time.
     if 'x' in sig:
         try:
-            expiry_time = _decode_int(sig['x'])
+            expiry_time = decode_legacy_int(sig['x']) if legacy else decode_int(sig['x'])
         except struct.error:
             raise ValueError('malformed expiry time')
+        
+        # Allow for relative expiry times.
+        if expiry_time < creation_time:
+            expiry_time += creation_time
         if expiry_time < time.time():
             raise ValueError('signature has self-expired')
 
-    # Check new max_age.
-    if max_age and 't' in sig:
-        try:
-            creation_time = _decode_int(sig['t'])
-        except struct.error:
-            raise ValueError('malformed creation time')
-        if creation_time + max_age < time.time():
-            raise ValueError('signature has expired')
 
 
 
@@ -445,6 +560,25 @@ def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_a
     ...
     ValueError: invalid signature
     
+    >>> encoded = dumps(key, 'abc123', encrypt=False, max_age=5)
+    >>> encoded #doctest: +ELLIPSIS
+    'abc123.n:...,s:...,t:...,x:5'
+    
+    >>> encoded = dumps(key, 'abc123', encrypt=False, max_age=3600)
+    >>> encoded #doctest: +ELLIPSIS
+    'abc123.n:...,s:...,t:...,x:Ug'
+    
+    
+    >>> encoded = dumps(key, 'abc123', max_age=60)
+    >>> loads(key, encoded)
+    'abc123'
+    
+    >>> encoded = dumps(key, 'abc123', max_age=-1)
+    >>> loads(key, encoded, strict=True)
+    Traceback (most recent call last):
+    ...
+    ValueError: signature has self-expired
+    
     """
     
     if encrypt:
@@ -455,9 +589,9 @@ def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_a
         inner_meta = outer_meta = {}
     
     if add_time:
-        inner_meta['t'] = _encode_int(time.time())
+        inner_meta['t'] = encode_int(time.time())
     if max_age:
-        inner_meta['x'] = _encode_int(time.time() + max_age)
+        inner_meta['x'] = encode_int(max(0, max_age))
     
     # Try compressing the data. Only use the compressed form if requested or
     # there is enough of a savings to justify it. If we are not encrypting then
@@ -472,24 +606,24 @@ def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_a
     if encrypt:
 
         # Pack up the inner payload.
-        data = _encode_seal(data, inner_meta)
+        data = encode_seal(data, inner_meta)
         
         # Encrypt it.
         iv = os.urandom(16)
-        outer_meta['i'] = _encode_binary(iv)
+        outer_meta['i'] = encode_binary(iv)
         cipher = tomcrypt.cipher.aes(key, iv, mode='ctr')
         data = cipher.encrypt(data)
     
     if encrypt or 'z' in inner_meta:
         
         # Make it transport safe.
-        data = _encode_binary(data)
+        data = encode_binary(data)
     
     # Sign it.
     outer_meta = sign(key, data, add_time=False, nonce=nonce, hash=hashlib.sha256, sig=outer_meta)
     
     # Pack up outer payload.
-    return _encode_seal(data, outer_meta)
+    return encode_seal(data, outer_meta)
     
 
 def dumps_json(key, data, **kwargs):
@@ -520,7 +654,7 @@ def loads(key, data, strict=False, **kwargs):
 def _loads(key, data, decrypt=None, max_age=None):
     
     # Unpack outer payload
-    data, outer_meta = _decode_seal(data)
+    data, outer_meta = decode_seal(data)
     
     # Verify signature.
     verify(key, data, strict=True, sig=outer_meta, hash=hashlib.sha256)
@@ -530,17 +664,17 @@ def _loads(key, data, decrypt=None, max_age=None):
     
     # Remove base64 if encrypted or compressed.
     if 'i' in outer_meta or 'z' in outer_meta:
-        data = _decode_binary(data)
+        data = decode_binary(data)
     
     if 'i' in outer_meta:
         
         # Decrypt it.
-        iv = _decode_binary(outer_meta['i'])
+        iv = decode_binary(outer_meta['i'])
         cipher = tomcrypt.cipher.aes(key, iv, mode='ctr')
         data = cipher.decrypt(data)
         
         # Unpack up the inner payload.
-        data, inner_meta = _decode_seal(data)
+        data, inner_meta = decode_seal(data)
     
     else:
         
@@ -603,7 +737,7 @@ def test_manual_json():
     print '\tdata:', data
     sig = sign(key, data)
     print '\tsign:', sig
-    pack = '%s?%s' % (data, _encode_query(sig))
+    pack = '%s?%s' % (data, encode_query(sig))
     print '\tpack:', pack
     good = verify(key, data, sig)
     print '\tgood:', good
@@ -625,9 +759,23 @@ def test_manual_encrypted_pickle():
     print '\tdata:', repr(data)
     sig  = sign(key, data)
     print '\tsign:', sig
-    pack = '%s?%s' % (data, _encode_query(sig))
+    pack = '%s?%s' % (data, encode_query(sig))
     print '\tpack:', repr(pack)
-    enc = _encode_binary(tomcrypt.cipher.aes(key, iv=iv, mode='ctr').encrypt(pack)) + '?' + _encode_binary(iv)
+    enc = encode_binary(tomcrypt.cipher.aes(key, iv=iv, mode='ctr').encrypt(pack)) + '?' + encode_binary(iv)
     print '\tencd:', enc
 
         
+
+if __name__ == '__main__':
+    
+    for i in range(10):
+        print dumps_query('key', dict(data='value'), max_age=60)
+    print
+    
+    for i in range(10):
+        print dumps('0123456789abcdef', 'value', max_age=60, encrypt=False)
+    print
+    
+    for i in range(10):
+        print dumps('0123456789abcdef', 'value', max_age=60)
+    
