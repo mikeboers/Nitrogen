@@ -160,12 +160,7 @@ class PasswordHash(object):
         return out
     
     def _check_v0_1(self, password):
-        """This is the old timed_hash.
-        
-        The only place this is in use will be the beta and demo sites for
-        PixRay, RebelHouse, and Swisssol.
-        
-        """
+        """Used on PixRay, RebelHouse, and Swisssol."""
         hasher = hashlib.sha256
         salt = self.salt
         blob = password
@@ -174,6 +169,7 @@ class PasswordHash(object):
         return blob == self.hash
         
     def _check_v1_0(self, password):
+        """I'm not sure if this is actually in use anywhere."""
         hasher = hashlib.sha256
         blob = hmac.new(self.salt, password, hasher).digest()
         for i in xrange(self.num_iter):
@@ -181,6 +177,7 @@ class PasswordHash(object):
         return blob == self.hash
     
     def _check_v2_0(self, password):
+        """New hotness."""
         return self.hash == tomcrypt.pkcs5.pkcs5(
             password,
             salt=self.salt,
@@ -194,15 +191,20 @@ class PasswordHash(object):
         if self.num_iter < self.min_iter:
             return True
         if self.check_time is not None:    
-            # Usually this ratio is about 0.80 for passwords just generated.
-            # print self.check_time / self.min_time
-            return self.check_time / self.min_time < 0.67
+            # This ratio is near 1 for passwords just generated.
+            return self.check_time / self.min_time < 0.5
 
 
 if __name__ == '__main__':
-    import getpass
-    password = getpass.getpass('password: ')
-    hasher = PasswordHash()
-    hasher.set(password)
-    print str(hasher)
+    import sys
+    if len(sys.argv) > 1:
+        passwords = sys.argv[1:]
+    else:
+        import getpass
+        passwords = [getpass.getpass('password: ')]
+    
+    for password in passwords:
+        hasher = PasswordHash()
+        hasher.set(password)
+        print str(hasher)
     
