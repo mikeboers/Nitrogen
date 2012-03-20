@@ -60,6 +60,7 @@ import functools
 import re
 import string
 import time
+import hashlib
 
 import werkzeug as wz
 import werkzeug.utils
@@ -277,14 +278,14 @@ class _RequestMixin(object):
         raw = parse_cookies(self.environ.get('HTTP_COOKIE', ''))
         if not self.app.config.private_key:
             return self.dict_storage_class(raw)
+        encryption_key = hashlib.md5(self.app.config.private_key).digest()    
         ret = {}
         for key, raw_value in raw.iteritems():
-            parts = raw_value.rsplit('?', 1)
-            if len(parts) == 2:
-                value, sig = parts
-                sig = sign.decode_query(sig)
-                if sign.verify(self.app.config.private_key, key + '=' + (value.encode('utf8') if isinstance(value, unicode) else value), sig):
-                    ret[key] = value
+            try:
+                ret[key] = sign.loads(encryption_key, raw_value, depends_on=dict(name=key), strict=True)
+                ret[key] = ret[key].decode('utf8')
+            except ValueError:
+                pass
         return self.dict_storage_class(ret)
 
 
@@ -300,9 +301,11 @@ class _ResponseMixin(object):
 class CookieAppMixin(object):
     
     def dump_cookie(self, key, value='', max_age=None, **kwargs):
+        if isinstance(value, unicode):
+            value = value.encode('utf8')
         if self.config.private_key:
-            sig = sign.sign(self.config.private_key, key + '=' + (value.encode('utf8') if isinstance(value, unicode) else value), max_age=max_age)
-            value = value + '?' + sign.encode_query(sig)
+            encryption_key = hashlib.md5(self.config.private_key).digest()
+            value = sign.dumps(encryption_key, value, max_age=max_age, depends_on=dict(name=key))
         return dump_cookie(key, value, max_age=max_age, **kwargs)
         
     RequestMixin = _RequestMixin
