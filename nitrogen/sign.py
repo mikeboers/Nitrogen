@@ -1,3 +1,4 @@
+# encoding: utf8
 """
 
 TODO
@@ -670,6 +671,18 @@ def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_a
         
         >>> loads(key, encoded, depends_on=dict(key='value'))
         'abc123'
+    
+    Unicode:
+    
+        >>> encoded = dumps(key, u'¡™£¢∞§¶•'.encode('utf8'))
+        >>> loads(key, encoded).decode('utf8') == u'¡™£¢∞§¶•'
+        True
+        
+        >>> data = u''.join(unichr(i) for i in range(512))
+        >>> encoded = dumps(key, data.encode('utf8'))
+        >>> loads(key, encoded).decode('utf8') == data
+        True
+        
         
         
     """
@@ -777,7 +790,7 @@ def _loads(key, data, decrypt=None, max_age=None, depends_on={}):
     _assert_times(inner_meta, max_age=max_age)
     
     # Decompress.
-    if 'z' in outer_meta:
+    if 'z' in inner_meta:
         data = zlib.decompress(data)
     
     return data
