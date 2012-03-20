@@ -1,7 +1,15 @@
 
+- use http://dotdotdot.frebsite.nl/#.T2GwjcK16KI.reddit
+
 - javascript compiler should watch inside dependencies
 - javascript compiler should add original file/line comments so we can backtrack
 - javascript compiler should work in dev mode to not actually minimize it
+
+- try to integrate compass / bootstrap / jquery UI
+
+- `nitrogen` javascript namespace
+	$.nitrogen.inlineCRUD()
+		Does this still get 'this' properly?
 
 - etags should also include headers which affect the agent's interpretation of the content, such as content-type
 
@@ -23,7 +31,7 @@
 which marks something as a mixin.
 	
 	@mixin('Response')
-	class ResponseMixin(object):
+	class __ResponseMixin(object):
 		pass
 
 - AppPlugin instead of AppMixin
