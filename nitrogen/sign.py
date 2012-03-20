@@ -95,6 +95,10 @@ import base64
 import time
 import string
 import re
+import json
+import zlib
+
+import tomcrypt.cipher
 
 
 # Build up the map we will use to determine which hash was used by the size of
@@ -391,7 +395,7 @@ def verify_query(key, encoded, strict=False, **kwargs):
             raise
 
 
-def _verify_query(key, encoded, **kwargs):
+def _verify_query(key, encoded, max_age=None):
     
     sig = decode_query(encoded)
     
@@ -407,7 +411,7 @@ def _verify_query(key, encoded, **kwargs):
         raise ValueError('unknown hash algo with length %d' % len(mac))
 
     _assert_str_eq(mac, new_mac)
-    _assert_times(sig, **kwargs)
+    _assert_times(sig, max_age=max_age)
 
     # Remove the rest of the signature metadata.
     for key in 'n', 't', 'x':
@@ -448,6 +452,137 @@ def _assert_times(sig, max_age=None):
 
 
 
+
+
+def seal(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_age=None):
+    """
+    
+    >>> key = '0123456789abcdef'
+    
+    >>> sealed = seal(key, 'abc123', encrypt=False)
+    >>> sealed #doctest: +ELLIPSIS
+    'abc123.n:...,s:...,t:...'
+    
+    >>> unseal(key, sealed)
+    'abc123'
+    
+    >>> unseal(key, sealed + 'extra', strict=True)
+    Traceback (most recent call last):
+    ...
+    ValueError: invalid signature
+    
+    """
+    
+    if encrypt:
+        inner_meta = {}
+        outer_meta = {}    
+        nonce = max(0, nonce - 16)
+    else:
+        inner_meta = outer_meta = {}
+    
+    if add_time:
+        inner_meta['t'] = encode_int(time.time())
+    if max_age:
+        inner_meta['x'] = encode_int(time.time() + max_age)
+    
+    # Try compressing the data. Only use the compressed form if requested or
+    # there is enough of a savings to justify it. If we are not encrypting then
+    # the compression must also do better than the base64 encoding that would
+    # be required.
+    if compress or compress is None:
+        data_compressed = zlib.compress(data)
+        if compress or len(data) / len(data_compressed) > (1 if encrypt else 4 / 3):
+            data = data_compressed
+            inner_meta['z'] = '1'
+
+    if encrypt:
+
+        # Pack up the inner payload.
+        data = _seal_dumps(data, inner_meta)
+        
+        # Encrypt it.
+        iv = os.urandom(16)
+        outer_meta['i'] = encode_binary(iv)
+        cipher = tomcrypt.cipher.aes(key, iv, mode='ctr')
+        data = cipher.encrypt(data)
+    
+    if encrypt or 'z' in inner_meta:
+        
+        # Make it transport safe.
+        data = encode_binary(data)
+    
+    # Sign it.
+    outer_meta = sign(key, data, add_time=False, nonce=nonce, hash=hashlib.sha256, sig=outer_meta)
+    
+    # Pack up outer payload.
+    return _seal_dumps(data, outer_meta)
+    
+
+def seal_json(key, data, **kwargs):
+    """
+    
+    >>> key = '0123456789abcdef'
+    >>> sealed_data = seal_json(key, range(10))
+    >>> unseal_json(key, sealed_data)
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    
+    """
+    data = json.dumps(data, separators=(',', ':'))
+    return seal(key, data, **kwargs)
+
+def unseal_json(key, data, **kwargs):
+    data = unseal(key, data, **kwargs)
+    return json.loads(data)
+    
+
+def unseal(key, data, strict=False, **kwargs):
+    try:
+        return _unseal(key, data, **kwargs)
+    except ValueError:
+        if strict:
+            raise
+    return None
+
+def _unseal(key, data, decrypt=None, max_age=None):
+    
+    # Unpack outer payload
+    data, outer_meta = _seal_loads(data)
+    
+    # Verify signature.
+    verify(key, data, strict=True, sig=outer_meta)
+    
+    if decrypt is not None and decrypt != 'i' in outer_meta:
+        raise ValueError('decryption flag is wrong')
+    
+    # Remove base64 if encrypted or compressed.
+    if 'i' in outer_meta or 'z' in outer_meta:
+        data = decode_binary(data)
+    
+    if 'i' in outer_meta:
+        
+        # Decrypt it.
+        iv = decode_binary(outer_meta['i'])
+        cipher = tomcrypt.cipher.aes(key, iv, mode='ctr')
+        data = cipher.decrypt(data)
+        
+        # Unpack up the inner payload.
+        data, inner_meta = _seal_loads(data)
+    
+    else:
+        
+        inner_meta = outer_meta
+
+    # Make sure it hasn't expired.
+    _assert_times(inner_meta, max_age=max_age)
+    
+    # Decompress.
+    if 'z' in outer_meta:
+        data = zlib.decompress(data)
+    
+    return data
+
+
+    
 def test_legacy():
     legacy = '''
         a=1&t=TtMnGA&n=hzxEMy09cWsRdLb2-Fzoyh&s=mtiThguCFBPrcgXXdJu2iA
