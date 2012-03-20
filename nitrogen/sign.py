@@ -6,6 +6,16 @@ TODO
 - consider adding `exclude_from_query` to dumps_query
     - this allows us to have some data that the signature depends upon, but isn't serialized into the final string
     - OR have an `extra` kwarg that is pulled into the
+    
+    1)
+        sign(key, data, extra={'path':'/something'}, exclude=['path'])
+    2)
+        sign(key, data, include={}, depends_on=dict(path='/something'))
+        
+        
+    
+    
+    
 - document that creation time is public for signatures
 - document userinfo/path/query safe characters:
     
@@ -311,6 +321,7 @@ def encode_int(value):
             break
     return ''.join(reversed(ret))
 
+
 def decode_int(encoded):
     """
         
@@ -324,7 +335,7 @@ def decode_int(encoded):
     return value
     
     
-def sign(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.sha1, sig={}):
+def sign(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.sha1, extra={}, depends_on={}):
     """Calculate a signature for the given data.
     
     The returned signature is a dict with the following keys:
@@ -345,25 +356,61 @@ def sign(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.sha1, si
         int nonce = 16: Length of the nonce to be added; 0 implies no nonce.
         int max_age = None: Number of seconds that this signature is valid.
         obj hash = hashlib.sha1: Hash algorithm to use.
-        dict sig = {}: Other data to add to the signature.
+        dict extra = {}: Other data to add to the signature.
+        dict depends_on = {}: Other data for the signature to depend on, but not
+            be included.
+    
+    Basic example:
+    
+        >>> sig = sign('key', 'data')
+        >>> verify('key', 'data', sig)
+        True
+    
+        >>> sign('key', 'data') # doctest: +ELLIPSIS
+        {'s': '...', 't': '...', 'n': '...'}
+    
+    Adding extra data to the signature:
+    
+        >>> sig = sign('key', 'data', add_time=None, nonce=0, extra=dict(key='value'))
+        >>> sig # doctest: +ELLIPSIS
+        {'s': '...', 'key': 'value'}
+        >>> verify('key', 'data', sig)
+        True
+    
+    Adding dependant data:
+    
+        >>> sig = sign('key', 'data', add_time=None, nonce=0, depends_on=dict(key='value'))
+        >>> sig # doctest: +ELLIPSIS
+        {'s': '...'}
+        >>> verify('key', 'data', sig)
+        False
+        >>> verify('key', 'data', sig, depends_on=dict(key='value'))
+        True
+    
     
     """
-    sig = sig.copy()
+    signature = dict(extra)
+    
     if add_time:
-        sig['t'] = encode_int(time.time())
+        signature['t'] = encode_int(time.time())
     if max_age:
-        sig['x'] = encode_int(max(0, max_age))
+        signature['x'] = encode_int(max(0, max_age))
     if nonce:
-        sig['n'] = encode_binary(os.urandom(nonce))
-    sig['s'] = encode_binary(hmac.new(
+        signature['n'] = encode_binary(os.urandom(nonce))
+    
+    to_sign = signature.copy()
+    to_sign.update(depends_on)
+    
+    signature['s'] = encode_binary(hmac.new(
         key,
-        encode_seal(data, sig),
+        encode_seal(data, to_sign),
         hash
     ).digest())
-    return sig
+    
+    return signature
 
 
-def verify(key, data, sig, strict=False, hash=None, max_age=None):
+def verify(key, data, signature, strict=False, hash=None, max_age=None, depends_on={}):
     """Verify a signature for the given data.
     
     This will verify that the MAC contained within the signature is valid,
@@ -382,22 +429,24 @@ def verify(key, data, sig, strict=False, hash=None, max_age=None):
         
     """
     # Copy sig OR coerce to a dict.
-    sig = dict(sig)
+    signature = dict(signature)
     try:
         
         # Extract the old mac, and calculate the new one.
-        mac = decode_binary(sig.pop('s', ''))
+        mac = decode_binary(signature.pop('s', ''))
+        to_sign = signature.copy()
+        to_sign.update(depends_on)
         try:
             new_mac = hmac.new(
                 key,
-                encode_seal(data, sig),
+                encode_seal(data, to_sign),
                 hash or hash_by_size[len(mac)]
             ).digest()
         except KeyError:
             raise ValueError('unknown hash algo with length %d' % len(mac))
 
         _assert_str_eq(mac, new_mac)
-        _assert_times(sig, max_age=max_age)
+        _assert_times(signature, max_age=max_age)
         return True
     
     
@@ -407,7 +456,7 @@ def verify(key, data, sig, strict=False, hash=None, max_age=None):
     return False
 
 
-def sign_query(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.md5):
+def sign_query(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.md5, depends_on={}):
     """Signs and encapsulates the given data.
     
     The returned value is a valid URL query.
@@ -421,23 +470,49 @@ def sign_query(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.md
         obj hash = hashlib.md5: Hash algorithm to use.
     
     """
-    sig = dict(data)
+    signature = dict(data)
     if add_time:
-        sig['t'] = encode_legacy_int(time.time())
+        signature['t'] = encode_legacy_int(time.time())
     if max_age:
-        sig['x'] = encode_legacy_int(time.time() + max(0, max_age))
+        signature['x'] = encode_legacy_int(time.time() + max(0, max_age))
     if nonce:
-        sig['n'] = encode_binary(os.urandom(nonce))
-    sig['s'] = encode_binary(hmac.new(key, encode_query(sig), hash).digest())
-    return sig
+        signature['n'] = encode_binary(os.urandom(nonce))
+        
+    to_sign = signature.copy()
+    to_sign.update(depends_on)
+    
+    signature['s'] = encode_binary(hmac.new(key, encode_query(to_sign), hash).digest())
+    return signature
 
 
 def dumps_query(key, data, **kwargs):
+    """
+    
+    Basic example:
+    
+        >>> query = dumps_query('key', dict(data='value'))
+        >>> query # doctest: +ELLIPSIS
+        'data=value&n=...&s=...&t=...'
+        >>> loads_query('key', query)
+        {'data': 'value'}
+    
+    Adding dependant data:
+    
+        >>> query = dumps_query('key', dict(data='value'), depends_on=dict(path='/something'))
+        >>> query # doctest: +ELLIPSIS
+        'data=value&n=...&s=...&t=...'
+        
+        >>> loads_query('key', query)
+        
+        >>> loads_query('key', query, depends_on=dict(path='/something'))
+        {'data': 'value'}
+
+    
+    """
     return encode_query(sign_query(key, data, **kwargs))
 
 
-
-def verify_query(key, data, strict=False, max_age=None):
+def verify_query(key, signature, strict=False, max_age=None, depends_on={}):
     """Verify a query-based signature, and return if it is valid.
     
     This will verify that the MAC contained within the signature is valid,
@@ -457,21 +532,23 @@ def verify_query(key, data, strict=False, max_age=None):
     try:
         
         # Copy or adapt query.
-        data = dict(data)
+        signature = dict(signature)
         
         # Extract the old mac, and calculate the new one.
-        mac = decode_binary(data.pop('s', ''))
+        mac = decode_binary(signature.pop('s', ''))
+        to_sign = signature.copy()
+        to_sign.update(depends_on)
         try:
             new_mac = hmac.new(
                 key,
-                encode_query(data),
+                encode_query(to_sign),
                 hash_by_size[len(mac)]
             ).digest()
         except KeyError:
             raise ValueError('unknown hash algo with length %d' % len(mac))
 
         _assert_str_eq(mac, new_mac)
-        _assert_times(data, max_age=max_age, legacy=True)
+        _assert_times(signature, max_age=max_age, legacy=True)
     
         return True
         
@@ -487,7 +564,6 @@ def loads_query(key, data, **kwargs):
         for key in 's', 'n', 't', 'x':
             data.pop(key, None)
         return data
-
 
 
 def _assert_str_eq(mac_a, mac_b):
@@ -531,62 +607,79 @@ def _assert_times(sig, max_age=None, legacy=False):
             raise ValueError('signature has self-expired')
 
 
-
-
-
-
-def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_age=None):
+def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_age=None, extra={}, depends_on={}):
     """
     
-    >>> key = '0123456789abcdef'
+    Basic example without encryption:
     
-    >>> encoded = dumps(key, 'abc123', encrypt=False)
-    >>> encoded #doctest: +ELLIPSIS
-    'abc123.n:...,s:...,t:...'
+        >>> key = '0123456789abcdef'
     
-    >>> loads(key, encoded)
-    'abc123'
+        >>> encoded = dumps(key, 'abc123', encrypt=False)
+        >>> encoded #doctest: +ELLIPSIS
+        'abc123.n:...,s:...,t:...'
     
-    >>> encoded = dumps(key, 'abc123')
-    >>> encoded #doctest: +ELLIPSIS
-    '....i:...,s:...'
+        >>> loads(key, encoded)
+        'abc123'
     
-    >>> loads(key, encoded)
-    'abc123'
+    Basic example with encryption:
     
+        >>> encoded = dumps(key, 'abc123')
+        >>> encoded #doctest: +ELLIPSIS
+        '....i:...,s:...'
     
-    >>> loads(key, encoded + 'extra', strict=True)
-    Traceback (most recent call last):
-    ...
-    ValueError: invalid signature
+        >>> loads(key, encoded)
+        'abc123'
     
-    >>> encoded = dumps(key, 'abc123', encrypt=False, max_age=5)
-    >>> encoded #doctest: +ELLIPSIS
-    'abc123.n:...,s:...,t:...,x:5'
+    It fails when modified:
     
-    >>> encoded = dumps(key, 'abc123', encrypt=False, max_age=3600)
-    >>> encoded #doctest: +ELLIPSIS
-    'abc123.n:...,s:...,t:...,x:Ug'
+        >>> loads(key, encoded + 'extra', strict=True)
+        Traceback (most recent call last):
+        ...
+        ValueError: invalid signature
     
+    We can add expiry times:
     
-    >>> encoded = dumps(key, 'abc123', max_age=60)
-    >>> loads(key, encoded)
-    'abc123'
+        >>> encoded = dumps(key, 'abc123', encrypt=False, max_age=5)
+        >>> encoded #doctest: +ELLIPSIS
+        'abc123.n:...,s:...,t:...,x:5'
     
-    >>> encoded = dumps(key, 'abc123', max_age=-1)
-    >>> loads(key, encoded, strict=True)
-    Traceback (most recent call last):
-    ...
-    ValueError: signature has self-expired
+        >>> encoded = dumps(key, 'abc123', encrypt=False, max_age=3600)
+        >>> encoded #doctest: +ELLIPSIS
+        'abc123.n:...,s:...,t:...,x:Ug'
+        
+        >>> encoded = dumps(key, 'abc123', max_age=60)
+        >>> loads(key, encoded)
+        'abc123'
     
+        >>> encoded = dumps(key, 'abc123', max_age=-1)
+        >>> loads(key, encoded, strict=True)
+        Traceback (most recent call last):
+        ...
+        ValueError: signature has self-expired
+    
+    Adding dependant data:
+    
+        >>> encoded = dumps(key, 'abc123', encrypt=False, depends_on=dict(key='value'))
+        >>> encoded #doctest: +ELLIPSIS
+        'abc123.n:...,s:...,t:...'
+    
+        >>> loads(key, encoded, strict=True)
+        Traceback (most recent call last):
+        ...
+        ValueError: invalid signature
+        
+        >>> loads(key, encoded, depends_on=dict(key='value'))
+        'abc123'
+        
+        
     """
     
     if encrypt:
-        inner_meta = {}
+        inner_meta = dict(extra)
         outer_meta = {}    
         nonce = max(0, nonce - 16)
     else:
-        inner_meta = outer_meta = {}
+        inner_meta = outer_meta = dict(extra)
     
     if add_time:
         inner_meta['t'] = encode_int(time.time())
@@ -620,7 +713,7 @@ def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_a
         data = encode_binary(data)
     
     # Sign it.
-    outer_meta = sign(key, data, add_time=False, nonce=nonce, hash=hashlib.sha256, sig=outer_meta)
+    outer_meta = sign(key, data, add_time=False, nonce=nonce, hash=hashlib.sha256, extra=outer_meta, depends_on=depends_on)
     
     # Pack up outer payload.
     return encode_seal(data, outer_meta)
@@ -651,13 +744,13 @@ def loads(key, data, strict=False, **kwargs):
             raise
     return None
 
-def _loads(key, data, decrypt=None, max_age=None):
+def _loads(key, data, decrypt=None, max_age=None, depends_on={}):
     
     # Unpack outer payload
     data, outer_meta = decode_seal(data)
     
     # Verify signature.
-    verify(key, data, strict=True, sig=outer_meta, hash=hashlib.sha256)
+    verify(key, data, outer_meta, strict=True, hash=hashlib.sha256, depends_on=depends_on)
     
     if decrypt is not None and decrypt != 'i' in outer_meta:
         raise ValueError('decryption flag is wrong')
