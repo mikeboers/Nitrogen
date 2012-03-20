@@ -139,18 +139,14 @@ class PasswordHash(object):
     def resalt(self):
         self.salt = hashlib.sha256(os.urandom(8192)).digest()
     
-    def set(self, password, best_of=3):    
-        self.resalt()
-        rounds = []
-        password = password.encode('utf8')
-        for i in xrange(best_of):
-            self._set(password)
-            rounds.append((self.num_iter, str(self)))
-        rounds.sort()
-        self.restore_state(rounds[-1][1])
-        self.version = self.current_version
+    def set(self, password):
+
+        if isinstance(password, unicode):
+            password = password.encode('utf8')
         
-    def _set(self, password):
+        self.version = self.current_version
+        self.resalt()
+        
         self.num_iter, self.hash = _timed_pkcs5(password, self.salt, self.min_time)
     
     def check(self, password):
