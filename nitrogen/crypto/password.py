@@ -3,8 +3,8 @@ import hashlib
 import hmac
 import os
 import time
-
-
+import urllib
+import urlparse
 
 class PasswordHash(object):
     """
@@ -70,14 +70,14 @@ class PasswordHash(object):
             self.salt = state[1:33]
             self.hash = state[33:65]
         else:
-            query = Query(state)
+            query = dict(urlparse.parse_qsl(state))
             self.version = query['v']
             self.num_iter = int(query['num'])
             self.salt = query['salt'].decode('hex')
             self.hash = query['hash'].decode('hex')
     
     def __str__(self):
-        return str(Query([('v', self.version), ('num', self.num_iter or 0),
+        return urllib.urlencode([('v', self.version), ('num', self.num_iter or 0),
             ('salt', (self.salt or '').encode('hex')), ('hash', (self.hash or
             '').encode('hex'))]))
     
