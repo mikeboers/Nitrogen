@@ -39,8 +39,7 @@ class PasswordHash(object):
     """
     
     CURRENT_VERSION = '1.0'
-    MIN_VERSION = '1.0'
-    MIN_TIME = 0.01
+    MIN_TIME = 0.25
     MIN_ITER = 2**10
     
     def __init__(self, state=None, password=None, min_time=None, min_iter=None):
@@ -144,7 +143,7 @@ class PasswordHash(object):
         return blob == self.hash
     
     def should_reset(self):
-        if self.version < self.MIN_VERSION:
+        if self.version < self.CURRENT_VERSION:
             return True
         if self.num_iter < self.min_iter:
             return True
@@ -154,7 +153,7 @@ class PasswordHash(object):
             return self.check_time / self.min_time < 0.67
 
 
-def test_timed_hash_compatibility():
+def test_old_timed_hash_compatibility():
     
     hashes = [
         '01129802e44542fbd7eabe52691e6cdb6810865e2982daa29481a6521678faa5512fe23594997caae715b455f8bf88f647ea3ca68548981854f5094d89681f914300002fc0',
@@ -167,6 +166,3 @@ def test_timed_hash_compatibility():
         assert not h.check('wrong')
         assert h.should_reset()
 
-
-if __name__ == '__main__':
-    import nose; nose.run(defaultTest=__name__)
