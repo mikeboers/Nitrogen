@@ -50,7 +50,7 @@ def format_report_iter(environ, html=False):
         >>> try:
         ...     raise ValueError('Testing')
         ... except:
-        ...     print format_report({'HTTP_HOST': 'example.com'}, ['one', 'two'])
+        ...     print format_report({'HTTP_HOST': 'example.com'})
         ... # doctest: +ELLIPSIS
         Traceback (most recent call last):
           File "<doctest ....format_report_iter[0]>", line 2, in <module>
@@ -58,17 +58,13 @@ def format_report_iter(environ, html=False):
         ValueError: Testing
         Environment:
           HTTP_HOST: 'example.com'
-        Output 2 chunks (6 bytes):
-        ==============================================================================
-        onetwo
-        ==============================================================================
         <BLANKLINE>
         
         
         >>> try:
         ...     raise ValueError('Testing')
         ... except:
-        ...     print format_report(environ={'HTTP_HOST': 'example.com'}, output=['one', 'two'], html=True).replace('\\t', '    ')
+        ...     print format_report(environ={'HTTP_HOST': 'example.com'}, html=True).replace('\\t', '    ')
         ... # doctest: +ELLIPSIS
         <h2>Traceback <em>(most recent call last)</em>:</h2>
         <ol>
@@ -81,8 +77,7 @@ def format_report_iter(environ, html=False):
         <ul>
             <li><strong>HTTP_HOST</strong>: <code>'example.com'</code></li>
         </ul>
-        <h2>Output <strong>2</strong> chunks (<strong>6</strong> bytes):</h2>
-        <pre>onetwo</pre>
+        <BLANKLINE>
         
     """
         
