@@ -276,9 +276,7 @@ class _RequestMixin(object):
     def cookies(self):
         """Read only access to the retrieved cookie values as dictionary."""
         raw = parse_cookies(self.environ.get('HTTP_COOKIE', ''))
-        if not self.app.config.private_key:
-            return self.dict_storage_class(raw)
-        encryption_key = hashlib.md5(self.app.config.private_key).digest()    
+        encryption_key = hashlib.md5(self.app.config.private_key).digest() if self.app.config.private_key else '0123456789abcdef'
         ret = {}
         for key, raw_value in raw.iteritems():
             try:
@@ -302,7 +300,10 @@ class CookieAppMixin(object):
     def dump_cookie(self, key, value='', max_age=None, **kwargs):
         if self.config.private_key:
             encryption_key = hashlib.md5(self.config.private_key).digest()
-            value = sign.dumps(encryption_key, value, max_age=max_age, depends_on=dict(name=key))
+        else:
+            log.warning('using default encryption key')
+            encryption_key = '0123456789abcdef'
+        value = sign.dumps(encryption_key, value, max_age=max_age, depends_on=dict(name=key))
         return dump_cookie(key, value, max_age=max_age, **kwargs)
         
     RequestMixin = _RequestMixin
