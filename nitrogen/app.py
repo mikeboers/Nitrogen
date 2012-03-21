@@ -4,6 +4,7 @@ import os
 import threading
 
 import werkzeug as wz
+import werkzeug.wrappers
 
 import webstar
 
@@ -63,9 +64,7 @@ class Core(object):
         
         Core.RequestMixin.app = self
         Core.ResponseMixin.app = self
-        
-        
-        
+    
     def setup_config(self):
         self.config.setdefaults(
             root='',
@@ -175,5 +174,11 @@ class Core(object):
             self.after_request.trigger(environ)
             for obj in self.__managed_locals:
                 obj.__dict__.clear()
+    
+    def test_client(self, use_cookies=True):
+        """Builds a test client that will call this app."""
+
+        from . import test
+        return test.Client(self, wz.wrappers.Response, use_cookies=use_cookies)
 
 
