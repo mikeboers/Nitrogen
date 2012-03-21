@@ -28,3 +28,6 @@
 
 /compass/.sass-cache
 /compass/stylesheets
+
+/.coverage
+/cover

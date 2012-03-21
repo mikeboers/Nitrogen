@@ -159,6 +159,22 @@ def encode_seal(data, meta):
     >>> encode_seal('a.b', {'!@#': '$%^'})
     'a.b.$21$40$23:$24$25$5e'
     
+    >>> encode_seal(u'data', {'key': 'value'})
+    Traceback (most recent call last):
+    ...
+    TypeError: data must be str; not <type 'unicode'>
+    
+    >>> encode_seal('data', {u'key': 'value'})
+    Traceback (most recent call last):
+    ...
+    TypeError: meta key u'key' must be str; not <type 'unicode'>
+    
+    >>> encode_seal('data', {'key': u'value'})
+    Traceback (most recent call last):
+    ...
+    TypeError: meta 'key' value u'value' must be str; not <type 'unicode'>
+    
+    
     """
     if not isinstance(data, str):
         raise TypeError('data must be str; not %r' % type(data))
@@ -309,6 +325,11 @@ def encode_int(value):
     >>> map(encode_int, [0, 1, 10, 256, 1000, 1332279638, 2**60 - 1])
     ['0', '1', 'a', '40', 'fE', '1fqfBm', '__________']
     
+    >>> encode_int(-1)
+    Traceback (most recent call last):
+    ...
+    ValueError: can only encode positive ints
+    
     """
     value = int(value)
     if value < 0:
@@ -328,11 +349,19 @@ def decode_int(encoded):
     >>> map(decode_int, ['0', '1', 'a', '40', 'fE', '1fqfBm', '__________'])
     [0, 1, 10, 256, 1000, 1332279638, 1152921504606846975]
     
+    >>> decode_int('not an encoded int')
+    Traceback (most recent call last):
+    ...
+    ValueError: not an encoded int
+    
     """
-    value = 0
-    for char in encoded:
-        value = value * 64 + _int_alphabet_inversed[char]
-    return value
+    try:
+        value = 0
+        for char in encoded:
+            value = value * 64 + _int_alphabet_inversed[char]
+        return value
+    except KeyError:
+        raise ValueError('not an encoded int')
     
     
 def sign(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.sha1, extra={}, depends_on={}):
@@ -386,7 +415,21 @@ def sign(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.sha1, ex
         False
         >>> verify('key', 'data', sig, depends_on=dict(key='value'))
         True
+
+    Expiry times:
     
+        >>> sig = sign('key', 'data', max_age=1)
+        >>> verify('key', 'data', sig)
+        True
+        >>> verify('key', 'data', sig, max_age=-1)
+        False
+        
+        >>> sig = sign('key', 'data', max_age=-1)
+        >>> verify('key', 'data', sig)
+        False
+        >>> verify('key', 'data', sig, max_age=1)
+        False
+        
     
     """
     signature = dict(extra)
@@ -426,7 +469,12 @@ def verify(key, data, signature, strict=False, hash=None, max_age=None, depends_
         dict sig: The signature to verify.
         bool strict = False: Should errors be thrown, or simply return False?
         int max_age = None: Number of seconds the signature was valid.
-        
+    
+    Test odd modifications:
+    
+        >>> verify('key', 'data', dict(s='not a hash'))
+        False
+    
     """
     # Copy sig OR coerce to a dict.
     signature = dict(signature)
@@ -469,6 +517,30 @@ def sign_query(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.md
         int max_age = None: Number of seconds that this signature is valid.
         obj hash = hashlib.md5: Hash algorithm to use.
     
+    Examples:
+    
+        >>> signed = sign_query('key', dict(key='value'))
+        >>> signed # doctest: +ELLIPSIS
+        {'s': '...', 't': '...', 'key': 'value', 'n': '...'}
+        >>> verify_query('key', signed)
+        True
+        
+        >>> signed = sign_query('key', dict(key='value'), max_age=1)
+        >>> verify_query('key', signed)
+        True
+        >>> verify_query('key', signed, max_age=-1)
+        False
+        
+        >>> signed = sign_query('key', dict(key='value'), max_age=-1)
+        >>> verify_query('key', signed)
+        False
+        
+        >>> verify_query('key', dict(key='value', s='abcdef'), strict=True)
+        Traceback (most recent call last):
+        ...
+        ValueError: unknown hash algo with length 4
+        
+        
     """
     signature = dict(data)
     if add_time:
@@ -585,7 +657,7 @@ def _assert_times(sig, max_age=None, legacy=False):
     if EXPIRATION_TIME_KEY in sig:
         try:
             expiry_time = decode_legacy_int(sig[EXPIRATION_TIME_KEY]) if legacy else decode_int(sig[EXPIRATION_TIME_KEY])
-        except struct.error:
+        except struct.error: #pragma: no cover
             raise ValueError('malformed expiry time')
         
         if expiry_time < time.time():
@@ -595,7 +667,7 @@ def _assert_times(sig, max_age=None, legacy=False):
     if max_age and CREATION_TIME_KEY in sig:
         try:
             creation_time = decode_legacy_int(sig[CREATION_TIME_KEY]) if legacy else decode_int(sig[CREATION_TIME_KEY])
-        except struct.error:
+        except struct.error: #pragma: no cover
             raise ValueError('malformed creation time')
         if creation_time + max_age < time.time():
             raise ValueError('signature has expired')
@@ -764,6 +836,11 @@ def dumps(key, data, encrypt=True, add_time=True, nonce=16, max_age=None, extra=
 
 
 def loads(key, data, strict=False, **kwargs):
+    """
+    
+    >>> loads('key', 'data')
+    
+    """
     try:
         return _loads(key, data, **kwargs)
     except ValueError:
@@ -772,16 +849,13 @@ def loads(key, data, strict=False, **kwargs):
     return None
 
 
-def _loads(key, data, decrypt=None, max_age=None, depends_on={}):
+def _loads(key, data, max_age=None, depends_on={}):
     
     # Unpack outer payload
     data, outer_meta = decode_seal(data)
     
     # Verify signature.
     verify(key, data, outer_meta, strict=True, hash=hashlib.sha256, depends_on=depends_on)
-    
-    if decrypt is not None and decrypt != ENCRYPTION_IV_KEY in outer_meta:
-        raise ValueError('decryption flag is wrong')
     
     # Remove base64 if encrypted or compressed. We don't need to check for
     # compression or format flags in the inner_meta, because if there is an
@@ -826,7 +900,7 @@ def _loads(key, data, decrypt=None, max_age=None, depends_on={}):
     elif data_format == 'p':
         data = pickle.loads(data)
     else:
-        raise ValueError('unknown data format %r' % data_format)
+        raise ValueError('unknown data format %r' % data_format) #pragma: no cover
     
     return data
 
@@ -907,7 +981,7 @@ def test_manual_encrypted_pickle():
 
         
 
-if __name__ == '__main__':
+if __name__ == '__main__': #pragma: no cover
     
     for i in range(10):
         print dumps_query('key', dict(data='value'), max_age=60)
