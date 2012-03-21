@@ -6,7 +6,6 @@ from sqlalchemy import MetaData, engine_from_config
 from sqlalchemy.orm import sessionmaker
 
 from .declarative import declarative_base
-from .orm import Session
 
 
 log = logging.getLogger(__name__)
@@ -33,7 +32,6 @@ class SQLAlchemyAppMixin(object):
             autocommit=False,
             autoflush=True,
             bind=self.engine,
-            class_=Session,
         )
         self.metadata = MetaData(bind=self.engine)
         self.Base = declarative_base(metadata=self.metadata)
