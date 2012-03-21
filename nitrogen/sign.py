@@ -45,6 +45,7 @@ import time
 import urllib
 import urlparse
 import zlib
+import pickle
 
 from . import repr as deterministic_repr
 import tomcrypt.cipher
@@ -80,7 +81,7 @@ for name in algorithms:
 encode_seal_map = {}
 for i in xrange(256):
     encode_seal_map[chr(i)] = '$%02x' % i
-for c in (string.letters + string.digits + '_-'):
+for c in (string.letters + string.digits + '_-\'()'):
     encode_seal_map[c] = c
 
 
@@ -168,7 +169,7 @@ def encode_seal(data, meta):
         if not isinstance(v, str):
             raise TypeError('meta %r value %r must be str; not %r' % (k, v, type(v)))
         meta_parts.append((dollar_encode(k), dollar_encode(v)))
-    return '%s.%s' % (dollar_encode(data, '.,;'), ','.join('%s:%s' % x for x in meta_parts))
+    return '%s.%s' % (dollar_encode(data, '.,:'), ','.join('%s:%s' % x for x in meta_parts))
 
 
 def decode_seal(data):
@@ -601,7 +602,7 @@ def _assert_times(sig, max_age=None, legacy=False):
             
 
 
-def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_age=None, extra={}, depends_on={}):
+def dumps(key, data, encrypt=True, add_time=True, nonce=16, max_age=None, extra={}, depends_on={}):
     """
     
     Basic example without encryption:
@@ -663,14 +664,42 @@ def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_a
     
     Unicode:
     
-        >>> encoded = dumps(key, u'¡™£¢∞§¶•'.encode('utf8'))
-        >>> loads(key, encoded).decode('utf8') == u'¡™£¢∞§¶•'
+        >>> encoded = dumps(key, u'¡™£¢∞§¶•')
+        >>> restored = loads(key, encoded)
+        >>> type(restored) is unicode
+        True
+        >>> restored == u'¡™£¢∞§¶•'
         True
         
         >>> data = u''.join(unichr(i) for i in range(512))
-        >>> encoded = dumps(key, data.encode('utf8'))
-        >>> loads(key, encoded).decode('utf8') == data
+        >>> encoded = dumps(key, data)
+        >>> restored = loads(key, encoded)
+        >>> type(restored) is unicode
         True
+        >>> restored == data
+        True
+    
+    Repr-able types:
+    
+        >>> encoded = dumps(key, range(10), encrypt=False)
+        >>> encoded # doctest: +ELLIPSIS
+        '$5b0,1,2,3,4,5,6,7,8,9$5d.f:r,n:...,s:...,t:...'
+        >>> loads(key, encoded)
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        
+        >>> encoded = dumps(key, {'list': [True, False], ('tuple', 'keys'): {'sub': 1234}}, encrypt=False)
+        >>> encoded # doctest: +ELLIPSIS
+        "$7b'list':$5bTrue,False$5d,('tuple','keys'):$7b'sub':1234$7d$7d.f:r,n:...,s:...,t:..."
+        >>> loads(key, encoded)
+        {('tuple', 'keys'): {'sub': 1234}, 'list': [True, False]}
+    
+    Pickle-able types:
+    
+        >>> encoded = dumps(key, set('hello'), encrypt=False)
+        >>> encoded # doctest: +ELLIPSIS
+        'gAJjX19idWlsdGluX18Kc2V0CnEAXXEBKFUBaHECVQFlcQNVAWxxBFUBb3EFZYVxBlJxBy4.f:p,n:...,s:...,t:...'
+        >>> loads(key, encoded)
+        set(['h', 'e', 'l', 'o'])
         
         
         
@@ -696,21 +725,20 @@ def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_a
         inner_meta[DATA_FORMAT_KEY] = 'u'
     else:
         try:
-            data = deterministic_repr(data)
+            data = deterministic_repr.dumps(data, minimize=True)
             inner_meta[DATA_FORMAT_KEY] = 'r'
         except TypeError:
-            data = pickle.dumps(data)
+            data = pickle.dumps(data, protocol=2)
             inner_meta[DATA_FORMAT_KEY] = 'p'
     
     # Try compressing the data. Only use the compressed form if requested or
     # there is enough of a savings to justify it. If we are not encrypting then
     # the compression must also do better than the base64 encoding that would
     # be required.
-    if encrypt or compress or compress is None:
-        data_compressed = zlib.compress(data)
-        if compress or len(data) / len(data_compressed) > (1 if encrypt else 4 / 3):
-            data = data_compressed
-            inner_meta[COMPRESSION_FLAG_KEY] = '1'
+    data_compressed = zlib.compress(data)
+    if len(data) / len(data_compressed) > (1 if encrypt else 4 / 3):
+        data = data_compressed
+        inner_meta[COMPRESSION_FLAG_KEY] = '1'
 
     if encrypt:
 
@@ -723,7 +751,7 @@ def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_a
         cipher = tomcrypt.cipher.aes(key, iv, mode='ctr')
         data = cipher.encrypt(data)
     
-    if encrypt or COMPRESSION_FLAG_KEY in inner_meta:
+    if encrypt or COMPRESSION_FLAG_KEY in inner_meta or inner_meta.get(DATA_FORMAT_KEY) == 'p':
         
         # Make it transport safe.
         data = encode_binary(data)
@@ -733,32 +761,7 @@ def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_a
     
     # Pack up outer payload.
     return encode_seal(data, outer_meta)
-    
 
-def dumps_json(key, data, **kwargs):
-    """
-    
-    >>> key = '0123456789abcdef'
-    >>> sealed = dumps_json(key, range(10))
-    >>> loads_json(key, sealed)
-    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-    
-    >>> data = u''.join(unichr(i) for i in range(512))
-    >>> sealed = dumps_json(key, data)
-    >>> restored = loads_json(key, sealed)
-    >>> isinstance(restored, unicode)
-    True
-    >>> restored == data
-    True
-    
-    """
-    data = json.dumps(data, separators=(',', ':'))
-    return dumps(key, data, **kwargs)
-
-def loads_json(key, data, **kwargs):
-    data = loads(key, data, **kwargs)
-    return json.loads(data)
-    
 
 def loads(key, data, strict=False, **kwargs):
     try:
@@ -767,6 +770,7 @@ def loads(key, data, strict=False, **kwargs):
         if strict:
             raise
     return None
+
 
 def _loads(key, data, decrypt=None, max_age=None, depends_on={}):
     
@@ -779,8 +783,15 @@ def _loads(key, data, decrypt=None, max_age=None, depends_on={}):
     if decrypt is not None and decrypt != ENCRYPTION_IV_KEY in outer_meta:
         raise ValueError('decryption flag is wrong')
     
-    # Remove base64 if encrypted or compressed.
-    if ENCRYPTION_IV_KEY in outer_meta or COMPRESSION_FLAG_KEY in outer_meta:
+    # Remove base64 if encrypted or compressed. We don't need to check for
+    # compression or format flags in the inner_meta, because if there is an
+    # inner meta at all then it must have been encrypted and the binary encoding
+    # will be applied at that level.
+    if (
+        ENCRYPTION_IV_KEY in outer_meta or
+        COMPRESSION_FLAG_KEY in outer_meta or
+        outer_meta.get(DATA_FORMAT_KEY) == 'p'
+    ):
         data = decode_binary(data)
     
     if ENCRYPTION_IV_KEY in outer_meta:
@@ -803,6 +814,19 @@ def _loads(key, data, decrypt=None, max_age=None, depends_on={}):
     # Decompress.
     if COMPRESSION_FLAG_KEY in inner_meta:
         data = zlib.decompress(data)
+    
+    # Deal with data format.
+    data_format = inner_meta.get(DATA_FORMAT_KEY)
+    if data_format is None:
+        pass
+    elif data_format == 'u':
+        data = data.decode('utf8')
+    elif data_format == 'r':
+        data = deterministic_repr.loads(data)
+    elif data_format == 'p':
+        data = pickle.loads(data)
+    else:
+        raise ValueError('unknown data format %r' % data_format)
     
     return data
 

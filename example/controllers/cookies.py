@@ -8,6 +8,7 @@ cookies = [
     ('is_httponly', 'this is http_only', dict(http_only=True, max_age=60)),
     ('is_secure', 'this one is secure', dict(secure=True, max_age=60)),
     ('no_path', 'this one has no path', dict(path=None, max_age=60)),
+    ('reprable', [(True, False), [1, 2, 'many', u'types', dict(word='here')]], dict(max_age=60)),
 ]
 
 @route('/')
@@ -49,7 +50,7 @@ def do_cookies(request):
     else:
         response.set_cookie('toggle', 'this cookie should not exist on the next request', max_age=60)
     
-    response.set_cookie('counter', str(int(request.cookies.get('counter', 0)) + 1), max_age=60)
+    response.set_cookie('counter', int(request.cookies.get('counter', 0)) + 1, max_age=60)
     
     return response
 
