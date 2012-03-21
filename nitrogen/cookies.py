@@ -282,9 +282,8 @@ class _RequestMixin(object):
         ret = {}
         for key, raw_value in raw.iteritems():
             try:
-                ret[key] = sign.loads(encryption_key, raw_value, depends_on=dict(name=key), strict=True)
-                ret[key] = ret[key].decode('utf8')
-            except ValueError:
+                ret[key] = sign.loads_json(encryption_key, raw_value, depends_on=dict(name=key), strict=True)
+            except ValueError, UnicodeDecodeError:
                 pass
         return self.dict_storage_class(ret)
 
@@ -301,11 +300,9 @@ class _ResponseMixin(object):
 class CookieAppMixin(object):
     
     def dump_cookie(self, key, value='', max_age=None, **kwargs):
-        if isinstance(value, unicode):
-            value = value.encode('utf8')
         if self.config.private_key:
             encryption_key = hashlib.md5(self.config.private_key).digest()
-            value = sign.dumps(encryption_key, value, max_age=max_age, depends_on=dict(name=key))
+            value = sign.dumps_json(encryption_key, value, max_age=max_age, depends_on=dict(name=key))
         return dump_cookie(key, value, max_age=max_age, **kwargs)
         
     RequestMixin = _RequestMixin

@@ -4,71 +4,69 @@
 TODO
 =====
 
-- consider adding `exclude_from_query` to dumps_query
-    - this allows us to have some data that the signature depends upon, but isn't serialized into the final string
-    - OR have an `extra` kwarg that is pulled into the
-    
-    1)
-        sign(key, data, extra={'path':'/something'}, exclude=['path'])
-    2)
-        sign(key, data, include={}, depends_on=dict(path='/something'))
-        
-        
-    
-    
-    
-- document that creation time is public for signatures
-- document userinfo/path/query safe characters:
-    
-    - !!! see what characters are cookie safe
-     
-    3.4: query = *( pchar / "/" / "?" )
-    3.3: (path) segment       = *pchar
-         pchar = unreserved / pct-encoded / sub-delims / ":" / "@"
-    2.3: unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
-    2.2: sub-delims  = "!" / "$" / "&" / "'" / "(" / ")"
-                  / "*" / "+" / "," / ";" / "="
-    
-    a-zA-Z0-9_- are taken by base64
-    &= are taken by standard queries
-    ; is often interpreted same as & in queries
-    + is interpreted as a space
-    
-    leaves: !$'()*+,;.~
-    
-    data ";" key "." value *("," key2 "." value2)
-    
-    data;(iv)012345(x)012345
-    data;iv.012345,x.012345
-    data;iv$012345,x$012345
-    data.iv,012345;x,012345
-    data$iv,012345;x,012345
-    data!iv,012345;x,012345 (this often doesnt work)
-    data.iv:012345,x:012345 <<<
-    
-    dollar-encode the rest
+- finalize on naming of extra/depends_on
+    The only other thing I can thing of is include/depends_on
 
+- consider adding loads_ex which returns (data, meta)
+    Would need to add `extra` to `dumps` for this to make sense.
+    
+- consider adding `mode` parameter to dumps:
+    - possible modes:
+        None -> byte string
+        'u'  -> unicode
+        'r'  -> deterministic repr; parsable with ast.literal_eval
+        'p'  -> pickle
+    - would then only have dumps/loads
+        
+- document that while creation time is encoded, it is still public for signatures
+
+- document the various signature/meta keys
+    t -> creation time
+    x -> expiration time
+    z -> compressed (ignores value)
+    i -> encryption iv
+    n -> nonce
+    s -> signature MAC
+    m -> data type
 
 """
 
 from __future__ import division
 
-import hashlib
-import struct
-import hmac
-import datetime
-import os
-import urlparse
-import urllib
 import base64
-import time
-import string
-import re
+import hashlib
+import hmac
 import json
+import os
+import re
+import string
+import struct
+import time
+import urllib
+import urlparse
 import zlib
 
+from . import repr as deterministic_repr
 import tomcrypt.cipher
 
+
+CREATION_TIME_KEY = 't' # legacy
+EXPIRATION_TIME_KEY = 'x' # legacy
+COMPRESSION_FLAG_KEY = 'z'
+ENCRYPTION_IV_KEY = 'i'
+NONCE_KEY = 'n' # legacy, but not checked
+SIGNATURE_MAC_KEY = 's' # legacy
+DATA_FORMAT_KEY = 'f'
+
+meta_keys = set([
+    CREATION_TIME_KEY,
+    EXPIRATION_TIME_KEY,
+    COMPRESSION_FLAG_KEY,
+    ENCRYPTION_IV_KEY,
+    NONCE_KEY,
+    SIGNATURE_MAC_KEY,
+    DATA_FORMAT_KEY,
+])
 
 # Build up the map we will use to determine which hash was used by the size of
 # its digest.
@@ -393,16 +391,16 @@ def sign(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.sha1, ex
     signature = dict(extra)
     
     if add_time:
-        signature['t'] = encode_int(time.time())
+        signature[CREATION_TIME_KEY] = encode_int(time.time())
     if max_age:
-        signature['x'] = encode_int(max(0, max_age))
+        signature[EXPIRATION_TIME_KEY] = encode_int(time.time() + max_age)
     if nonce:
-        signature['n'] = encode_binary(os.urandom(nonce))
+        signature[NONCE_KEY] = encode_binary(os.urandom(nonce))
     
     to_sign = signature.copy()
     to_sign.update(depends_on)
     
-    signature['s'] = encode_binary(hmac.new(
+    signature[SIGNATURE_MAC_KEY] = encode_binary(hmac.new(
         key,
         encode_seal(data, to_sign),
         hash
@@ -434,7 +432,7 @@ def verify(key, data, signature, strict=False, hash=None, max_age=None, depends_
     try:
         
         # Extract the old mac, and calculate the new one.
-        mac = decode_binary(signature.pop('s', ''))
+        mac = decode_binary(signature.pop(SIGNATURE_MAC_KEY, ''))
         to_sign = signature.copy()
         to_sign.update(depends_on)
         try:
@@ -473,16 +471,16 @@ def sign_query(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.md
     """
     signature = dict(data)
     if add_time:
-        signature['t'] = encode_legacy_int(time.time())
+        signature[CREATION_TIME_KEY] = encode_legacy_int(time.time())
     if max_age:
-        signature['x'] = encode_legacy_int(time.time() + max(0, max_age))
+        signature[EXPIRATION_TIME_KEY] = encode_legacy_int(time.time() + max_age)
     if nonce:
-        signature['n'] = encode_binary(os.urandom(nonce))
+        signature[NONCE_KEY] = encode_binary(os.urandom(nonce))
         
     to_sign = signature.copy()
     to_sign.update(depends_on)
     
-    signature['s'] = encode_binary(hmac.new(key, encode_query(to_sign), hash).digest())
+    signature[SIGNATURE_MAC_KEY] = encode_binary(hmac.new(key, encode_query(to_sign), hash).digest())
     return signature
 
 
@@ -536,7 +534,7 @@ def verify_query(key, signature, strict=False, max_age=None, depends_on={}):
         signature = dict(signature)
         
         # Extract the old mac, and calculate the new one.
-        mac = decode_binary(signature.pop('s', ''))
+        mac = decode_binary(signature.pop(SIGNATURE_MAC_KEY, ''))
         to_sign = signature.copy()
         to_sign.update(depends_on)
         try:
@@ -562,7 +560,7 @@ def verify_query(key, signature, strict=False, max_age=None, depends_on={}):
 def loads_query(key, data, **kwargs):
     data = decode_query(data)
     if verify_query(key, data, **kwargs):
-        for key in 's', 'n', 't', 'x':
+        for key in SIGNATURE_MAC_KEY, NONCE_KEY, CREATION_TIME_KEY, EXPIRATION_TIME_KEY:
             data.pop(key, None)
         return data
 
@@ -582,30 +580,25 @@ def _assert_str_eq(mac_a, mac_b):
 
 def _assert_times(sig, max_age=None, legacy=False):
     
-    if 't' in sig:
-        try:
-            creation_time = decode_legacy_int(sig['t']) if legacy else decode_int(sig['t'])
-        except struct.error:
-            raise ValueError('malformed creation time')
-    else:
-        creation_time = 0
-    
-    # Check new max_age.
-    if max_age and creation_time + max_age < time.time():
-        raise ValueError('signature has expired')
-    
     # Check expiry time.
-    if 'x' in sig:
+    if EXPIRATION_TIME_KEY in sig:
         try:
-            expiry_time = decode_legacy_int(sig['x']) if legacy else decode_int(sig['x'])
+            expiry_time = decode_legacy_int(sig[EXPIRATION_TIME_KEY]) if legacy else decode_int(sig[EXPIRATION_TIME_KEY])
         except struct.error:
             raise ValueError('malformed expiry time')
         
-        # Allow for relative expiry times.
-        if expiry_time < creation_time:
-            expiry_time += creation_time
         if expiry_time < time.time():
-            raise ValueError('signature has self-expired')
+            raise ValueError('signature has expired')
+            
+    # Check new max_age.
+    if max_age and CREATION_TIME_KEY in sig:
+        try:
+            creation_time = decode_legacy_int(sig[CREATION_TIME_KEY]) if legacy else decode_int(sig[CREATION_TIME_KEY])
+        except struct.error:
+            raise ValueError('malformed creation time')
+        if creation_time + max_age < time.time():
+            raise ValueError('signature has expired')
+            
 
 
 def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_age=None, extra={}, depends_on={}):
@@ -640,15 +633,11 @@ def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_a
     
     We can add expiry times:
     
-        >>> encoded = dumps(key, 'abc123', encrypt=False, max_age=5)
-        >>> encoded #doctest: +ELLIPSIS
-        'abc123.n:...,s:...,t:...,x:5'
-    
         >>> encoded = dumps(key, 'abc123', encrypt=False, max_age=3600)
         >>> encoded #doctest: +ELLIPSIS
-        'abc123.n:...,s:...,t:...,x:Ug'
+        'abc123.n:...,s:...,t:...,x:...'
         
-        >>> encoded = dumps(key, 'abc123', max_age=60)
+        >>> encoded = dumps(key, 'abc123', max_age=1)
         >>> loads(key, encoded)
         'abc123'
     
@@ -656,7 +645,7 @@ def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_a
         >>> loads(key, encoded, strict=True)
         Traceback (most recent call last):
         ...
-        ValueError: signature has self-expired
+        ValueError: signature has expired
     
     Adding dependant data:
     
@@ -695,9 +684,23 @@ def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_a
         inner_meta = outer_meta = dict(extra)
     
     if add_time:
-        inner_meta['t'] = encode_int(time.time())
+        inner_meta[CREATION_TIME_KEY] = encode_int(time.time())
     if max_age:
-        inner_meta['x'] = encode_int(max(0, max_age))
+        inner_meta[EXPIRATION_TIME_KEY] = encode_int(time.time() + max_age)
+    
+    # Deal with different types.
+    if type(data) is bytes:
+        pass
+    elif type(data) is unicode:
+        data = data.encode('utf8')
+        inner_meta[DATA_FORMAT_KEY] = 'u'
+    else:
+        try:
+            data = deterministic_repr(data)
+            inner_meta[DATA_FORMAT_KEY] = 'r'
+        except TypeError:
+            data = pickle.dumps(data)
+            inner_meta[DATA_FORMAT_KEY] = 'p'
     
     # Try compressing the data. Only use the compressed form if requested or
     # there is enough of a savings to justify it. If we are not encrypting then
@@ -707,7 +710,7 @@ def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_a
         data_compressed = zlib.compress(data)
         if compress or len(data) / len(data_compressed) > (1 if encrypt else 4 / 3):
             data = data_compressed
-            inner_meta['z'] = '1'
+            inner_meta[COMPRESSION_FLAG_KEY] = '1'
 
     if encrypt:
 
@@ -716,11 +719,11 @@ def dumps(key, data, encrypt=True, compress=None, add_time=True, nonce=16, max_a
         
         # Encrypt it.
         iv = os.urandom(16)
-        outer_meta['i'] = encode_binary(iv)
+        outer_meta[ENCRYPTION_IV_KEY] = encode_binary(iv)
         cipher = tomcrypt.cipher.aes(key, iv, mode='ctr')
         data = cipher.encrypt(data)
     
-    if encrypt or 'z' in inner_meta:
+    if encrypt or COMPRESSION_FLAG_KEY in inner_meta:
         
         # Make it transport safe.
         data = encode_binary(data)
@@ -739,6 +742,14 @@ def dumps_json(key, data, **kwargs):
     >>> sealed = dumps_json(key, range(10))
     >>> loads_json(key, sealed)
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    
+    >>> data = u''.join(unichr(i) for i in range(512))
+    >>> sealed = dumps_json(key, data)
+    >>> restored = loads_json(key, sealed)
+    >>> isinstance(restored, unicode)
+    True
+    >>> restored == data
+    True
     
     """
     data = json.dumps(data, separators=(',', ':'))
@@ -765,17 +776,17 @@ def _loads(key, data, decrypt=None, max_age=None, depends_on={}):
     # Verify signature.
     verify(key, data, outer_meta, strict=True, hash=hashlib.sha256, depends_on=depends_on)
     
-    if decrypt is not None and decrypt != 'i' in outer_meta:
+    if decrypt is not None and decrypt != ENCRYPTION_IV_KEY in outer_meta:
         raise ValueError('decryption flag is wrong')
     
     # Remove base64 if encrypted or compressed.
-    if 'i' in outer_meta or 'z' in outer_meta:
+    if ENCRYPTION_IV_KEY in outer_meta or COMPRESSION_FLAG_KEY in outer_meta:
         data = decode_binary(data)
     
-    if 'i' in outer_meta:
+    if ENCRYPTION_IV_KEY in outer_meta:
         
         # Decrypt it.
-        iv = decode_binary(outer_meta['i'])
+        iv = decode_binary(outer_meta[ENCRYPTION_IV_KEY])
         cipher = tomcrypt.cipher.aes(key, iv, mode='ctr')
         data = cipher.decrypt(data)
         
@@ -790,7 +801,7 @@ def _loads(key, data, decrypt=None, max_age=None, depends_on={}):
     _assert_times(inner_meta, max_age=max_age)
     
     # Decompress.
-    if 'z' in inner_meta:
+    if COMPRESSION_FLAG_KEY in inner_meta:
         data = zlib.decompress(data)
     
     return data
