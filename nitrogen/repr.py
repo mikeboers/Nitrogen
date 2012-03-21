@@ -5,6 +5,19 @@ import base64
 import ast
 
 def dumps(x, minimize=False):
+    """
+    
+    >>> dumps(1)
+    '1'
+    
+    >>> dumps('hello')
+    "'hello'"
+    
+    >>> dumps(u'hello')
+    "u'hello'"
+    
+    
+    """
     if x in (True, False, None):
         return repr(x)
     t = type(x)
@@ -29,7 +42,7 @@ def loads(x):
     return ast.literal_eval(x)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': #pragma: no cover
     for x in [
         0,
         1,
