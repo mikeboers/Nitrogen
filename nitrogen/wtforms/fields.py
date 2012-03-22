@@ -1,9 +1,10 @@
 from __future__ import absolute_import
 
-import wtforms
+# Need to mimic the API of this module.
+from wtforms.fields import *
 
 
-class MarkdownField(wtforms.TextAreaField):
+class MarkdownField(TextAreaField):
     """The destinction in this field is during rendering."""
     pass
 
