@@ -9,7 +9,6 @@ import wtforms
 
 from nitrogen import recaptcha
 
-from . import app
 from . import mixin
 
 

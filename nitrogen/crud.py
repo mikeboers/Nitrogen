@@ -13,7 +13,6 @@ import werkzeug as wz
 from nitrogen import status
 
 from .request import Request, Response
-from . import app
 from . import mixin
 
 log = logging.getLogger(__name__)
