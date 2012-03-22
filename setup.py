@@ -26,6 +26,7 @@ setup(
         # These are mine.
         multimap
         pytomcrypt
+        webstar
         
         wtforms
         
@@ -38,8 +39,12 @@ setup(
     extras_require=dict(
         testing='''
             nose
-            webtest
+            mock
             ''',
+        example='''
+            gunicorn
+            gevent
+        ''',
         
     ),
     

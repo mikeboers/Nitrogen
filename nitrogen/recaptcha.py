@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from werkzeug import url_encode
 from werkzeug import url_encode
 from wtforms import ValidationError

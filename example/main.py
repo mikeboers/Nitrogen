@@ -1,4 +1,4 @@
-from nitrogen.core import App
+from nitrogen.app import App
 
 from . import config
 

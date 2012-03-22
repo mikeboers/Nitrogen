@@ -1,6 +1,8 @@
 
 - have a TestClient that is driven by werkzeug.test and another by WebDriver
 
+- nitrogen.wtforms.html5 (this was in flask, I believe)
+
 - consider using http://webassets.readthedocs.org/en/latest/index.html
 
 - use http://dotdotdot.frebsite.nl/#.T2GwjcK16KI.reddit
