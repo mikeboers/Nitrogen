@@ -1,11 +1,10 @@
-"""Module for the ModelContext class."""
+from __future__ import absolute_import
 
 import logging
 
 from sqlalchemy import MetaData, engine_from_config
 from sqlalchemy.orm import sessionmaker
-
-from .declarative import declarative_base
+from sqlalchemy.ext.declarative import declarative_base
 
 
 log = logging.getLogger(__name__)

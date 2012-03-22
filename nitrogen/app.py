@@ -183,16 +183,16 @@ class Core(object):
 
 def _build_final_class():
     from .auth import AuthAppMixin
+    from .cookies import CookieAppMixin
     from .crud import CRUDAppMixin
     from .exception import ExceptionAppMixin
-    from .wtforms.app import FormAppMixin
     from .imgsizer import ImgSizerAppMixin
     from .logs import LoggingAppMixin
     from .session import SessionAppMixin
     from .sqlalchemy.app import SQLAlchemyAppMixin
     from .tracker import TrackerAppMixin
     from .view.app import ViewAppMixin
-    from .cookies import CookieAppMixin
+    from .wtforms.app import FormAppMixin
 
     # Be careful about the order of these.
     class App(
