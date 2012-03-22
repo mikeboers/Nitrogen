@@ -24,6 +24,16 @@
 - Request.application should look at *remaining* args for functions, (un)bound methods, partials, etc.
 	- cache the function and how many are left
 	- if we can't tell (or if there is an *args) then pass it the request
+	- test that it takes exc_info properly
+	- 0 args -> pass nothing
+	- 1 arg -> pass request
+	- 2/3 arg -> pass environ, start
+	- if we pass environ/start then assume that start was called
+	- Request.application(signature/call_style/dispatch_method=...)
+		None -> automatic
+		"wsgi" forces wsgi
+		"request" forces request object
+		"empty" or "no arg" passes nothing
 	
 - consider using http://webassets.readthedocs.org/en/latest/index.html
 

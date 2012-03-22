@@ -64,25 +64,21 @@
 	
 	$.fn.markdownEditor = function(opts)
 	{
-		if (!opts) {
-			opts = $.markdownEditor.defaults;
-		}
+		if (!opts)
+			opts = $.markdownEditor.defaults
 		
-		var $$ = this;
-		$$.addClass('markdown-editor-area');
-		$$.wrap('<div class="markdown-editor" />');
+		var $$ = this
+		$$.addClass('markdown-editor-area')
+		$$.wrap('<div class="markdown-editor" />')
 		var buttons = $('<div class="buttons" />')
-		    .insertBefore($$);
-		$$.wrap('<div class="wrapper" />');
+		    .insertBefore($$)
+		$$.wrap('<div class="wrapper" />')
 		
-        /*
-        $$.resizable({
-                    minHeight: opts.minHeight ? opts.minHeight : 100,
-                    handles: 's'
-                });
-        
-        //*/
-        $$.parent().TextAreaResizer();
+        $$.autoResize({
+        	extraSpace: 24,
+			minHeight: 24,
+			maxHeight: 4096
+        })
         
 		// Build the button list.
 		for (var i in opts.commands)

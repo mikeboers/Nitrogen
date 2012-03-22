@@ -87,6 +87,7 @@ class Request(wz.wrappers.Request):
         
         """
         
+        # Work as a decorator.
         if func is None:
             return functools.partial(cls.application,
                 add_etags=add_etags,
