@@ -418,17 +418,17 @@ def sign(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.sha1, ex
 
     Expiry times:
     
-        >>> sig = sign('key', 'data', max_age=1)
+        >>> import mock
+        
+        >>> sig = sign('key', 'data', max_age=60)
         >>> verify('key', 'data', sig)
         True
-        >>> verify('key', 'data', sig, max_age=-1)
-        False
         
-        >>> sig = sign('key', 'data', max_age=-1)
-        >>> verify('key', 'data', sig)
-        False
-        >>> verify('key', 'data', sig, max_age=1)
-        False
+        >>> with mock.patch('time.time', returns=time.time() + 3600):
+        ...     verify('key', 'data', sig, strict=True)
+        Traceback (most recent call last):
+        ...
+        ValueError: signature has expired
         
     
     """
@@ -525,15 +525,17 @@ def sign_query(key, data, add_time=True, nonce=16, max_age=None, hash=hashlib.md
         >>> verify_query('key', signed)
         True
         
-        >>> signed = sign_query('key', dict(key='value'), max_age=1)
+        >>> import mock
+        
+        >>> signed = sign_query('key', dict(key='value'), max_age=60)
         >>> verify_query('key', signed)
         True
-        >>> verify_query('key', signed, max_age=-1)
-        False
         
-        >>> signed = sign_query('key', dict(key='value'), max_age=-1)
-        >>> verify_query('key', signed)
-        False
+        >>> with mock.patch('time.time', returns=time.time() + 3600):
+        ...     verify_query('key', signed, strict=True)
+        Traceback (most recent call last):
+        ...
+        ValueError: signature has expired
         
         >>> verify_query('key', dict(key='value', s='abcdef'), strict=True)
         Traceback (most recent call last):
@@ -710,12 +712,13 @@ def dumps(key, data, encrypt=True, add_time=True, nonce=16, max_age=None, extra=
         >>> encoded #doctest: +ELLIPSIS
         'abc123.n:...,s:...,t:...,x:...'
         
-        >>> encoded = dumps(key, 'abc123', max_age=1)
+        >>> encoded = dumps(key, 'abc123', max_age=60)
         >>> loads(key, encoded)
         'abc123'
     
-        >>> encoded = dumps(key, 'abc123', max_age=-1)
-        >>> loads(key, encoded, strict=True)
+        >>> import mock
+        >>> with mock.patch('time.time', returns=time.time() + 3600):
+        ...     loads(key, encoded, strict=True)
         Traceback (most recent call last):
         ...
         ValueError: signature has expired

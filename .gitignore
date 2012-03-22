@@ -6,8 +6,8 @@
 # Virtualenv
 /.Python
 /bin
-/include/python2.6
-/lib/python2.6
+/include/python*
+/lib/python*
 /man
 /share
 /src
