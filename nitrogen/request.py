@@ -53,12 +53,16 @@ class Request(wz.wrappers.Request):
         if func is None:
             return functools.partial(cls.auto_application, **kwargs)
         
+        # TODO: work with unbound methods, bound methods and functools.partials.
+        
         input_func = func
         if hasattr(func, '__Request_auto_application__'):
             return func.__Request_auto_application__
         try:
             if func.__code__.co_argcount == 1:
                 func = cls.application(func, **kwargs)
+            elif func.__code__.co_argcount == 0:
+                func = cls.application(lambda request: input_func(), **kwargs)
         except AttributeError as e:
             # methods and callable classes don't have __code__
             pass
@@ -98,8 +102,18 @@ class Request(wz.wrappers.Request):
             request.response = Response()
             
             response = func(*(args[:-2] + (request, )))
+            
+            # Use default response.
             if response is None:
                 response = request.response
+            
+            # Convert other return values to a response. Tuples will be passed
+            # as *args, and everything else as the Response.data.
+            if not isinstance(response, Response):
+                if isinstance(response, tuple):
+                    response = Response(*response)
+                else:
+                    response = Response(response)
             
             if response.status_code == 200:
                 if add_etag or add_etag is None and response.is_sequence:

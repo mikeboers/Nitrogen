@@ -1,8 +1,30 @@
 
+- consider replacing my events with blinker.signal
+	http://discorporate.us/projects/Blinker/
+	- put all of my signals into a Namespace
+
 - have a TestClient that is driven by werkzeug.test and another by WebDriver
 
 - nitrogen.wtforms.html5 (this was in flask, I believe)
 
+- methods/options in webstar
+	@route('/', methods=['GET', 'POST'])
+	def handler(request):
+		blargh
+	
+	calling OPTIONS should return the proper headers without actually running
+	the app
+	
+	HEAD should truncate the body (if it exists) and issue a warning
+
+- consider supporting Flask-style global request object
+	- if we detect that the controller does not accept parameters, don't pass any
+
+- merge Request.application and Request.auto_application
+- Request.application should look at *remaining* args for functions, (un)bound methods, partials, etc.
+	- cache the function and how many are left
+	- if we can't tell (or if there is an *args) then pass it the request
+	
 - consider using http://webassets.readthedocs.org/en/latest/index.html
 
 - use http://dotdotdot.frebsite.nl/#.T2GwjcK16KI.reddit
