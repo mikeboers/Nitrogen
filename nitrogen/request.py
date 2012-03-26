@@ -61,8 +61,9 @@ class Request(wz.wrappers.Request):
         try:
             if func.__code__.co_argcount == 1:
                 func = cls.application(func, **kwargs)
-            elif func.__code__.co_argcount == 0:
-                func = cls.application(lambda request: input_func(), **kwargs)
+            # elif func.__code__.co_argcount == 0:
+            #     print func
+            #     func = cls.application(lambda request: input_func(), **kwargs)
         except AttributeError as e:
             # methods and callable classes don't have __code__
             pass
