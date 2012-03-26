@@ -11,7 +11,7 @@
 
 (function($){
 
-	var uid = 'ar' + +new Date,
+	var uid = 'ar' + (+new Date),
 
 		defaults = autoResize.defaults = {
 			onResize: function(){},
