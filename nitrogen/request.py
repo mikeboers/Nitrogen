@@ -108,13 +108,10 @@ class Request(wz.wrappers.Request):
             if response is None:
                 response = request.response
             
-            # Convert other return values to a response. Tuples will be passed
-            # as *args, and everything else as the Response.data.
-            if not isinstance(response, Response):
-                if isinstance(response, tuple):
-                    response = Response(*response)
-                else:
-                    response = Response(response)
+            if isinstance(response, tuple):
+                response = Response(*response)
+            elif isinstance(response, basestring):
+                response = Response(response)
             
             if response.status_code == 200:
                 if add_etag or add_etag is None and response.is_sequence:
