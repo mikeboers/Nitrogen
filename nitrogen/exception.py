@@ -22,6 +22,13 @@ from . import status
 log = logging.getLogger(__name__)
 
 
+def safe_repr(x):
+    try:
+        return repr(x)
+    except Exception as e:
+        return "%s during repr: %s" % (e.__class__.__name__, e)
+
+
 DEFAULT_ERROR_HTTP_STATUS = '500 Internal Server Error'
 DEFAULT_ERROR_HTTP_HEADERS = [('Content-Type','text/plain')]
 DEFAULT_ERROR_BODY = """Uh oh... we dropped the ball on this one.
@@ -109,13 +116,13 @@ def format_report_iter(environ, html=False):
         yield '<ul>\n'
         for k, v in sorted(environ.items()):
             yield '\t<li><strong>%s</strong>: <code>%s</code></li>\n' % (
-                escape(str(k)), escape(repr(v)))
+                escape(str(k)), escape(safe_repr(v)))
         yield '</ul>\n'
     
     else:
         yield 'Environment:\n'
-        yield '\n'.join('  %s: %r' % x for x in sorted(environ.items()))
-        yield '\n'
+        for k, v in sorted(environ.items()):
+            yield '  %s: %s\n' % (k, safe_repr(v))
 
 
 def format_report(environ, html=False):
