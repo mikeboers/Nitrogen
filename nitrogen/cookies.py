@@ -390,8 +390,7 @@ class RawContainer(multimap.MutableMultiMap):
                 # We ignore attributes which pertain to the cookie
                 # mechanism as a whole.  See RFC 2109.
                 # (Does anyone care?)
-                if cookie:
-                    cookie[key[1:]] = value
+                pass
             elif key.startswith(self.prefix):
                 key = key[len(self.prefix):]
                 value = self._unquote(value)
